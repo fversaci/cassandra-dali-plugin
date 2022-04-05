@@ -1,4 +1,6 @@
-FROM debian:11
+#FROM nvidia/cuda:11.5.1-cudnn8-devel-ubuntu20.04
+#FROM pytorch/pytorch:1.11.0-cuda11.3-cudnn8-devel
+FROM nvcr.io/nvidia/pytorch:20.10-py3
 
 # install some useful tools
 RUN \
@@ -56,17 +58,16 @@ RUN \
 
 #install cassandra python driver + some python libraries
 RUN \
-    pip3 install --upgrade --no-cache pillow \
-    && pip3 install --upgrade --no-cache tqdm numpy matplotlib pandas \
-         matplotlib pyyaml opencv-python cassandra-driver 
+    pip3 install --upgrade --no-cache matplotlib pandas \
+      opencv-python cassandra-driver 
 
 ########################################################################
 # Install PyTorch
 ########################################################################
-
-RUN \
-    pip3 install --upgrade --no-cache torch torchvision torchaudio \
-      --extra-index-url https://download.pytorch.org/whl/cu113
+#
+#RUN \
+#    pip3 install --upgrade --no-cache torch torchvision torchaudio \
+#      --extra-index-url https://download.pytorch.org/whl/cu113
 
 ########################################################################
 # SPARK installation, to test examples
