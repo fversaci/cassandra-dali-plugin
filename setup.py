@@ -24,7 +24,7 @@ cpp_handler = cpp_extension.CppExtension(
     ],
     language="c++",
     library_dirs=["/usr/local/lib/x86_64-linux-gnu"],
-    libraries=["cassandra", "opencv_core", "opencv_imgcodecs", "python3.6m"],
+    libraries=["cassandra", "opencv_core", "opencv_imgcodecs", "python3.8"], 
     extra_compile_args=EXTRA_COMPILE_ARGS,
 )
 
@@ -46,6 +46,12 @@ setup(
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering",
         "Intended Audience :: Science/Research",
+    ],
+    install_requires=[
+        'cassandra-driver',
+        'pybind11',
+        'opencv-python',
+        'tqdm',
     ],
     python_requires=">=3.6",
 )
