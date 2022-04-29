@@ -9,12 +9,18 @@ from distutils.core import Extension
 from torch.utils import cpp_extension
 import pybind11
 from glob import glob
+import sysconfig
 
 import os
 
 print(os.environ["LD_LIBRARY_PATH"])
 
 EXTRA_COMPILE_ARGS = ["-fvisibility=hidden", "-g0"]
+LIBPY = (
+    "python"
+    + sysconfig.get_config_var("py_version_short")
+    + sysconfig.get_config_var("abiflags")
+)  # e.g. python3.6m or python3.8
 
 cpp_handler = cpp_extension.CppExtension(
     "BPH",
@@ -24,7 +30,7 @@ cpp_handler = cpp_extension.CppExtension(
     ],
     language="c++",
     library_dirs=["/usr/local/lib/x86_64-linux-gnu"],
-    libraries=["cassandra", "opencv_core", "opencv_imgcodecs", "python3.8"], 
+    libraries=["cassandra", "opencv_core", "opencv_imgcodecs", LIBPY],
     extra_compile_args=EXTRA_COMPILE_ARGS,
 )
 
@@ -48,10 +54,10 @@ setup(
         "Intended Audience :: Science/Research",
     ],
     install_requires=[
-        'cassandra-driver',
-        'pybind11',
-        'opencv-python',
-        'tqdm',
+        "cassandra-driver",
+        "pybind11",
+        "opencv-python",
+        "tqdm",
     ],
     python_requires=">=3.6",
 )
