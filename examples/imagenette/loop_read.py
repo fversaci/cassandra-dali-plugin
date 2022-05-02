@@ -46,8 +46,27 @@ cd.set_config(
     num_classes=num_classes,
 )
 
-for _ in range(5):
+for _ in trange(5):
     cd.rewind_splits(shuffle=True)
-    for i in trange(cd.num_batches[0]):
+    for i in range(cd.num_batches[0]):
         x, y = cd.load_batch()
 
+
+# RGB with augmentations
+from torchvision import transforms
+augs_fn = "/tmp/augs.pt"
+# rescale and normalize
+n_scale = 255.  # divide by 255
+n_mean = n_scale*np.array((0.485, 0.456, 0.406)).tolist()
+n_std = n_scale*np.array((0.229, 0.224, 0.225)).tolist()
+augs = torch.nn.Sequential(
+    transforms.Normalize(n_mean, n_std, inplace=True),
+)
+s_augs = torch.jit.script(augs)
+s_augs.save(augs_fn)
+
+cd.set_config(rgb=True)
+for _ in trange(5):
+    cd.rewind_splits(shuffle=True)
+    for i in range(cd.num_batches[0]):
+        x, y = cd.load_batch()
