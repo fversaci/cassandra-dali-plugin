@@ -35,7 +35,7 @@ clm.set_config(
     num_classes=num_classes,
 )
 clm.read_rows_from_db()
-clm.split_setup(split_ratios=[7, 2, 1])
+clm.split_setup(split_ratios=[1])
 cd = CassandraDataset(ap, [cassandra_ip])
 cd.use_splits(clm)
 cd.set_config(
@@ -46,27 +46,30 @@ cd.set_config(
     num_classes=num_classes,
 )
 
-for _ in trange(5):
+for _ in range(3):
     cd.rewind_splits(shuffle=True)
-    for i in range(cd.num_batches[0]):
+    for i in trange(cd.num_batches[0]):
         x, y = cd.load_batch()
 
 
 # RGB with augmentations
+import torch
 from torchvision import transforms
-augs_fn = "/tmp/augs.pt"
+aug_fn = "/tmp/aug.pt"
 # rescale and normalize
 n_scale = 255.  # divide by 255
-n_mean = n_scale*np.array((0.485, 0.456, 0.406)).tolist()
-n_std = n_scale*np.array((0.229, 0.224, 0.225)).tolist()
-augs = torch.nn.Sequential(
+n_mean = (n_scale*np.array((0.485, 0.456, 0.406))).tolist()
+n_std = (n_scale*np.array((0.229, 0.224, 0.225))).tolist()
+aug = torch.nn.Sequential(
     transforms.Normalize(n_mean, n_std, inplace=True),
 )
-s_augs = torch.jit.script(augs)
-s_augs.save(augs_fn)
+# ex_input = torch.rand(x.shape)
+# s_aug = = torch.jit.trace(aug, ex_input)
+s_aug = torch.jit.script(aug)
+s_aug.save(aug_fn)
 
-cd.set_config(rgb=True)
-for _ in trange(5):
+cd.set_config(rgb=True, augs=[aug_fn])
+for _ in range(3):
     cd.rewind_splits(shuffle=True)
-    for i in range(cd.num_batches[0]):
+    for i in trange(cd.num_batches[0]):
         x, y = cd.load_batch()
