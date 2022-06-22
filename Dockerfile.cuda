@@ -24,6 +24,7 @@ RUN \
     flex \
     git \
     htop \
+    iperf \
     iproute2 \
     iputils-ping \
     ipython3 \
@@ -64,7 +65,7 @@ RUN \
 #install cassandra python driver + some python libraries
 RUN \
     pip3 install --upgrade --no-cache matplotlib pandas \
-      opencv-python cassandra-driver pybind11 tqdm
+      opencv-python cassandra-driver pybind11 tqdm tifffile
 
 ########################################################################
 # Install PyTorch
@@ -100,7 +101,7 @@ EXPOSE 4040
 ########################################################################
 # Cassandra server installation, to test examples
 ########################################################################
-ARG CASS_VERS=4.0.3
+ARG CASS_VERS=4.0.4
 RUN \
     cd /tmp && wget "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \

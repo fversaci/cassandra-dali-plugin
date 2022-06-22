@@ -12,6 +12,7 @@ from tqdm import trange, tqdm
 import numpy as np
 from time import sleep
 
+
 # Read Cassandra parameters
 try:
     from private_data import cassandra_ip, cass_user, cass_pass
@@ -36,7 +37,8 @@ clm.set_config(
 )
 clm.read_rows_from_db()
 clm.split_setup(split_ratios=[1])
-cd = CassandraDataset(ap, [cassandra_ip])
+cd = CassandraDataset(ap, [cassandra_ip],
+                      thread_par=32, max_buf=6, gpu_id=1)
 cd.use_splits(clm)
 cd.set_config(
     table="imagenette.data_224",
@@ -45,12 +47,14 @@ cd.set_config(
     label_col=label_col,
     num_classes=num_classes,
 )
+cd.rewind_splits(shuffle=True)
 
-for _ in range(3):
-    cd.rewind_splits(shuffle=True)
+for _ in trange(3):
     for i in trange(cd.num_batches[0]):
         x, y = cd.load_batch()
+    cd.rewind_splits(shuffle=True)
 
+#exit()
 
 # RGB with augmentations
 import torch
@@ -63,13 +67,11 @@ n_std = (n_scale*np.array((0.229, 0.224, 0.225))).tolist()
 aug = torch.nn.Sequential(
     transforms.Normalize(n_mean, n_std, inplace=True),
 )
-# ex_input = torch.rand(x.shape)
-# s_aug = = torch.jit.trace(aug, ex_input)
 s_aug = torch.jit.script(aug)
 s_aug.save(aug_fn)
 
 cd.set_config(rgb=True, augs=[aug_fn])
-for _ in range(3):
+for _ in trange(3):
     cd.rewind_splits(shuffle=True)
     for i in trange(cd.num_batches[0]):
         x, y = cd.load_batch()
