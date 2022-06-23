@@ -24,13 +24,15 @@ except ImportError:
 # Init Cassandra dataset
 ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 
+suff="_fat" #"_huge"
+
 # Create three splits, with ratio 70, 20, 10 and balanced classes
 id_col = "patch_id"
 label_col = "label"
 num_classes = 10
 clm = CassandraListManager(ap, [cassandra_ip])
 clm.set_config(
-    table="imagenette.ids_224",
+    table=f"imagenette.ids_224{suff}",
     id_col=id_col,
     label_col=label_col,
     num_classes=num_classes,
@@ -38,20 +40,22 @@ clm.set_config(
 clm.read_rows_from_db()
 clm.split_setup(split_ratios=[1])
 cd = CassandraDataset(ap, [cassandra_ip],
-                      thread_par=32, max_buf=6, gpu_id=1)
+                      thread_par=6, max_buf=8, gpu_id=0)
 cd.use_splits(clm)
 cd.set_config(
-    table="imagenette.data_224",
-    bs=28,
+    table=f"imagenette.data_224{suff}",
+    bs=32,
     id_col=id_col,
     label_col=label_col,
     num_classes=num_classes,
 )
 cd.rewind_splits(shuffle=True)
 
-for _ in trange(3):
+for _ in trange(5):
     for i in trange(cd.num_batches[0]):
         x, y = cd.load_batch()
+        #x = x.to("cuda:0")
+        #y = y.to("cuda:0")
     cd.rewind_splits(shuffle=True)
 
 #exit()
@@ -71,7 +75,7 @@ s_aug = torch.jit.script(aug)
 s_aug.save(aug_fn)
 
 cd.set_config(rgb=True, augs=[aug_fn])
-for _ in trange(3):
-    cd.rewind_splits(shuffle=True)
+for _ in trange(5):
     for i in trange(cd.num_batches[0]):
         x, y = cd.load_batch()
+    cd.rewind_splits(shuffle=True)
