@@ -24,7 +24,7 @@ except ImportError:
 # Init Cassandra dataset
 ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 
-suff="_fat" #"_huge"
+suff="_fat"
 
 # Create three splits, with ratio 70, 20, 10 and balanced classes
 id_col = "patch_id"
@@ -39,16 +39,19 @@ clm.set_config(
 )
 clm.read_rows_from_db()
 clm.split_setup(split_ratios=[1])
-cd = CassandraDataset(ap, [cassandra_ip],
-                      thread_par=6, max_buf=8, gpu_id=0)
+cd = CassandraDataset(ap, [cassandra_ip], gpu_id=1,
+                      comm_par=8, thread_par=16, max_buf=6)
+
 cd.use_splits(clm)
 cd.set_config(
     table=f"imagenette.data_224{suff}",
-    bs=32,
+    bs=64,
     id_col=id_col,
     label_col=label_col,
     num_classes=num_classes,
+    #rgb=True,
 )
+
 cd.rewind_splits(shuffle=True)
 
 for _ in trange(5):
