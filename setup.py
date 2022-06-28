@@ -23,7 +23,7 @@ LIBPY = (
 )  # e.g. python3.6m or python3.8
 
 cpp_handler = cpp_extension.CppExtension(
-    "BPH",
+    "CBH",
     sorted(glob("cassandradl/cpp/*.cpp")),
     include_dirs=[
         "/usr/include/opencv4",
