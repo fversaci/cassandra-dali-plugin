@@ -27,6 +27,7 @@ cpp_handler = cpp_extension.CppExtension(
     sorted(glob("cassandradl/cpp/*.cpp")),
     include_dirs=[
         "/usr/include/opencv4",
+        "/usr/local/cuda-11.3/targets/x86_64-linux/include",
     ],
     language="c++",
     library_dirs=["/usr/local/lib/x86_64-linux-gnu"],
