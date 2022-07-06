@@ -11,7 +11,7 @@ from getpass import getpass
 from tqdm import trange, tqdm
 import numpy as np
 from time import sleep
-
+import torch
 
 # Read Cassandra parameters
 try:
@@ -24,7 +24,7 @@ except ImportError:
 # Init Cassandra dataset
 ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 
-suff="" #"_fat"
+suff="_fat"
 
 # Create three splits, with ratio 70, 20, 10 and balanced classes
 id_col = "patch_id"
@@ -39,28 +39,23 @@ clm.set_config(
 )
 clm.read_rows_from_db()
 clm.split_setup(split_ratios=[1])
-cd = CassandraDataset(ap, [cassandra_ip], gpu_id=0,
-                      tcp_connections=2, threads=16, prefetch=16)
+cd = CassandraDataset(ap, [cassandra_ip], gpu_id=1,
+                      tcp_connections=4, threads=10, prefetch_buffers=24)
 
 cd.use_splits(clm)
 cd.set_config(
     table=f"imagenette.data_224{suff}",
-    bs=128,
+    bs=32,
     id_col=id_col,
     label_col=label_col,
     num_classes=num_classes,
     #rgb=True,
 )
-# warm up
-for i in range(cd.num_batches[0]):
-    x, y = cd.load_batch()
 cd.rewind_splits(shuffle=True)
 
 for _ in trange(10):
     for i in range(cd.num_batches[0]):
         x, y = cd.load_batch()
-        #x = x.to("cuda:0")
-        #y = y.to("cuda:0")
     cd.rewind_splits(shuffle=True)
 
 #exit()
@@ -81,9 +76,6 @@ s_aug.save(aug_fn)
 
 cd.set_config(rgb=True, augs=[aug_fn])
 
-# warm up
-for i in range(cd.num_batches[0]):
-    x, y = cd.load_batch()
 cd.rewind_splits(shuffle=True)
 
 for _ in trange(10):
