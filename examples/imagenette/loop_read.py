@@ -24,7 +24,7 @@ except ImportError:
 # Init Cassandra dataset
 ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 
-suff="_fat"
+suff="_jpg"
 
 # Create three splits, with ratio 70, 20, 10 and balanced classes
 id_col = "patch_id"
@@ -39,13 +39,13 @@ clm.set_config(
 )
 clm.read_rows_from_db()
 clm.split_setup(split_ratios=[1])
-cd = CassandraDataset(ap, [cassandra_ip], gpu_id=1,
-                      tcp_connections=4, threads=10, prefetch_buffers=24)
+cd = CassandraDataset(ap, [cassandra_ip], gpu_id=0,
+                      tcp_connections=4, threads=16, prefetch_buffers=8)
 
 cd.use_splits(clm)
 cd.set_config(
     table=f"imagenette.data_224{suff}",
-    bs=32,
+    bs=128,
     id_col=id_col,
     label_col=label_col,
     num_classes=num_classes,
@@ -70,6 +70,7 @@ n_mean = (n_scale*np.array((0.485, 0.456, 0.406))).tolist()
 n_std = (n_scale*np.array((0.229, 0.224, 0.225))).tolist()
 aug = torch.nn.Sequential(
     transforms.Normalize(n_mean, n_std, inplace=True),
+    transforms.GaussianBlur(5),
 )
 s_aug = torch.jit.script(aug)
 s_aug.save(aug_fn)
