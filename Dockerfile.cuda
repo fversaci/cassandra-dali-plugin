@@ -114,6 +114,10 @@ RUN \
 EXPOSE 9042
 ########################################################################
 
+# Install NVIDIA DALI: https://github.com/NVIDIA/DALI
+RUN \
+    pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110
+
 ########################################################################
 # Download the Imagenette dataset
 ########################################################################
