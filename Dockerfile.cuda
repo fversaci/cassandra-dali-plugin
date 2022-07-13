@@ -135,5 +135,5 @@ RUN \
 COPY . /home/user/cassandradl
 RUN chown -R user.user '/home/user/cassandradl'
 WORKDIR /home/user/cassandradl
-#RUN pip3 install .
+RUN pip3 install .
 USER user
