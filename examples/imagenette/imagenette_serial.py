@@ -15,19 +15,21 @@ def save_images(src_dir, img_format="JPEG", *, target_dir=None):
     :param src_dir: Input directory for Imagenette
     :param target_dir: Output directory for the cropped images
     """
-    # Read Cassandra parameters
-    try:
-        from private_data import cassandra_ip, cass_user, cass_pass
-    except ImportError:
-        cassandra_ip = getpass("Insert Cassandra's IP address: ")
-        cass_user = getpass("Insert Cassandra user: ")
-        cass_pass = getpass("Insert Cassandra password: ")
-
     jobs = imagenette_common.get_jobs(src_dir)
-    imagenette_common.send_images_to_db(
-        cassandra_ip, cass_user, cass_pass, img_format)(jobs)
-    # imagenette_common.save_images_to_dir(
-    #     target_dir, img_format)(jobs)
+    if not target_dir:
+        try:
+            # Read Cassandra parameters
+            from private_data import cassandra_ip, cass_user, cass_pass
+        except ImportError:
+            cassandra_ip = getpass("Insert Cassandra's IP address: ")
+            cassandra_ips = [cassandra_ip]
+            cass_user = getpass("Insert Cassandra user: ")
+            cass_pass = getpass("Insert Cassandra password: ")
+
+        imagenette_common.send_images_to_db(
+            cassandra_ips, cass_user, cass_pass, img_format)(jobs)
+    else:
+        imagenette_common.save_images_to_dir(target_dir, img_format)(jobs)
 
 
 # parse arguments

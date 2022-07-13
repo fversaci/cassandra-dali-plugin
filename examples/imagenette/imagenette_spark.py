@@ -5,7 +5,9 @@
 # https://opensource.org/licenses/MIT.
 
 # Run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py --src-dir /tmp/imagenette2-320
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py /tmp/imagenette2-320 JPEG
+# or
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py /tmp/imagenette2-320 JPEG /data/imagenette-cropped/jpg
 
 from getpass import getpass
 import imagenette_common
@@ -17,14 +19,6 @@ from clize import run
 
 
 def save_images(src_dir, img_format="JPEG", *, target_dir=None):
-    # Read Cassandra parameters
-    try:
-        from private_data import cassandra_ip, cass_user, cass_pass
-    except ImportError:
-        cassandra_ip = getpass("Insert Cassandra's IP address: ")
-        cass_user = getpass("Insert Cassandra user: ")
-        cass_pass = getpass("Insert Cassandra password: ")
-
     jobs = imagenette_common.get_jobs(src_dir)
     # run spark
     conf = SparkConf().setAppName("Imagenette_224")
@@ -32,12 +26,24 @@ def save_images(src_dir, img_format="JPEG", *, target_dir=None):
     sc = SparkContext(conf=conf)
     spark = SparkSession(sc)
     par_jobs = sc.parallelize(jobs)
-    par_jobs.foreachPartition(
-        imagenette_common.send_images_to_db(
-            cassandra_ip, cass_user, cass_pass, img_format)
-        # imagenette_common.save_images_to_dir(
-        #     target_dir, img_format)(jobs)
-    )
+    if not target_dir:
+        try:
+            # Read Cassandra parameters
+            from private_data import cassandra_ips, cass_user, cass_pass
+        except ImportError:
+            cassandra_ip = getpass("Insert Cassandra's IP address: ")
+            cassandra_ips = [cassandra_ip]
+            cass_user = getpass("Insert Cassandra user: ")
+            cass_pass = getpass("Insert Cassandra password: ")
+            
+        par_jobs.foreachPartition(
+            imagenette_common.send_images_to_db(
+                cassandra_ips, cass_user, cass_pass, img_format)
+        )
+    else:
+        par_jobs.foreachPartition(
+            imagenette_common.save_images_to_dir(target_dir, img_format)
+        )
 
 
 # parse arguments

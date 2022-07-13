@@ -73,7 +73,7 @@ def get_jobs(src_dir):
     return jobs
 
 
-def send_images_to_db(cassandra_ip, cass_user, cass_pass, img_format):
+def send_images_to_db(cassandra_ips, cass_user, cass_pass, img_format):
     if img_format == "JPEG":
         suff="_jpg"
     elif img_format == "TIFF":
@@ -87,7 +87,7 @@ def send_images_to_db(cassandra_ip, cass_user, cass_pass, img_format):
     def ret(jobs):
         cw = CassandraWriter(
             auth_prov,
-            [cassandra_ip],
+            cassandra_ips,
             table_ids=f"imagenette.ids_224{suff}",
             table_data=f"imagenette.data_224{suff}",
             table_metadata=f"imagenette.metadata_224{suff}",
