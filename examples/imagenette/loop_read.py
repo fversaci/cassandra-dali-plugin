@@ -12,45 +12,64 @@ from tqdm import trange, tqdm
 import numpy as np
 from time import sleep
 import torch
+from torchvision import transforms
+import os
 
 # Read Cassandra parameters
 try:
-    from private_data import cassandra_ip, cass_user, cass_pass
+    from private_data import cassandra_ips, cass_user, cass_pass
 except ImportError:
     cassandra_ip = getpass("Insert Cassandra's IP address: ")
+    cassandra_ips = [cassandra_ip]
     cass_user = getpass("Insert Cassandra user: ")
     cass_pass = getpass("Insert Cassandra password: ")
 
 # Init Cassandra dataset
 ap = PlainTextAuthProvider(username=cass_user, password=cass_pass)
 
+cd = CassandraDataset(ap, cassandra_ips, gpu_id=1,
+                      tcp_connections=4, threads=32, prefetch_buffers=32)
+
+dataset_nm="imagenette"
 suff="_jpg"
 
-# Create three splits, with ratio 70, 20, 10 and balanced classes
-id_col = "patch_id"
-label_col = "label"
-num_classes = 10
-clm = CassandraListManager(ap, [cassandra_ip])
-clm.set_config(
-    table=f"imagenette.ids_224{suff}",
-    id_col=id_col,
-    label_col=label_col,
-    num_classes=num_classes,
-)
-clm.read_rows_from_db()
-clm.split_setup(split_ratios=[1])
-cd = CassandraDataset(ap, [cassandra_ip], gpu_id=0,
-                      tcp_connections=4, threads=16, prefetch_buffers=8)
+if dataset_nm=="imagenet":
+    num_classes = 1000
+elif dataset_nm=="imagenette":
+    num_classes = 10
+else:
+    raise RuntimeError(f"Dataset {dataset_nm} not supported.")
 
-cd.use_splits(clm)
-cd.set_config(
-    table=f"imagenette.data_224{suff}",
-    bs=128,
-    id_col=id_col,
-    label_col=label_col,
-    num_classes=num_classes,
-    #rgb=True,
-)
+split_fn = f"{dataset_nm}{suff}.split"
+if not os.path.exists(split_fn):
+    # Create one split
+    id_col = "patch_id"
+    label_col = "label"
+    num_classes = 1000
+    clm = CassandraListManager(ap, cassandra_ips)
+    clm.set_config(
+        table=f"{dataset_nm}.ids_224{suff}",
+        id_col=id_col,
+        label_col=label_col,
+        num_classes=num_classes,
+    )
+    clm.read_rows_from_db()
+    clm.split_setup(split_ratios=[1])
+    cd.use_splits(clm)
+    cd.set_config(
+        table=f"{dataset_nm}.data_224{suff}",
+        bs=128,
+        id_col=id_col,
+        label_col=label_col,
+        num_classes=num_classes,
+        #rgb=True,
+    )
+    cd.save_splits(split_fn)
+else:
+    cd.load_splits(split_fn)
+    cd.set_config(bs=128)
+
+
 cd.rewind_splits(shuffle=True)
 
 for _ in trange(10):
@@ -61,8 +80,6 @@ for _ in trange(10):
 #exit()
 
 # RGB with augmentations
-import torch
-from torchvision import transforms
 aug_fn = "/tmp/aug.pt"
 # rescale and normalize
 n_scale = 255.  # divide by 255

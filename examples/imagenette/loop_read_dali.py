@@ -19,19 +19,25 @@ from nvidia.dali.plugin.pytorch import DALIGenericIterator
 suff="jpg"
 src_dir = os.path.join("/data/imagenette-cropped/", suff)
 
-@pipeline_def(batch_size=128, num_threads=8, device_id=1)
+@pipeline_def(batch_size=128, num_threads=10, device_id=1,
+              #prefetch_queue_depth=4,
+)
 def get_dali_pipeline(src_dir):
     images, labels = fn.readers.file(file_root=src_dir, name="Reader")
     images = fn.decoders.image(images, device="mixed", output_type=types.RGB)
+    # images = images.gpu()
+    labels = labels.gpu()
     return images, labels
 
+pl = get_dali_pipeline(src_dir)
     
+# using PyTorch iterator
 ddl = DALIGenericIterator(
-   [get_dali_pipeline(src_dir)], ['data', 'label'],
+   [pl], ['data', 'label'],
    reader_name='Reader'
 )
 
-for _ in trange(1000):
+for _ in trange(10):
     for data in ddl:
         x, y = data[0]['data'], data[0]['label']
     ddl.reset() # rewind data loader
