@@ -1,5 +1,5 @@
-#ifndef EXAMPLE_CASSANDRA_H_
-#define EXAMPLE_CASSANDRA_H_
+#ifndef CRS4_CASSANDRA_H_
+#define CRS4_CASSANDRA_H_
 
 #include <vector>
 #include "dali/pipeline/operator/operator.h"
@@ -37,4 +37,4 @@ protected:
 
 }  // namespace crs4
 
-#endif  // EXAMPLE_CASSANDRA_H_
+#endif  // CRS4_CASSANDRA_H_
