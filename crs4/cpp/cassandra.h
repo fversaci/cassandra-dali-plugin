@@ -4,7 +4,7 @@
 #include <vector>
 #include "dali/pipeline/operator/operator.h"
 
-namespace other_ns {
+namespace crs4 {
 
 template <typename Backend>
 class Cassandra : public ::dali::Operator<Backend> {
@@ -35,6 +35,6 @@ protected:
     void RunImpl(::dali::workspace_t<Backend> &ws) override;
 };
 
-}  // namespace other_ns
+}  // namespace crs4
 
 #endif  // EXAMPLE_CASSANDRA_H_

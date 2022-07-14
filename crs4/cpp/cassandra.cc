@@ -1,6 +1,6 @@
 #include "cassandra.h"
 
-namespace other_ns {
+namespace crs4 {
 
 template <>
 void Cassandra<::dali::CPUBackend>::RunImpl(::dali::HostWorkspace &ws) {
@@ -22,9 +22,9 @@ void Cassandra<::dali::CPUBackend>::RunImpl(::dali::HostWorkspace &ws) {
     tp.RunAll();
 }
 
-}  // namespace other_ns
+}  // namespace crs4
 
-DALI_REGISTER_OPERATOR(Crs4Cassandra, ::other_ns::Cassandra<::dali::CPUBackend>, ::dali::CPU);
+DALI_REGISTER_OPERATOR(Crs4Cassandra, ::crs4::Cassandra<::dali::CPUBackend>, ::dali::CPU);
 
 DALI_SCHEMA(Crs4Cassandra)
 .DocStr("Make a copy of the input tensor")
