@@ -9,7 +9,7 @@ from nvidia.dali.pipeline import pipeline_def
 import nvidia.dali.types as types
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 import nvidia.dali.plugin_manager as plugin_manager
-plugin_manager.load_library('cpp/build/libcrs4cassandra.so')
+plugin_manager.load_library('./cpp/build/libcrs4cassandra.so')
 
 from tqdm import trange, tqdm
 import numpy as np
@@ -20,18 +20,23 @@ from torchvision import transforms
 
 #help(fn.crs4_cassandra)
 
-@pipeline_def(batch_size=8, num_threads=1, device_id=1)
+@pipeline_def(batch_size=2, num_threads=1, device_id=1)
 def get_dali_pipeline():
-    images = fn.crs4_cassandra()
+    images = fn.crs4_cassandra(name="CassReader")
     images = fn.decoders.image(images, device="mixed", output_type=types.RGB)
     return images
 
 pl = get_dali_pipeline()
-    
+pl.build()
+for x in tqdm(pl.run()):
+    print(x.shape())
+
+exit()
+
 # using PyTorch iterator
 ddl = DALIGenericIterator(
    [pl], ['data'],
-   reader_name='Reader'
+   reader_name='CassReader'
 )
 
 for _ in trange(10):

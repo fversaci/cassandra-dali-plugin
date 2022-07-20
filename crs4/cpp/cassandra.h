@@ -19,6 +19,8 @@ public:
   Cassandra(Cassandra&&) = delete;
   Cassandra& operator=(Cassandra&&) = delete;
 
+  ::dali::Tensor<::dali::CPUBackend> image;
+
 protected:
   bool CanInferOutputs() const override {
     return true;
@@ -26,9 +28,9 @@ protected:
 
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
                  const ::dali::workspace_t<Backend> &ws) override {
-    const auto &input = ws.template Input<Backend>(0);
+
     output_desc.resize(1);
-    output_desc[0] = {input.shape(), input.type()};
+    output_desc[0] = {{{14409}, {14409}}, ::dali::DALI_UINT8};
     return true;
   }
 
