@@ -19,8 +19,6 @@ public:
   Cassandra(Cassandra&&) = delete;
   Cassandra& operator=(Cassandra&&) = delete;
 
-  ::dali::Tensor<::dali::CPUBackend> image;
-
 protected:
   bool CanInferOutputs() const override {
     return true;
