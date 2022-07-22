@@ -18,13 +18,15 @@ void Cassandra<::dali::CPUBackend>::RunImpl(::dali::HostWorkspace &ws) {
 
   // copy to output
   auto &output = ws.Output<::dali::CPUBackend>(0);
-  std::cout << output.num_samples() << std::endl;
+  // output.SetContiguous(true);
+  output.Resize({{14409}, {14409}}, ::dali::DALI_UINT8);
+  // std::cout << output.IsContiguous() << std::endl;
 
   auto &tp = ws.GetThreadPool();
   for (int sample_id = 0; sample_id < output.num_samples(); sample_id++) {
-    std::cout << output.tensor_shape(sample_id) << std::endl;
+    // std::cout << output.tensor_shape(sample_id) << std::endl;
     tp.AddWork(
-    [&, sample_id](int thread_id) {
+    [&, sample_id, buffer, length](int thread_id) {
       std::memcpy(
         output.raw_mutable_tensor(sample_id),
         buffer,

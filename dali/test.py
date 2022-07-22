@@ -29,7 +29,9 @@ def get_dali_pipeline():
 pl = get_dali_pipeline()
 pl.build()
 for x in tqdm(pl.run()):
-    print(x.shape())
+    ...
+
+print(x.shape())
 
 exit()
 

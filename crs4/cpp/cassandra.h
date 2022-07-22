@@ -21,15 +21,15 @@ public:
 
 protected:
   bool CanInferOutputs() const override {
-    return true;
+    return false;
   }
 
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
                  const ::dali::workspace_t<Backend> &ws) override {
 
-    output_desc.resize(1);
-    output_desc[0] = {{{14409}, {14409}}, ::dali::DALI_UINT8};
-    return true;
+    // output_desc.resize(1);
+    // output_desc[0] = {{{14409}, {14409}}, ::dali::DALI_UINT8};
+    return false;
   }
 
   void RunImpl(::dali::workspace_t<Backend> &ws) override;
