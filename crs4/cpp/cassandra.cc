@@ -5,8 +5,16 @@
 
 namespace crs4 {
 
-template <>
-void Cassandra<::dali::CPUBackend>::RunImpl(::dali::HostWorkspace &ws) {
+
+Cassandra::Cassandra(const ::dali::OpSpec &spec) :
+  ::dali::Operator<dali::CPUBackend>(spec),
+  uuids(spec.GetArgument<std::vector<std::string>>("uuids"))
+{
+  std::cout << uuids[0] << std::endl;
+}
+
+
+void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
   // read test image
   std::ifstream is ("coso.jpg", std::ifstream::binary);
   is.seekg (0, is.end);
@@ -24,7 +32,7 @@ void Cassandra<::dali::CPUBackend>::RunImpl(::dali::HostWorkspace &ws) {
   std::vector<int64_t> sz(bs, length);
   ::dali::TensorListShape szs(sz, bs, 1);
   // std::cout << szs << std::endl;
-  
+
   output.Resize(szs, ::dali::DALI_UINT8);
   // std::cout << output.IsContiguous() << std::endl;
 
@@ -45,9 +53,10 @@ void Cassandra<::dali::CPUBackend>::RunImpl(::dali::HostWorkspace &ws) {
 }  // namespace crs4
 
 DALI_REGISTER_OPERATOR(crs4__cassandra,
-                       ::crs4::Cassandra<::dali::CPUBackend>, ::dali::CPU);
+                       ::crs4::Cassandra, ::dali::CPU);
 
 DALI_SCHEMA(crs4__cassandra)
 .DocStr("Takes nothing returns something")
 .NumInput(0)
-.NumOutput(1);
+.NumOutput(1)
+.AddOptionalArg<std::vector<std::string>>("uuids", R"(A list of uuids)", nullptr);

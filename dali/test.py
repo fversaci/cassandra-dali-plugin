@@ -20,9 +20,11 @@ from torchvision import transforms
 
 #help(fn.crs4.cassandra)
 
+uuids = ["ciao", "miao"]
+
 @pipeline_def(batch_size=3, num_threads=1, device_id=1)
 def get_dali_pipeline():
-    images = fn.crs4.cassandra(name="CassReader")
+    images = fn.crs4.cassandra(name="CassReader", uuids=uuids)
     images = fn.decoders.image(images, device="mixed", output_type=types.RGB)
     return images
 
@@ -34,8 +36,6 @@ ddl = DALIGenericIterator(
    reader_name='CassReader'
 )
 
-for epoch in range(4):
-    print(f"Epoch {epoch}")
-    for data in tqdm(ddl):
-        x = data[0]['data']
-    ddl.reset() # rewind data loader
+for data in tqdm(ddl):
+    x = data[0]['data']
+ddl.reset() # rewind data loader
