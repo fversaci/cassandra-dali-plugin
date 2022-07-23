@@ -18,30 +18,24 @@ import os
 import torch
 from torchvision import transforms
 
-#help(fn.crs4_cassandra)
+#help(fn.crs4.cassandra)
 
-@pipeline_def(batch_size=2, num_threads=1, device_id=1)
+@pipeline_def(batch_size=3, num_threads=1, device_id=1)
 def get_dali_pipeline():
-    images = fn.crs4_cassandra(name="CassReader")
+    images = fn.crs4.cassandra(name="CassReader")
     images = fn.decoders.image(images, device="mixed", output_type=types.RGB)
     return images
 
 pl = get_dali_pipeline()
 pl.build()
-for x in tqdm(pl.run()):
-    ...
 
-print(x.shape())
-
-exit()
-
-# using PyTorch iterator
 ddl = DALIGenericIterator(
    [pl], ['data'],
    reader_name='CassReader'
 )
 
-for _ in trange(10):
+for epoch in range(4):
+    print(f"Epoch {epoch}")
     for data in tqdm(ddl):
         x = data[0]['data']
     ddl.reset() # rewind data loader
