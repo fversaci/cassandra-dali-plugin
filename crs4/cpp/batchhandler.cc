@@ -56,17 +56,16 @@ void BatchHandler::connect(){
   batch_pool = new ThreadPool(batch_par);
 }
 
-BatchHandler::BatchHandler(int num_classes,
-			   std::string table, std::string label_col,
+BatchHandler::BatchHandler(std::string table, std::string label_col,
 			   std::string data_col, std::string id_col,
-			   std::vector<int> label_map, std::string username,
-			   std::string cass_pass,
+			   // std::vector<int> label_map,
+			   std::string username, std::string cass_pass,
 			   std::vector<std::string> cassandra_ips,
 			   int tcp_connections, int threads, int batch_par,
 			   int comm_par, int prefetch_buffers, int port) :
-  num_classes(num_classes), table(table),
-  label_col(label_col), data_col(data_col), id_col(id_col),
-  label_map(label_map), username(username), password(cass_pass),
+  table(table), label_col(label_col), data_col(data_col), id_col(id_col),
+  // label_map(label_map),
+  username(username), password(cass_pass),
   cassandra_ips(cassandra_ips), port(port),
   tcp_connections(tcp_connections), threads(threads),
   batch_par(batch_par), comm_par(comm_par), prefetch_buffers(prefetch_buffers)
@@ -93,7 +92,7 @@ BatchHandler::BatchHandler(int num_classes,
 		      return a + (a.length() > 0 ? "," : "") + b; 
 	    });
   // transforming labels?
-  use_label_map = !label_map.empty();
+  // use_label_map = !label_map.empty();
 }
 
 void BatchHandler::allocTens(int wb){
@@ -114,9 +113,9 @@ void BatchHandler::img2tensor(const CassResult* result, int off, int wb){
     cass_row_get_column_by_name(row, data_col.c_str());
   cass_int32_t lab;
   cass_value_get_int32(c_lab, &lab);
-  // if needed, map label to new one
-  if (use_label_map)
-    lab = label_map[lab];
+  //// if needed, map label to new one
+  // if (use_label_map)
+  //   lab = label_map[lab];
   const cass_byte_t* data;
   size_t sz;
   cass_value_get_bytes(c_data, &data, &sz);

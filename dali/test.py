@@ -17,11 +17,21 @@ plugin_manager.load_library('./cpp/build/libcrs4cassandra.so')
 # varia
 import pickle
 from tqdm import trange, tqdm
+import getpass
 import numpy as np
 from time import sleep
 import os
 import torch
 from torchvision import transforms
+
+# Read Cassandra parameters
+try:
+    from private_data import cass_ips, cass_user, cass_pass
+except ImportError:
+    cass_ip = getpass("Insert Cassandra's IP address: ")
+    cass_ips = [cassandra_ip]
+    cass_user = getpass("Insert Cassandra user: ")
+    cass_pass = getpass("Insert Cassandra password: ")
 
 # read list of uuids
 dataset_nm="imagenette"
@@ -32,10 +42,21 @@ with open(split_fn, "rb") as f:
 uuids = x['row_keys']
 uuids = list(map(str, uuids)) # convert uuids to strings
 
+cass_conf = [
+    f"{dataset_nm}.ids_224{suff}",
+    "label",
+    "data",
+    "patch_id",
+    cass_user,
+    cass_pass,
+]
+
 # create dali pipeline
 @pipeline_def(batch_size=3, num_threads=1, device_id=1)
 def get_dali_pipeline():
-    images = fn.crs4.cassandra(name="CassReader", uuids=uuids)
+    images = fn.crs4.cassandra(name="CassReader", uuids=uuids,
+                               cass_conf=cass_conf,
+                               cass_ips=cass_ips)
     images = fn.decoders.image(images, device="mixed", output_type=types.RGB)
     return images
 

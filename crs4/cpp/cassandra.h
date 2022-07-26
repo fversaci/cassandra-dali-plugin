@@ -2,10 +2,11 @@
 #define CRS4_CASSANDRA_H_
 
 #include <vector>
+#include <map>
 #include <string>
 #include "dali/pipeline/operator/operator.h"
 #include "dali/operators/reader/reader_op.h"
-
+#include "batchhandler.h"
 namespace crs4 {
 
 class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
@@ -36,6 +37,9 @@ protected:
 
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
                  const ::dali::workspace_t<::dali::CPUBackend> &ws) override {
+    bh = new BatchHandler(cass_conf[0], cass_conf[1], cass_conf[2],
+			  cass_conf[3], cass_conf[4], cass_conf[5],
+			  cass_ips);
     return false;
   }
 
@@ -43,6 +47,9 @@ protected:
 
 private:
   std::vector<std::string> uuids;
+  std::vector<std::string> cass_ips;
+  std::vector<std::string> cass_conf;
+  BatchHandler* bh;
 };
 
 }  // namespace crs4

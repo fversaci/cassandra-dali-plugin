@@ -21,13 +21,12 @@ class BatchHandler{
 private:
   // parameters
   bool connected = false;
-  int num_classes;
   std::string table;
   std::string label_col;
   std::string data_col;
   std::string id_col;
-  std::vector<int> label_map;
-  bool use_label_map = false;
+  // std::vector<int> label_map;
+  // bool use_label_map = false;
   std::string username;
   std::string password;
   std::vector<std::string> cassandra_ips;
@@ -71,9 +70,8 @@ private:
   static void wrap_t2c(CassFuture* query_future, void* v_fd);
   void allocTens(int wb);
 public:
-  BatchHandler(int num_classes, std::string table,
-	       std::string label_col, std::string data_col,
-	       std::string id_col, std::vector<int> label_map,
+  BatchHandler(std::string table, std::string label_col, std::string data_col,
+	       std::string id_col, // std::vector<int> label_map,
 	       std::string username, std::string cass_pass,
 	       std::vector<std::string> cassandra_ips, int tcp_connection=2,
 	       int threads=2, int batch_par=2, int comm_par=1,

@@ -8,9 +8,11 @@ namespace crs4 {
 
 Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   ::dali::Operator<dali::CPUBackend>(spec),
-  uuids(spec.GetArgument<std::vector<std::string>>("uuids"))
+  uuids(spec.GetArgument<std::vector<std::string>>("uuids")),
+  cass_ips(spec.GetArgument<std::vector<std::string>>("cass_ips")),
+  cass_conf(spec.GetArgument<std::vector<std::string>>("cass_conf"))
 {
-  std::cout << uuids[0] << std::endl;
+  std::cout << cass_conf[4] << std::endl;
 }
 
 
@@ -59,4 +61,6 @@ DALI_SCHEMA(crs4__cassandra)
 .DocStr("Takes nothing returns something")
 .NumInput(0)
 .NumOutput(1)
-.AddOptionalArg<std::vector<std::string>>("uuids", R"(A list of uuids)", nullptr);
+.AddOptionalArg<std::vector<std::string>>("uuids", R"(A list of uuids)", nullptr)
+.AddOptionalArg<std::vector<std::string>>("cass_ips", R"(List of Cassandra IPs)", nullptr)
+.AddOptionalArg<std::vector<std::string>>("cass_conf", R"(Cassandra configuration parameters)", nullptr);

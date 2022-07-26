@@ -29,5 +29,5 @@ link_directories("${DALI_LIB_DIR}")
 link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}")
 
 add_library(crs4cassandra SHARED cassandra.cc batchhandler.cc)
-target_link_libraries(crs4cassandra dali cudart)
+target_link_libraries(crs4cassandra dali cudart cassandra)
 
