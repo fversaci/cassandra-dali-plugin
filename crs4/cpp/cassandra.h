@@ -1,3 +1,9 @@
+// Copyright 2021-2 CRS4
+// 
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
 #ifndef CRS4_CASSANDRA_H_
 #define CRS4_CASSANDRA_H_
 
@@ -13,16 +19,15 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
 public:
   explicit Cassandra(const ::dali::OpSpec &spec);
 
-  // virtual inline ~Cassandra() = default;
-  // Cassandra(const Cassandra&) = delete;
-  // Cassandra& operator=(const Cassandra&) = delete;
-  // Cassandra(Cassandra&&) = delete;
-  // Cassandra& operator=(Cassandra&&) = delete;
+  Cassandra(const Cassandra&) = delete;
+  Cassandra& operator=(const Cassandra&) = delete;
+  Cassandra(Cassandra&&) = delete;
+  Cassandra& operator=(Cassandra&&) = delete;
 
   ::dali::ReaderMeta GetReaderMeta() const override {
     ::dali::ReaderMeta ret;
-    ret.epoch_size = 10;
-    ret.epoch_size_padded = 10;
+    ret.epoch_size = uuids.size();
+    ret.epoch_size_padded = uuids.size();
     ret.number_of_shards = 1;
     ret.shard_id = 0;
     ret.pad_last_batch = true;
@@ -30,6 +35,11 @@ public:
     return ret;
   }
 
+  ~Cassandra() override {
+    if (bh!=nullptr)
+      delete bh;
+  }
+  
 protected:
   bool CanInferOutputs() const override {
     return false;
@@ -37,9 +47,6 @@ protected:
 
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
                  const ::dali::workspace_t<::dali::CPUBackend> &ws) override {
-    bh = new BatchHandler(cass_conf[0], cass_conf[1], cass_conf[2],
-			  cass_conf[3], cass_conf[4], cass_conf[5],
-			  cass_ips);
     return false;
   }
 
@@ -49,7 +56,8 @@ private:
   std::vector<std::string> uuids;
   std::vector<std::string> cass_ips;
   std::vector<std::string> cass_conf;
-  BatchHandler* bh;
+  BatchHandler* bh = nullptr;
+  int bs;
 };
 
 }  // namespace crs4

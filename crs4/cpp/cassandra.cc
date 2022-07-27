@@ -1,3 +1,9 @@
+// Copyright 2021-2 CRS4
+// 
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT.
+
 #include <iostream>
 #include <fstream>
 
@@ -8,45 +14,56 @@ namespace crs4 {
 
 Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   ::dali::Operator<dali::CPUBackend>(spec),
+  bs(spec.GetArgument<int>("max_batch_size")),
   uuids(spec.GetArgument<std::vector<std::string>>("uuids")),
   cass_ips(spec.GetArgument<std::vector<std::string>>("cass_ips")),
   cass_conf(spec.GetArgument<std::vector<std::string>>("cass_conf"))
 {
-  std::cout << cass_conf[4] << std::endl;
+  bh = new BatchHandler(cass_conf[0], cass_conf[1], cass_conf[2],
+			cass_conf[3], cass_conf[4], cass_conf[5],
+			cass_ips);
+  auto batch_ids = std::vector(uuids.begin(), uuids.begin()+bs);
+  bh->prefetch_batch_str(batch_ids);
+  std::cout << batch_ids[0] << std::endl;
 }
 
 
 void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
-  // read test image
-  std::ifstream is ("coso.jpg", std::ifstream::binary);
-  is.seekg (0, is.end);
-  int length = is.tellg();
-  is.seekg (0, is.beg);
-  char* buffer = new char[length];
-  // std::cout << "Reading " << length << " characters... " << std::endl;
-  is.read (buffer,length);
+  // // read test image
+  // std::ifstream is ("coso.jpg", std::ifstream::binary);
+  // is.seekg (0, is.end);
+  // int length = is.tellg();
+  // is.seekg (0, is.beg);
+  // char* buffer = new char[length];
+  // // std::cout << "Reading " << length << " characters... " << std::endl;
+  // is.read (buffer,length);
 
+  auto keys = std::vector(uuids.begin(), uuids.begin()+bs);
+  BatchRawImage bri = bh->blocking_get_batch().first;
+  auto batch_ids = std::vector(uuids.begin(), uuids.begin()+bs);
+  bh->prefetch_batch_str(batch_ids);
+  int ibs = bri.size(); // input batch size
+  std::vector<int64_t> sz;
+  for (auto i = 0; i != ibs; ++i){
+    sz.push_back(bri[i].size());
+  }
+  ::dali::TensorListShape szs(sz, ibs, 1);
+  
   // copy to output
   auto &output = ws.Output<::dali::CPUBackend>(0);
-  int bs = output.num_samples();
   // output.SetContiguous(true);
-
-  std::vector<int64_t> sz(bs, length);
-  ::dali::TensorListShape szs(sz, bs, 1);
-  // std::cout << szs << std::endl;
-
   output.Resize(szs, ::dali::DALI_UINT8);
   // std::cout << output.IsContiguous() << std::endl;
 
   auto &tp = ws.GetThreadPool();
-  for (int sample_id = 0; sample_id < bs; sample_id++) {
+  for (int i = 0; i < ibs; ++i) {
     // std::cout << output.tensor_shape(sample_id) << std::endl;
     tp.AddWork(
-    [&, sample_id, buffer, length](int thread_id) {
+    [&, i](int thread_id) {
       std::memcpy(
-        output.raw_mutable_tensor(sample_id),
-        buffer,
-        length);
+        output.raw_mutable_tensor(i),
+        bri[i].data(),
+        bri[i].size());
     });
   }
   tp.RunAll();

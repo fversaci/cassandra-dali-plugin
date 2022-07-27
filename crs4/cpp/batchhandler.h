@@ -17,6 +17,12 @@
 
 #include "ThreadPool.h"
 
+using RawImage = std::vector<char>;
+using Label = int;
+using BatchRawImage = std::vector<RawImage>;
+using BatchLabel = std::vector<Label>;
+using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
+
 class BatchHandler{
 private:
   // parameters
@@ -53,9 +59,9 @@ private:
   std::vector<std::vector<std::future<void>>> conv_jobs;
   // current batch
   std::vector<int> bs;
-  std::vector<std::future<std::pair<std::vector<std::byte>, std::vector<int>>>> batch;
-  std::vector<std::vector<std::byte>> v_feats;
-  std::vector<std::vector<int>> v_labs;
+  std::vector<std::future<BatchImgLab>> batch;
+  std::vector<BatchRawImage> v_feats;
+  std::vector<BatchLabel> v_labs;
   std::vector<bool> allocated;
   std::queue<int> read_buf;
   std::queue<int> write_buf;
@@ -63,8 +69,8 @@ private:
   void connect();
   void check_connection();
   void img2tensor(const CassResult* result, int off, int wb);
-  std::future<std::pair<std::vector<std::byte>, std::vector<int>>> start_transfers(const std::vector<std::string>& keys, int wb);
-  std::pair<std::vector<std::byte>, std::vector<int>> wait4images(int wb);
+  std::future<BatchImgLab> start_transfers(const std::vector<std::string>& keys, int wb);
+  BatchImgLab wait4images(int wb);
   void keys2transfers(const std::vector<std::string>& keys, int wb);
   void transfer2conv(CassFuture* query_future, int wb, int i);
   static void wrap_t2c(CassFuture* query_future, void* v_fd);
@@ -78,8 +84,7 @@ public:
 	       int prefetch_buffers=2, int port=9042);
   ~BatchHandler();
   void prefetch_batch_str(const std::vector<std::string>& keys);
-  std::pair<std::vector<std::byte>, std::vector<int>> load_batch(const std::vector<std::string>& keys, int wb);
-  std::pair<std::vector<std::byte>, std::vector<int>> blocking_get_batch();
+  BatchImgLab blocking_get_batch();
   void ignore_batch();
 };
 

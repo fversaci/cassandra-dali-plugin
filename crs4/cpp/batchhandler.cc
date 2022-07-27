@@ -96,8 +96,8 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
 }
 
 void BatchHandler::allocTens(int wb){
-  v_feats.resize(bs[wb]);
-  v_labs.resize(bs[wb]);
+  v_feats[wb].resize(bs[wb]);
+  v_labs[wb].resize(bs[wb]);
 }
 
 void BatchHandler::img2tensor(const CassResult* result, int off, int wb){
@@ -119,8 +119,8 @@ void BatchHandler::img2tensor(const CassResult* result, int off, int wb){
   const cass_byte_t* data;
   size_t sz;
   cass_value_get_bytes(c_data, &data, &sz);
-  // convert buffer to image as std::vector<float>
-  std::vector<char> buf(data, data+sz);
+  // copy buffer as RawImage
+  RawImage buf(data, data+sz);
   // free Cassandra result memory (values included)
   cass_result_free(result);
   // do something with buf and lab
@@ -137,6 +137,9 @@ void BatchHandler::img2tensor(const CassResult* result, int off, int wb){
     allocated[wb] = true;
   }
   alloc_mtx[wb].unlock();
+  // insert buffer in batch
+  v_feats[wb][off] = buf;
+  v_labs[wb][off] = lab;
 }
 
 void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i){
@@ -188,7 +191,7 @@ void BatchHandler::keys2transfers(const std::vector<std::string>& keys, int wb){
   }
 }
 
-std::future<std::pair<std::vector<std::byte>, std::vector<int>>> BatchHandler::start_transfers(const std::vector<std::string>& keys, int wb){
+std::future<BatchImgLab> BatchHandler::start_transfers(const std::vector<std::string>& keys, int wb){
   // lock until conv_jobs have been added
   wait_mtx[wb].lock();
   bs[wb] = keys.size();
@@ -199,7 +202,7 @@ std::future<std::pair<std::vector<std::byte>, std::vector<int>>> BatchHandler::s
   return(r);
 }
 
-std::pair<std::vector<std::byte>, std::vector<int>> BatchHandler::wait4images(int wb){
+BatchImgLab BatchHandler::wait4images(int wb){
   // check in tranfers succeeded
   comm_jobs[wb].get();
   // wait for conv_jobs to be scheduled
@@ -235,8 +238,7 @@ void BatchHandler::prefetch_batch_str(const std::vector<std::string>& ks){
   read_buf.push(wb);
 }
 
-std::pair<std::vector<std::byte>, std::vector<int>> BatchHandler::blocking_get_batch(){
-  //check_connection();
+BatchImgLab BatchHandler::blocking_get_batch(){
   // recover
   int rb = read_buf.front();
   read_buf.pop();

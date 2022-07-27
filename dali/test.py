@@ -34,7 +34,7 @@ except ImportError:
     cass_pass = getpass("Insert Cassandra password: ")
 
 # read list of uuids
-dataset_nm="imagenette"
+dataset_nm="imagenet"
 suff="_jpg"
 split_fn = f"{dataset_nm}{suff}.split"
 with open(split_fn, "rb") as f:
@@ -43,7 +43,7 @@ uuids = x['row_keys']
 uuids = list(map(str, uuids)) # convert uuids to strings
 
 cass_conf = [
-    f"{dataset_nm}.ids_224{suff}",
+    f"{dataset_nm}.data_224{suff}",
     "label",
     "data",
     "patch_id",
@@ -52,7 +52,7 @@ cass_conf = [
 ]
 
 # create dali pipeline
-@pipeline_def(batch_size=3, num_threads=1, device_id=1)
+@pipeline_def(batch_size=128, num_threads=1, device_id=1)
 def get_dali_pipeline():
     images = fn.crs4.cassandra(name="CassReader", uuids=uuids,
                                cass_conf=cass_conf,
