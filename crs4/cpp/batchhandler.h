@@ -13,14 +13,17 @@
 #include <future>
 #include <utility>
 #include <mutex>
+#include "ThreadPool.h"
+#include "dali/pipeline/operator/operator.h"
 #include "credentials.h"
 
-#include "ThreadPool.h"
-
 using RawImage = std::vector<char>;
-using Label = int;
+using Label = int32_t;
 using BatchRawImage = std::vector<RawImage>;
-using BatchLabel = std::vector<Label>;
+// using BatchRawImage = ::dali::TensorVector<::dali::CPUBackend>;
+// using TensImage = ::dali::Tensor<::dali::CPUBackend>;
+// using BatchLabel = std::vector<Label>;
+using BatchLabel = ::dali::TensorVector<::dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 
 class BatchHandler{
@@ -79,9 +82,9 @@ public:
   BatchHandler(std::string table, std::string label_col, std::string data_col,
 	       std::string id_col, // std::vector<int> label_map,
 	       std::string username, std::string cass_pass,
-	       std::vector<std::string> cassandra_ips, int tcp_connection=2,
-	       int threads=2, int batch_par=2, int comm_par=1,
-	       int prefetch_buffers=2, int port=9042);
+	       std::vector<std::string> cassandra_ips, int tcp_connection=4,
+	       int threads=10, int batch_par=2, int comm_par=1,
+	       int prefetch_buffers=4, int port=9042);
   ~BatchHandler();
   void prefetch_batch_str(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();

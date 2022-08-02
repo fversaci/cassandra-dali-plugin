@@ -97,7 +97,11 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
 
 void BatchHandler::allocTens(int wb){
   v_feats[wb].resize(bs[wb]);
-  v_labs[wb].resize(bs[wb]);
+
+  v_labs[wb] = BatchLabel();
+  std::vector<long int> v_sz(bs[wb], 1);
+  ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
+  v_labs[wb].Resize(t_sz, ::dali::DALI_INT32);
 }
 
 void BatchHandler::img2tensor(const CassResult* result, int off, int wb){
@@ -121,25 +125,22 @@ void BatchHandler::img2tensor(const CassResult* result, int off, int wb){
   cass_value_get_bytes(c_data, &data, &sz);
   // copy buffer as RawImage
   RawImage buf(data, data+sz);
-  // free Cassandra result memory (values included)
-  cass_result_free(result);
   // do something with buf and lab
   ////////////////////////////////////////////////////////////////////////
   // run once per batch, allocate new vector
   ////////////////////////////////////////////////////////////////////////
   alloc_mtx[wb].lock();
-  // synchronize previous transfers on buffer wb
+  // allocate batch
   if (!allocated[wb]){
-    // allocate batch if needed
-    if (v_feats[wb].size()!=bs[wb]){
-      allocTens(wb);
-    }
+    allocTens(wb);
     allocated[wb] = true;
   }
   alloc_mtx[wb].unlock();
   // insert buffer in batch
   v_feats[wb][off] = buf;
-  v_labs[wb][off] = lab;
+  *(v_labs[wb].mutable_tensor<Label>(off)) = lab;
+  // free Cassandra result memory (values included)
+  cass_result_free(result);
 }
 
 void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i){
@@ -157,7 +158,7 @@ void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i){
   // enqueue image conversion
   auto cj = conv_pool->enqueue(&BatchHandler::img2tensor, this, result, i, wb);
   loc_mtx[wb].lock();
-  conv_jobs[wb].emplace_back(move(cj));
+  conv_jobs[wb].emplace_back(std::move(cj));
   // if all conv_jobs added, unlock wait mutex
   if (conv_jobs[wb].size()==bs[wb])
     wait_mtx[wb].unlock();    
@@ -215,11 +216,11 @@ BatchImgLab BatchHandler::wait4images(int wb){
   conv_jobs[wb].clear();
   comm_jobs[wb] = std::future<void>();
   // copy vector to be returned
-  auto nv_feats = move(v_feats[wb]);
-  auto nv_labs = move(v_labs[wb]);
+  BatchRawImage nv_feats = std::move(v_feats[wb]);
+  BatchLabel nv_labs = std::move(v_labs[wb]);
   allocated[wb] = false;
   wait_mtx[wb].unlock(); // release lock on batch wb
-  auto r = std::make_pair(nv_feats, nv_labs);
+  BatchImgLab r = std::make_pair(std::move(nv_feats), std::move(nv_labs));
   return(r);
 }
 

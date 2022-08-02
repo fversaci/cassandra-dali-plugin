@@ -52,22 +52,24 @@ cass_conf = [
 ]
 
 # create dali pipeline
-@pipeline_def(batch_size=128, num_threads=1, device_id=1)
+@pipeline_def(batch_size=128, num_threads=12, device_id=1)
 def get_dali_pipeline():
-    images = fn.crs4.cassandra(name="CassReader", uuids=uuids,
-                               cass_conf=cass_conf,
-                               cass_ips=cass_ips)
+    images, labels = fn.crs4.cassandra(name="CassReader", uuids=uuids,
+                                       cass_conf=cass_conf,
+                                       cass_ips=cass_ips)
     images = fn.decoders.image(images, device="mixed", output_type=types.RGB)
-    return images
+    labels = labels.gpu()
+    return images, labels
 
 pl = get_dali_pipeline()
 pl.build()
 
 ddl = DALIGenericIterator(
-   [pl], ['data'],
+   [pl], ['data', 'label'],
    reader_name='CassReader'
 )
 
 for data in tqdm(ddl):
     x = data[0]['data']
+    y = data[0]['label']
 ddl.reset() # rewind data loader

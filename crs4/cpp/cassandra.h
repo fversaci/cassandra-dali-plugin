@@ -57,7 +57,7 @@ private:
   std::vector<std::string> cass_ips;
   std::vector<std::string> cass_conf;
   BatchHandler* bh = nullptr;
-  int bs;
+  int batch_size;
 };
 
 }  // namespace crs4
