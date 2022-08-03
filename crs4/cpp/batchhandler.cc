@@ -104,27 +104,13 @@ void BatchHandler::allocTens(int wb){
   v_labs[wb].Resize(t_sz, ::dali::DALI_INT32);
 }
 
-void BatchHandler::img2tensor(const CassResult* result, int off, int wb){
-  // decode result
-  const CassRow* row = cass_result_first_row(result);
-  if (row == NULL) {
-    // Handle error
-    throw std::runtime_error("Error: query returned empty set");
-  }
-  const CassValue* c_lab =
-    cass_row_get_column_by_name(row, label_col.c_str());
-  const CassValue* c_data =
-    cass_row_get_column_by_name(row, data_col.c_str());
-  cass_int32_t lab;
-  cass_value_get_int32(c_lab, &lab);
-  //// if needed, map label to new one
-  // if (use_label_map)
-  //   lab = label_map[lab];
-  const cass_byte_t* data;
-  size_t sz;
-  cass_value_get_bytes(c_data, &data, &sz);
+void BatchHandler::img2tensor(const CassResult* result,
+			      const cass_byte_t* data, size_t sz,
+			      cass_int32_t lab, int off, int wb){
   // copy buffer as RawImage
   RawImage buf(data, data+sz);
+  // free Cassandra result memory (data included)
+  cass_result_free(result);  
   // do something with buf and lab
   ////////////////////////////////////////////////////////////////////////
   // run once per batch, allocate new vector
@@ -139,8 +125,6 @@ void BatchHandler::img2tensor(const CassResult* result, int off, int wb){
   // insert buffer in batch
   v_feats[wb][off] = buf;
   *(v_labs[wb].mutable_tensor<Label>(off)) = lab;
-  // free Cassandra result memory (values included)
-  cass_result_free(result);
 }
 
 void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i){
@@ -155,8 +139,24 @@ void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i){
     throw std::runtime_error("Error: unable to execute query, " +
 			std::string(error_message));
   }
+  // decode result
+  const CassRow* row = cass_result_first_row(result);
+  if (row == NULL) {
+    // Handle error
+    throw std::runtime_error("Error: query returned empty set");
+  }
+  const CassValue* c_lab =
+    cass_row_get_column_by_name(row, label_col.c_str());
+  const CassValue* c_data =
+    cass_row_get_column_by_name(row, data_col.c_str());
+  cass_int32_t lab;
+  cass_value_get_int32(c_lab, &lab);
+  const cass_byte_t* data;
+  size_t sz;
+  cass_value_get_bytes(c_data, &data, &sz);
   // enqueue image conversion
-  auto cj = conv_pool->enqueue(&BatchHandler::img2tensor, this, result, i, wb);
+  auto cj = conv_pool->enqueue(&BatchHandler::img2tensor, this,
+			       result, data, sz, lab, i, wb);
   loc_mtx[wb].lock();
   conv_jobs[wb].emplace_back(std::move(cj));
   // if all conv_jobs added, unlock wait mutex
@@ -231,7 +231,7 @@ void BatchHandler::check_connection(){
   }
 }
 
-void BatchHandler::prefetch_batch_str(const std::vector<std::string>& ks){
+void BatchHandler::prefetch_batch(const std::vector<std::string>& ks){
   int wb = write_buf.front();
   write_buf.pop();
   check_connection();

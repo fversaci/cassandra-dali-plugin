@@ -22,7 +22,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
 			cass_conf[3], cass_conf[4], cass_conf[5],
 			cass_ips);
   auto batch_ids = std::vector(uuids.begin(), uuids.begin()+batch_size);
-  bh->prefetch_batch_str(batch_ids);
+  bh->prefetch_batch(batch_ids);
 }
 
 void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
@@ -30,7 +30,7 @@ void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
   BatchImgLab batch = bh->blocking_get_batch();
   BatchRawImage feats = batch.first;
   auto batch_ids = std::vector(uuids.begin(), uuids.begin()+batch_size);
-  bh->prefetch_batch_str(batch_ids);
+  bh->prefetch_batch(batch_ids);
   int ibs = feats.size(); // input batch size
   std::vector<int64_t> sz;
   for (auto i = 0; i != ibs; ++i){

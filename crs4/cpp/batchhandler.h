@@ -34,8 +34,6 @@ private:
   std::string label_col;
   std::string data_col;
   std::string id_col;
-  // std::vector<int> label_map;
-  // bool use_label_map = false;
   std::string username;
   std::string password;
   std::vector<std::string> cassandra_ips;
@@ -71,7 +69,8 @@ private:
   // methods
   void connect();
   void check_connection();
-  void img2tensor(const CassResult* result, int off, int wb);
+  void img2tensor(const CassResult* result, const cass_byte_t* data,
+		  size_t sz, cass_int32_t lab, int off, int wb);
   std::future<BatchImgLab> start_transfers(const std::vector<std::string>& keys, int wb);
   BatchImgLab wait4images(int wb);
   void keys2transfers(const std::vector<std::string>& keys, int wb);
@@ -80,13 +79,13 @@ private:
   void allocTens(int wb);
 public:
   BatchHandler(std::string table, std::string label_col, std::string data_col,
-	       std::string id_col, // std::vector<int> label_map,
+	       std::string id_col, 
 	       std::string username, std::string cass_pass,
 	       std::vector<std::string> cassandra_ips, int tcp_connection=4,
 	       int threads=10, int batch_par=2, int comm_par=1,
 	       int prefetch_buffers=4, int port=9042);
   ~BatchHandler();
-  void prefetch_batch_str(const std::vector<std::string>& keys);
+  void prefetch_batch(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();
   void ignore_batch();
 };
