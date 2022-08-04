@@ -37,7 +37,7 @@ except ImportError:
     cass_pass = getpass("Insert Cassandra password: ")
 
 # read list of uuids
-dataset_nm = "imagenette"
+dataset_nm = "imagenet"
 suff = "jpg"
 split_fn = f"{dataset_nm}_{suff}.split"
 with open(split_fn, "rb") as f:
@@ -71,7 +71,7 @@ def get_dali_pipeline():
         uuids=uuids,
         cass_conf=cass_conf,
         cass_ips=cass_ips,
-        prefetch_queue_depth=4,
+        prefetch_buffers=4,
         tcp_connections=6,
         copy_threads=2,
     )
@@ -85,7 +85,20 @@ def get_dali_pipeline():
 
 
 pl = get_dali_pipeline()
-#pl.build()
+pl.build()
+
+bs = pl.max_batch_size
+steps = (pl.epoch_size()['CassReader'] + bs - 1)//bs
+
+for _ in trange(10):
+    for _ in trange(steps):
+        pl.run()
+
+exit()
+
+########################################################################
+# pytorch iterator
+########################################################################
 
 ddl = DALIGenericIterator([pl], ["data", "label"], reader_name="CassReader")
 

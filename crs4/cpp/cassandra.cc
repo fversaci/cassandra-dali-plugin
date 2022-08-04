@@ -17,7 +17,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   uuids(spec.GetArgument<std::vector<std::string>>("uuids")),
   cass_ips(spec.GetArgument<std::vector<std::string>>("cass_ips")),
   cass_conf(spec.GetArgument<std::vector<std::string>>("cass_conf")),
-  prefetch_buffers(spec.GetArgument<int>("prefetch_queue_depth")),
+  prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   tcp_connections(spec.GetArgument<int>("tcp_connections")),
   copy_threads(spec.GetArgument<int>("copy_threads"))
 {
@@ -76,6 +76,6 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg<std::vector<std::string>>("uuids", R"(A list of uuids)", nullptr)
 .AddOptionalArg<std::vector<std::string>>("cass_ips", R"(List of Cassandra IPs)", nullptr)
 .AddOptionalArg<std::vector<std::string>>("cass_conf", R"(Cassandra configuration parameters)", nullptr)
-.AddOptionalArg("prefetch_queue_depth", R"(Number or prefetch buffers)", 1)
+.AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
 .AddOptionalArg("tcp_connections", R"(TCP connections used by Cassandra driver)", 2)
 .AddOptionalArg("copy_threads", R"(Number of thread copying data in parallel)", 2);
