@@ -5,17 +5,18 @@
 # https://opensource.org/licenses/MIT.
 
 # cassandra
-from cassandradl import CassandraDataset, CassandraListManager
-from cassandra.auth import PlainTextAuthProvider
+# from cassandradl import CassandraDataset, CassandraListManager
+# from cassandra.auth import PlainTextAuthProvider
 
 # dali
 import nvidia.dali.fn as fn
 from nvidia.dali.pipeline import pipeline_def
 import nvidia.dali.types as types
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
+from nvidia.dali.plugin.base_iterator import LastBatchPolicy
 import nvidia.dali.plugin_manager as plugin_manager
-
 plugin_manager.load_library("./cpp/build/libcrs4cassandra.so")
+
 # varia
 import pickle
 from tqdm import trange, tqdm
@@ -58,10 +59,10 @@ src_dir = os.path.join(f"/data/{dataset_nm}-cropped/", suff)
 
 # create dali pipeline
 @pipeline_def(
-    batch_size=1,
+    batch_size=128,
     num_threads=10,
     device_id=1, #types.CPU_ONLY_DEVICE_ID,
-    prefetch_queue_depth=4,
+    # prefetch_queue_depth=2,
 )
 def get_dali_pipeline():
     # images, labels = fn.readers.file(file_root=src_dir, name="CassReader")
@@ -74,12 +75,12 @@ def get_dali_pipeline():
         tcp_connections=4,
         copy_threads=2,
     )
-    # images = fn.decoders.image(
-    #     images,
-    #     device="mixed",
-    #     output_type=types.RGB,
-    # )
-    labels = labels.gpu()
+    images = fn.decoders.image(
+        images,
+        device="mixed",
+        output_type=types.RGB,
+    )
+    # labels = labels.gpu()
     return images, labels
 
 
@@ -88,8 +89,7 @@ pl = get_dali_pipeline()
 
 ddl = DALIGenericIterator([pl], ["data", "label"], reader_name="CassReader")
 
-for _ in range(100):
+for _ in range(1000):
     for data in tqdm(ddl):
-        x = data[0]["data"]
-        y = data[0]["label"]
+        x, y = data[0]["data"], data[0]["label"]
     ddl.reset()  # rewind data loader

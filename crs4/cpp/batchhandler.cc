@@ -81,10 +81,8 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
   shape_count.resize(prefetch_buffers);
   alloc_cv = std::vector<std::condition_variable>(prefetch_buffers);
   alloc_mtx = std::vector<std::mutex>(prefetch_buffers);
-  wait_mtx = std::vector<std::mutex>(prefetch_buffers);
   for(int i=0; i<prefetch_buffers; ++i) {
     write_buf.push(i);
-    allocated.push_back(false);
   }
   // join cassandra ip's into comma seperated string
   s_cassandra_ips =
@@ -114,7 +112,6 @@ void BatchHandler::img2tensor(const CassResult* result,
   // wait for feature tensor to be allocated
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    // while (!allocated[wb])
     while(copy_jobs[wb].size()!=bs[wb]){
       alloc_cv[wb].wait(lck);
     }
@@ -163,13 +160,10 @@ void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i) {
     copy_jobs[wb].emplace_back(std::move(cj));
     // if all copy_jobs added 
     if (copy_jobs[wb].size()==bs[wb]){
-      // allocate feature tensor
+      // allocate feature tensor and notify waiting threads
       ::dali::TensorListShape t_sz(shapes[wb], bs[wb], 1);
       v_feats[wb].Resize(t_sz, ::dali::DALI_UINT8);
-      allocated[wb] = true;
       alloc_cv[wb].notify_all();
-      // unlock wait mutex
-      wait_mtx[wb].unlock();
     }
   }
 }
@@ -204,8 +198,6 @@ void BatchHandler::keys2transfers(const std::vector<std::string>& keys, int wb) 
 }
 
 std::future<BatchImgLab> BatchHandler::start_transfers(const std::vector<std::string>& keys, int wb) {
-  // lock until copy_jobs have been added
-  wait_mtx[wb].lock();
   bs[wb] = keys.size();
   copy_jobs[wb].reserve(bs[wb]);
   allocTens(wb); // allocate space for tensors
@@ -218,20 +210,23 @@ std::future<BatchImgLab> BatchHandler::start_transfers(const std::vector<std::st
 BatchImgLab BatchHandler::wait4images(int wb) {
   // check if tranfers succeeded
   comm_jobs[wb].get();
-  // wait for copy_jobs to be scheduled
-  wait_mtx[wb].lock();
+  // wait for all copy_jobs to be scheduled
+  {
+    std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
+    while(copy_jobs[wb].size()!=bs[wb]){
+      alloc_cv[wb].wait(lck);
+    }
+  }
   // check if all images were copied correctly
   for(auto it=copy_jobs[wb].begin(); it!=copy_jobs[wb].end(); ++it) {
     it->get(); // using get to propagates exceptions
   }
   // reset job queues
   copy_jobs[wb].clear();
-  allocated[wb] = false;
   comm_jobs[wb] = std::future<void>();
   // copy vector to be returned
   BatchRawImage nv_feats = std::move(v_feats[wb]);
   BatchLabel nv_labs = std::move(v_labs[wb]);
-  wait_mtx[wb].unlock(); // release lock on batch wb
   BatchImgLab r = std::make_pair(std::move(nv_feats), std::move(nv_labs));
   return(r);
 }

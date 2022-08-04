@@ -51,10 +51,8 @@ private:
   int wait_par;
   int comm_par; // number of communication threads
   int prefetch_buffers; // multi-buffering
-  std::mutex glob_mtx;
   std::vector<std::mutex> alloc_mtx;
   std::vector<std::condition_variable> alloc_cv;
-  std::vector<std::mutex> wait_mtx;
   std::vector<std::future<void>> comm_jobs;
   std::vector<std::vector<std::future<void>>> copy_jobs;
   // current batch
@@ -62,7 +60,6 @@ private:
   std::vector<std::future<BatchImgLab>> batch;
   std::vector<BatchRawImage> v_feats;
   std::vector<BatchLabel> v_labs;
-  std::vector<bool> allocated;
   std::queue<int> read_buf;
   std::queue<int> write_buf;
   std::vector<std::vector<int64_t>> shapes;
