@@ -1,5 +1,5 @@
 // Copyright 2021-2 CRS4
-// 
+//
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
@@ -19,14 +19,13 @@
 
 using RawImage = std::vector<char>;
 using Label = int32_t;
-using BatchRawImage = std::vector<RawImage>;
-// using BatchRawImage = ::dali::TensorVector<::dali::CPUBackend>;
+// using BatchRawImage = std::vector<RawImage>;
+using BatchRawImage = ::dali::TensorVector<::dali::CPUBackend>;
 // using TensImage = ::dali::Tensor<::dali::CPUBackend>;
-// using BatchLabel = std::vector<Label>;
 using BatchLabel = ::dali::TensorVector<::dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 
-class BatchHandler{
+class BatchHandler {
 private:
   // parameters
   bool connected = false;
@@ -45,19 +44,19 @@ private:
   const CassPrepared* prepared;
   // concurrency
   ThreadPool* comm_pool;
-  ThreadPool* conv_pool;
-  ThreadPool* batch_pool;
+  ThreadPool* copy_pool;
+  ThreadPool* wait_pool;
   int tcp_connections;
-  int threads; // thread parallelism
-  int batch_par;
+  int copy_threads; // copy parallelism
+  int wait_par;
   int comm_par; // number of communication threads
   int prefetch_buffers; // multi-buffering
   std::mutex glob_mtx;
   std::vector<std::mutex> alloc_mtx;
-  std::vector<std::mutex> loc_mtx;
+  std::vector<std::condition_variable> alloc_cv;
   std::vector<std::mutex> wait_mtx;
   std::vector<std::future<void>> comm_jobs;
-  std::vector<std::vector<std::future<void>>> conv_jobs;
+  std::vector<std::vector<std::future<void>>> copy_jobs;
   // current batch
   std::vector<int> bs;
   std::vector<std::future<BatchImgLab>> batch;
@@ -66,11 +65,13 @@ private:
   std::vector<bool> allocated;
   std::queue<int> read_buf;
   std::queue<int> write_buf;
+  std::vector<std::vector<int64_t>> shapes;
+  std::vector<int> shape_count;
   // methods
   void connect();
   void check_connection();
   void img2tensor(const CassResult* result, const cass_byte_t* data,
-		  size_t sz, cass_int32_t lab, int off, int wb);
+                  size_t sz, cass_int32_t lab, int off, int wb);
   std::future<BatchImgLab> start_transfers(const std::vector<std::string>& keys, int wb);
   BatchImgLab wait4images(int wb);
   void keys2transfers(const std::vector<std::string>& keys, int wb);
@@ -79,18 +80,18 @@ private:
   void allocTens(int wb);
 public:
   BatchHandler(std::string table, std::string label_col, std::string data_col,
-	       std::string id_col, 
-	       std::string username, std::string cass_pass,
-	       std::vector<std::string> cassandra_ips, int tcp_connection=4,
-	       int threads=10, int batch_par=2, int comm_par=1,
-	       int prefetch_buffers=4, int port=9042);
+               std::string id_col,
+               std::string username, std::string cass_pass,
+               std::vector<std::string> cassandra_ips, int prefetch_buffers,
+               int tcp_connections, int copy_threads, int wait_par=2,
+               int comm_par=2, int port=9042);
   ~BatchHandler();
   void prefetch_batch(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();
   void ignore_batch();
 };
 
-struct futdata{
+struct futdata {
   BatchHandler* bh;
   int wb;
   int i;

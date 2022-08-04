@@ -1,5 +1,5 @@
 // Copyright 2021-2 CRS4
-// 
+//
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
@@ -39,7 +39,7 @@ public:
     if (bh!=nullptr)
       delete bh;
   }
-  
+
 protected:
   bool CanInferOutputs() const override {
     return false;
@@ -53,11 +53,17 @@ protected:
   void RunImpl(::dali::workspace_t<dali::CPUBackend> &ws) override;
 
 private:
+  void prefetch_one();
+
   std::vector<std::string> uuids;
   std::vector<std::string> cass_ips;
   std::vector<std::string> cass_conf;
   BatchHandler* bh = nullptr;
   int batch_size;
+  int prefetch_buffers;
+  int tcp_connections;
+  int copy_threads;
+  std::vector<std::string>::iterator current;
 };
 
 }  // namespace crs4
