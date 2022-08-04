@@ -36,8 +36,9 @@ public:
   }
 
   ~Cassandra() override {
-    if (bh!=nullptr)
+    if (bh!=nullptr){
       delete bh;
+    }
   }
 
 protected:

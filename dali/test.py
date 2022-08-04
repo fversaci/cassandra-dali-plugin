@@ -37,7 +37,7 @@ except ImportError:
     cass_pass = getpass("Insert Cassandra password: ")
 
 # read list of uuids
-dataset_nm = "imagenet"
+dataset_nm = "imagenette"
 suff = "jpg"
 split_fn = f"{dataset_nm}_{suff}.split"
 with open(split_fn, "rb") as f:
@@ -72,7 +72,7 @@ def get_dali_pipeline():
         cass_conf=cass_conf,
         cass_ips=cass_ips,
         prefetch_queue_depth=4,
-        tcp_connections=4,
+        tcp_connections=6,
         copy_threads=2,
     )
     images = fn.decoders.image(
@@ -89,7 +89,7 @@ pl = get_dali_pipeline()
 
 ddl = DALIGenericIterator([pl], ["data", "label"], reader_name="CassReader")
 
-for _ in range(1000):
+for _ in range(10):
     for data in tqdm(ddl):
         x, y = data[0]["data"], data[0]["label"]
     ddl.reset()  # rewind data loader

@@ -15,6 +15,7 @@
 
 BatchHandler::~BatchHandler() {
   if (connected) {
+    ignore_batch();
     cass_session_free(session);
     cass_cluster_free(cluster);
     delete(copy_pool);
