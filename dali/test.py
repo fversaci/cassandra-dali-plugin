@@ -37,8 +37,9 @@ except ImportError:
     cass_pass = getpass("Insert Cassandra password: ")
 
 # read list of uuids
-dataset_nm = "imagenet"
+dataset_nm = "imagenette"
 suff = "jpg"
+
 split_fn = f"{dataset_nm}_{suff}.split"
 with open(split_fn, "rb") as f:
     x = pickle.load(f)
@@ -65,7 +66,10 @@ src_dir = os.path.join(f"/data/{dataset_nm}-cropped/", suff)
     # prefetch_queue_depth=2,
 )
 def get_dali_pipeline():
-    # images, labels = fn.readers.file(file_root=src_dir, name="CassReader")
+    # images, labels = fn.readers.file(
+    #     file_root=src_dir,
+    #     name="CassReader",
+    # )
     images, labels = fn.crs4.cassandra(        
         name="CassReader",
         uuids=uuids,
@@ -90,7 +94,7 @@ pl.build()
 bs = pl.max_batch_size
 steps = (pl.epoch_size()['CassReader'] + bs - 1)//bs
 
-for _ in trange(10):
+for _ in range(10):
     for _ in trange(steps):
         pl.run()
 

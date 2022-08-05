@@ -51,6 +51,12 @@ protected:
     return false;
   }
 
+  inline void Reset() {
+    // std::cout << "Reset" << std::endl;
+    current = uuids.begin();
+  }
+
+  
   void RunImpl(::dali::workspace_t<dali::CPUBackend> &ws) override;
 
 private:

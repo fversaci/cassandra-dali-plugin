@@ -25,7 +25,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
                         cass_conf[3], cass_conf[4], cass_conf[5],
                         cass_ips, prefetch_buffers, tcp_connections,
                         copy_threads);
-  current = uuids.begin();
+  Reset();
   // start prefetching
   for (int i=0; i<prefetch_buffers; ++i)
     prefetch_one();
@@ -35,7 +35,7 @@ void Cassandra::prefetch_one() {
   auto dist = std::distance(current, uuids.end());
   // if reached the end, rewind
   if (dist==0){
-    current = uuids.begin();
+    Reset();
     dist = uuids.size();
   }
   // full batch
