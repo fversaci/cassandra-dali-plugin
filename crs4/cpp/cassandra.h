@@ -42,10 +42,6 @@ public:
   }
 
 protected:
-  bool CanInferOutputs() const override {
-    return false;
-  }
-
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
                  const ::dali::workspace_t<::dali::CPUBackend> &ws) override {
     return false;
@@ -55,7 +51,6 @@ protected:
     // std::cout << "Reset" << std::endl;
     current = uuids.begin();
   }
-
   
   void RunImpl(::dali::workspace_t<dali::CPUBackend> &ws) override;
 
