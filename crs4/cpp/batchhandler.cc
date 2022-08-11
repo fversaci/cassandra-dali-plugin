@@ -99,7 +99,7 @@ void BatchHandler::allocTens(int wb) {
   shapes[wb].resize(bs[wb]);
   shape_count[wb]=0;
   v_feats[wb] = BatchRawImage();
-  // v_feats[wb].set_pinned(true);
+  v_feats[wb].set_pinned(false);
   v_feats[wb].SetContiguous(true);
   v_labs[wb] = BatchLabel();
   std::vector<long int> v_sz(bs[wb], 1);

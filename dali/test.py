@@ -37,7 +37,7 @@ except ImportError:
     cass_pass = getpass("Insert Cassandra password: ")
 
 # read list of uuids
-dataset_nm = "imagenette"
+dataset_nm = "imagenet"
 suff = "jpg"
 
 split_fn = f"{dataset_nm}_{suff}.split"
@@ -61,7 +61,7 @@ src_dir = os.path.join(f"/data/{dataset_nm}-cropped/", suff)
 # create dali pipeline
 @pipeline_def(
     batch_size=128,
-    num_threads=10,
+    num_threads=36,
     device_id=1, #types.CPU_ONLY_DEVICE_ID,
     # prefetch_queue_depth=2,
 )
@@ -75,16 +75,19 @@ def get_dali_pipeline():
         uuids=uuids,
         cass_conf=cass_conf,
         cass_ips=cass_ips,
-        prefetch_buffers=4,
-        tcp_connections=6,
+        prefetch_buffers=16,
+        tcp_connections=8,
         copy_threads=2,
     )
     images = fn.decoders.image(
         images,
-        device="mixed",
+        device="cpu",
         output_type=types.RGB,
-    )
-    # labels = labels.gpu()
+        use_fast_idct=True,
+        # memory_stats=True,
+    ) # note: output is HWC (channels-last)
+    images = images.gpu() # redundant if already in gpu
+    labels = labels.gpu()
     return images, labels
 
 
@@ -96,8 +99,7 @@ steps = (pl.epoch_size()['CassReader'] + bs - 1)//bs
 
 for _ in range(10):
     for _ in trange(steps):
-        pl.run()
-
+        x,y = pl.run()
 exit()
 
 ########################################################################

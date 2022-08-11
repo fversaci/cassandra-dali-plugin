@@ -27,8 +27,9 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
                         copy_threads);
   Reset();
   // start prefetching
-  for (int i=0; i<prefetch_buffers; ++i)
+  for (int i=0; i<prefetch_buffers; ++i){
     prefetch_one();
+  }
 }
 
 void Cassandra::prefetch_one() {
