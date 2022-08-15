@@ -36,7 +36,7 @@ public:
   }
 
   ~Cassandra() override {
-    if (bh!=nullptr){
+    if (bh!=nullptr) {
       delete bh;
     }
   }
@@ -51,7 +51,7 @@ protected:
     // std::cout << "Reset" << std::endl;
     current = uuids.begin();
   }
-  
+
   void RunImpl(::dali::workspace_t<dali::CPUBackend> &ws) override;
 
 private:

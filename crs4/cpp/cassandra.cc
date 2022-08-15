@@ -28,10 +28,10 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   bh = new BatchHandler(cass_conf[0], cass_conf[1], cass_conf[2],
                         cass_conf[3], cass_conf[4], cass_conf[5],
                         cass_ips, cass_port, use_ssl, tcp_connections,
-			prefetch_buffers, copy_threads, wait_par, comm_par);
+                        prefetch_buffers, copy_threads, wait_par, comm_par);
   Reset();
   // start prefetching
-  for (int i=0; i<prefetch_buffers; ++i){
+  for (int i=0; i<prefetch_buffers; ++i) {
     prefetch_one();
   }
 }
@@ -39,7 +39,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
 void Cassandra::prefetch_one() {
   auto dist = std::distance(current, uuids.end());
   // if reached the end, rewind
-  if (dist==0){
+  if (dist==0) {
     Reset();
     dist = uuids.size();
   }
@@ -71,19 +71,25 @@ void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
 
 }  // namespace crs4
 
-DALI_REGISTER_OPERATOR(crs4__cassandra,
-                       ::crs4::Cassandra, ::dali::CPU);
+DALI_REGISTER_OPERATOR(crs4__cassandra, ::crs4::Cassandra, ::dali::CPU);
 
 DALI_SCHEMA(crs4__cassandra)
 .DocStr("Takes nothing returns something")
 .NumInput(0)
 .NumOutput(2)
-.AddOptionalArg<std::vector<std::string>>("uuids", R"(A list of uuids)", nullptr)
-.AddOptionalArg<std::vector<std::string>>("cass_ips", R"(List of Cassandra IPs)", nullptr)
-.AddOptionalArg("cass_port", R"(Port to connect to in the Cassandra server)", 9042)
-.AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false).AddOptionalArg<std::vector<std::string>>("cass_conf", R"(Cassandra configuration parameters)", nullptr)
+.AddOptionalArg<std::vector<std::string>>("uuids",
+   R"(A list of uuids)", nullptr)
+.AddOptionalArg<std::vector<std::string>>("cass_ips",
+   R"(List of Cassandra IPs)", nullptr)
+.AddOptionalArg("cass_port",
+   R"(Port to connect to in the Cassandra server)", 9042)
+.AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
+.AddOptionalArg<std::vector<std::string>>("cass_conf",
+   R"(Cassandra configuration parameters)", nullptr)
 .AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
-.AddOptionalArg("tcp_connections", R"(TCP connections used by Cassandra driver)", 2)
-.AddOptionalArg("copy_threads", R"(Number of thread copying data in parallel)", 2)
+.AddOptionalArg("tcp_connections",
+   R"(TCP connections used by Cassandra driver)", 2)
+.AddOptionalArg("copy_threads",
+   R"(Number of thread copying data in parallel)", 2)
 .AddOptionalArg("wait_par", R"(Parallelism for waiting threads)", 2)
 .AddOptionalArg("comm_par", R"(Parallelism for communication threads)", 2);

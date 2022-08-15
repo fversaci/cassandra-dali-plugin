@@ -24,7 +24,7 @@ BatchHandler::~BatchHandler() {
   }
 }
 
-void set_ssl(CassCluster* cluster){
+void set_ssl(CassCluster* cluster) {
   CassSsl* ssl = cass_ssl_new();
   cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
   cass_cluster_set_ssl(cluster, ssl);
@@ -40,7 +40,7 @@ void BatchHandler::connect() {
   cass_cluster_set_application_name(cluster, "Cassandra module for NVIDIA DALI, CRS4");
   cass_cluster_set_queue_size_io(cluster, 65536); // max pending requests
   // set ssl if required
-  if (use_ssl){
+  if (use_ssl) {
     set_ssl(cluster);
   }
   CassFuture* connect_future = cass_session_connect(session, cluster);
@@ -74,8 +74,8 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
                            std::string username, std::string cass_pass,
                            std::vector<std::string> cassandra_ips, int port,
                            bool use_ssl, int tcp_connections,
-			   int prefetch_buffers, int copy_threads,
-			   int wait_par, int comm_par) :
+                           int prefetch_buffers, int copy_threads,
+                           int wait_par, int comm_par) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   // label_map(label_map),
   username(username), password(cass_pass),
@@ -125,7 +125,7 @@ void BatchHandler::img2tensor(const CassResult* result,
   // wait for feature tensor to be allocated
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    while(copy_jobs[wb].size()!=bs[wb]){
+    while(copy_jobs[wb].size()!=bs[wb]) {
       alloc_cv[wb].wait(lck);
     }
   }
@@ -171,8 +171,8 @@ void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i) {
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
     copy_jobs[wb].emplace_back(std::move(cj));
-    // if all copy_jobs added 
-    if (copy_jobs[wb].size()==bs[wb]){
+    // if all copy_jobs added
+    if (copy_jobs[wb].size()==bs[wb]) {
       // allocate feature tensor and notify waiting threads
       ::dali::TensorListShape t_sz(shapes[wb], bs[wb], 1);
       v_feats[wb].Resize(t_sz, ::dali::DALI_UINT8);
@@ -226,7 +226,7 @@ BatchImgLab BatchHandler::wait4images(int wb) {
   // wait for all copy_jobs to be scheduled
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    while(copy_jobs[wb].size()!=bs[wb]){
+    while(copy_jobs[wb].size()!=bs[wb]) {
       alloc_cv[wb].wait(lck);
     }
   }
