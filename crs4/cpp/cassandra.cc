@@ -16,15 +16,19 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   batch_size(spec.GetArgument<int>("max_batch_size")),
   uuids(spec.GetArgument<std::vector<std::string>>("uuids")),
   cass_ips(spec.GetArgument<std::vector<std::string>>("cass_ips")),
+  cass_port(spec.GetArgument<int>("cass_port")),
+  use_ssl(spec.GetArgument<bool>("use_ssl")),
   cass_conf(spec.GetArgument<std::vector<std::string>>("cass_conf")),
   prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   tcp_connections(spec.GetArgument<int>("tcp_connections")),
-  copy_threads(spec.GetArgument<int>("copy_threads"))
+  copy_threads(spec.GetArgument<int>("wait_par")),
+  wait_par(spec.GetArgument<int>("comm_par")),
+  comm_par(spec.GetArgument<int>("copy_threads"))
 {
   bh = new BatchHandler(cass_conf[0], cass_conf[1], cass_conf[2],
                         cass_conf[3], cass_conf[4], cass_conf[5],
-                        cass_ips, prefetch_buffers, tcp_connections,
-                        copy_threads);
+                        cass_ips, cass_port, use_ssl, tcp_connections,
+			prefetch_buffers, copy_threads, wait_par, comm_par);
   Reset();
   // start prefetching
   for (int i=0; i<prefetch_buffers; ++i){
@@ -76,7 +80,10 @@ DALI_SCHEMA(crs4__cassandra)
 .NumOutput(2)
 .AddOptionalArg<std::vector<std::string>>("uuids", R"(A list of uuids)", nullptr)
 .AddOptionalArg<std::vector<std::string>>("cass_ips", R"(List of Cassandra IPs)", nullptr)
-.AddOptionalArg<std::vector<std::string>>("cass_conf", R"(Cassandra configuration parameters)", nullptr)
+.AddOptionalArg("cass_port", R"(Port to connect to in the Cassandra server)", 9042)
+.AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false).AddOptionalArg<std::vector<std::string>>("cass_conf", R"(Cassandra configuration parameters)", nullptr)
 .AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
 .AddOptionalArg("tcp_connections", R"(TCP connections used by Cassandra driver)", 2)
-.AddOptionalArg("copy_threads", R"(Number of thread copying data in parallel)", 2);
+.AddOptionalArg("copy_threads", R"(Number of thread copying data in parallel)", 2)
+.AddOptionalArg("wait_par", R"(Parallelism for waiting threads)", 2)
+.AddOptionalArg("comm_par", R"(Parallelism for communication threads)", 2);

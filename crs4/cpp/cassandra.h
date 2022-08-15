@@ -59,12 +59,16 @@ private:
 
   std::vector<std::string> uuids;
   std::vector<std::string> cass_ips;
+  int cass_port;
   std::vector<std::string> cass_conf;
   BatchHandler* bh = nullptr;
   int batch_size;
   int prefetch_buffers;
   int tcp_connections;
   int copy_threads;
+  int wait_par;
+  int comm_par;
+  bool use_ssl;
   std::vector<std::string>::iterator current;
 };
 

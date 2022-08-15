@@ -24,13 +24,25 @@ BatchHandler::~BatchHandler() {
   }
 }
 
+void set_ssl(CassCluster* cluster){
+  CassSsl* ssl = cass_ssl_new();
+  cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
+  cass_cluster_set_ssl(cluster, ssl);
+  cass_ssl_free(ssl);
+}
+
 void BatchHandler::connect() {
   cass_cluster_set_contact_points(cluster, s_cassandra_ips.c_str());
   cass_cluster_set_credentials(cluster, username.c_str(), password.c_str());
   cass_cluster_set_port(cluster, port);
   cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4);
   cass_cluster_set_num_threads_io(cluster, tcp_connections);
+  cass_cluster_set_application_name(cluster, "Cassandra module for NVIDIA DALI, CRS4");
   cass_cluster_set_queue_size_io(cluster, 65536); // max pending requests
+  // set ssl if required
+  if (use_ssl){
+    set_ssl(cluster);
+  }
   CassFuture* connect_future = cass_session_connect(session, cluster);
   CassError rc = cass_future_error_code(connect_future);
   cass_future_free(connect_future);
@@ -60,16 +72,16 @@ void BatchHandler::connect() {
 BatchHandler::BatchHandler(std::string table, std::string label_col,
                            std::string data_col, std::string id_col,
                            std::string username, std::string cass_pass,
-                           std::vector<std::string> cassandra_ips,
-                           int prefetch_buffers, int tcp_connections,
-                           int copy_threads, int wait_par, int comm_par,
-                           int port) :
+                           std::vector<std::string> cassandra_ips, int port,
+                           bool use_ssl, int tcp_connections,
+			   int prefetch_buffers, int copy_threads,
+			   int wait_par, int comm_par) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   // label_map(label_map),
   username(username), password(cass_pass),
-  cassandra_ips(cassandra_ips), port(port),
-  tcp_connections(tcp_connections), copy_threads(copy_threads),
-  wait_par(wait_par), comm_par(comm_par), prefetch_buffers(prefetch_buffers)
+  cassandra_ips(cassandra_ips), port(port), use_ssl(use_ssl),
+  tcp_connections(tcp_connections), prefetch_buffers(prefetch_buffers),
+  copy_threads(copy_threads), wait_par(wait_par), comm_par(comm_par)
 {
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
