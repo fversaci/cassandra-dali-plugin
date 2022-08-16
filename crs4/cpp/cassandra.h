@@ -62,10 +62,15 @@ protected:
 private:
   void prefetch_one();
   // variables
-  std::vector<std::string> uuids;
+  std::vector<std::string> uuids;  
   std::vector<std::string> cass_ips;
-  int cass_port;
-  std::vector<std::string> cass_conf;
+  int cass_port;  
+  std::string table;
+  std::string label_col;
+  std::string data_col;
+  std::string id_col;
+  std::string username;
+  std::string password;
   BatchHandler* bh = nullptr;
   int batch_size;
   int prefetch_buffers;
@@ -76,7 +81,7 @@ private:
   bool use_ssl;
   std::vector<std::string>::iterator current;
   bool shuffle_after_epoch;
-  int current_epoch=-1;
+  int current_epoch=-1;  
 };
 
 }  // namespace crs4

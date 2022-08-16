@@ -78,10 +78,9 @@ private:
   void allocTens(int wb);
 public:
   BatchHandler(std::string table, std::string label_col, std::string data_col,
-               std::string id_col, std::string username,
-               std::string cass_pass, std::vector<std::string> cassandra_ips,
-               int port, bool use_ssl, int tcp_connections,
-               int prefetch_buffers, int copy_threads,
+               std::string id_col, std::string username, std::string password,
+	       std::vector<std::string> cassandra_ips, int port, bool use_ssl,
+	       int tcp_connections, int prefetch_buffers, int copy_threads,
                int wait_par, int comm_par);
   ~BatchHandler();
   void prefetch_batch(const std::vector<std::string>& keys);

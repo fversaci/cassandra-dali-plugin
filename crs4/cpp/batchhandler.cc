@@ -71,14 +71,14 @@ void BatchHandler::connect() {
 
 BatchHandler::BatchHandler(std::string table, std::string label_col,
                            std::string data_col, std::string id_col,
-                           std::string username, std::string cass_pass,
+                           std::string username, std::string password,
                            std::vector<std::string> cassandra_ips, int port,
                            bool use_ssl, int tcp_connections,
                            int prefetch_buffers, int copy_threads,
                            int wait_par, int comm_par) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   // label_map(label_map),
-  username(username), password(cass_pass),
+  username(username), password(password),
   cassandra_ips(cassandra_ips), port(port), use_ssl(use_ssl),
   tcp_connections(tcp_connections), prefetch_buffers(prefetch_buffers),
   copy_threads(copy_threads), wait_par(wait_par), comm_par(comm_par)

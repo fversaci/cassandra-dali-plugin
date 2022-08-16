@@ -17,8 +17,13 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   uuids(spec.GetArgument<std::vector<std::string>>("uuids")),
   cass_ips(spec.GetArgument<std::vector<std::string>>("cass_ips")),
   cass_port(spec.GetArgument<int>("cass_port")),
+  table(spec.GetArgument<std::string>("table")),
+  label_col(spec.GetArgument<std::string>("label_col")),
+  data_col(spec.GetArgument<std::string>("data_col")),
+  id_col(spec.GetArgument<std::string>("id_col")),
+  username(spec.GetArgument<std::string>("username")),
+  password(spec.GetArgument<std::string>("password")),
   use_ssl(spec.GetArgument<bool>("use_ssl")),
-  cass_conf(spec.GetArgument<std::vector<std::string>>("cass_conf")),
   shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")),
   prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   tcp_connections(spec.GetArgument<int>("tcp_connections")),
@@ -26,10 +31,10 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   wait_par(spec.GetArgument<int>("comm_par")),
   comm_par(spec.GetArgument<int>("copy_threads"))
 {
-  bh = new BatchHandler(cass_conf[0], cass_conf[1], cass_conf[2],
-                        cass_conf[3], cass_conf[4], cass_conf[5],
-                        cass_ips, cass_port, use_ssl, tcp_connections,
-                        prefetch_buffers, copy_threads, wait_par, comm_par);
+  bh = new BatchHandler(table, label_col, data_col, id_col,
+			username, password, cass_ips, cass_port, use_ssl,
+			tcp_connections, prefetch_buffers, copy_threads,
+			wait_par, comm_par);
   Reset();
   // start prefetching
   for (int i=0; i<prefetch_buffers; ++i) {
@@ -84,6 +89,12 @@ DALI_SCHEMA(crs4__cassandra)
    R"(List of Cassandra IPs)", nullptr)
 .AddOptionalArg("cass_port",
    R"(Port to connect to in the Cassandra server)", 9042)
+.AddOptionalArg<std::string>("table", R"()", nullptr)
+.AddOptionalArg<std::string>("label_col", R"()", nullptr)
+.AddOptionalArg<std::string>("data_col", R"()", nullptr)
+.AddOptionalArg<std::string>("id_col", R"()", nullptr)
+.AddOptionalArg<std::string>("username", R"()", nullptr)
+.AddOptionalArg<std::string>("password", R"()", nullptr)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
 .AddOptionalArg<std::vector<std::string>>("cass_conf",
    R"(Cassandra configuration parameters)", nullptr)

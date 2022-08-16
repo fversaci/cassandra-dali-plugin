@@ -30,12 +30,12 @@ from torchvision import transforms
 
 # Read Cassandra parameters
 try:
-    from private_data import cass_ips, cass_user, cass_pass
+    from private_data import cass_ips, username, password
 except ImportError:
     cass_ip = getpass("Insert Cassandra's IP address: ")
     cass_ips = [cassandra_ip]
-    cass_user = getpass("Insert Cassandra user: ")
-    cass_pass = getpass("Insert Cassandra password: ")
+    username = getpass("Insert Cassandra user: ")
+    password = getpass("Insert Cassandra password: ")
 
 # read list of uuids
 dataset_nm = "imagenet"
@@ -46,15 +46,11 @@ with open(split_fn, "rb") as f:
     x = pickle.load(f)
 uuids = x["row_keys"]
 uuids = list(map(str, uuids))  # convert uuids to strings
+table = f"{dataset_nm}.data_{suff}"
+label_col = "label"
+data_col = "data" 
+id_col = "patch_id"
 
-cass_conf = [
-    f"{dataset_nm}.data_{suff}",
-    "label",
-    "data",
-    "patch_id",
-    cass_user,
-    cass_pass,
-]
 
 # test file reader
 src_dir = os.path.join(f"/data/{dataset_nm}-cropped/", suff)
@@ -76,8 +72,13 @@ def get_dali_pipeline():
         name="CassReader",
         uuids=uuids,
         shuffle_after_epoch=True,
-        cass_conf=cass_conf,
         cass_ips=cass_ips,
+        table=table,
+        label_col=label_col,
+        data_col=data_col,
+        id_col=id_col,
+        username=username,
+        password=password,
         tcp_connections=10,
         prefetch_buffers=32,
         copy_threads=2,
