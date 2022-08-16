@@ -48,15 +48,20 @@ protected:
   }
 
   inline void Reset() {
-    // std::cout << "Reset" << std::endl;
     current = uuids.begin();
+    current_epoch++;
+
+    if (shuffle_after_epoch) {
+      std::mt19937 g(kDaliDataloaderSeed + current_epoch);
+      std::shuffle(uuids.begin(), uuids.end(), g);
+    }
   }
 
   void RunImpl(::dali::workspace_t<dali::CPUBackend> &ws) override;
 
 private:
   void prefetch_one();
-
+  // variables
   std::vector<std::string> uuids;
   std::vector<std::string> cass_ips;
   int cass_port;
@@ -70,6 +75,8 @@ private:
   int comm_par;
   bool use_ssl;
   std::vector<std::string>::iterator current;
+  bool shuffle_after_epoch;
+  int current_epoch=-1;
 };
 
 }  // namespace crs4

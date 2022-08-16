@@ -15,6 +15,7 @@ import nvidia.dali.types as types
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 from nvidia.dali.plugin.base_iterator import LastBatchPolicy
 import nvidia.dali.plugin_manager as plugin_manager
+
 plugin_manager.load_library("./cpp/build/libcrs4cassandra.so")
 
 # varia
@@ -61,33 +62,36 @@ src_dir = os.path.join(f"/data/{dataset_nm}-cropped/", suff)
 # create dali pipeline
 @pipeline_def(
     batch_size=128,
-    num_threads=4,
-    device_id=1, #types.CPU_ONLY_DEVICE_ID,
+    num_threads=2,
+    device_id=1, # types.CPU_ONLY_DEVICE_ID,
     # prefetch_queue_depth=2,
+    # enable_memory_stats=True,
 )
 def get_dali_pipeline():
     # images, labels = fn.readers.file(
     #     file_root=src_dir,
     #     name="CassReader",
     # )
-    images, labels = fn.crs4.cassandra(        
+    images, labels = fn.crs4.cassandra(
         name="CassReader",
         uuids=uuids,
+        shuffle_after_epoch=True,
         cass_conf=cass_conf,
         cass_ips=cass_ips,
-        prefetch_buffers=64,
-        tcp_connections=20,
-        copy_threads=4,
-        wait_par=4,
-        # use_ssl=True,        
+        tcp_connections=10,
+        prefetch_buffers=32,
+        copy_threads=2,
+        wait_par=2,
+        comm_par=2,
+        # use_ssl=True,
     )
     # images = fn.decoders.image(
     #     images,
-    #     device="mixed",
+    #     device="cpu",
     #     output_type=types.RGB,
     #     # hybrid_huffman_threshold=100000,
     #     # memory_stats=True,
-    # ) # note: output is HWC (channels-last)
+    # )  # note: output is HWC (channels-last)
     # images = fn.crop_mirror_normalize(images,
     #                    dtype=types.FLOAT,
     #                    output_layout="CHW",
@@ -112,7 +116,7 @@ def get_dali_pipeline():
     #                    mean=[0.485 * 255,0.456 * 255,0.406 * 255],
     #                    std=[0.229 * 255,0.224 * 255,0.225 * 255])
     ########################################################################
-    images = images.gpu() # redundant if already in gpu
+    images = images.gpu()  # redundant if already in gpu
     labels = labels.gpu()
     return images, labels
 
@@ -121,20 +125,28 @@ pl = get_dali_pipeline()
 pl.build()
 
 bs = pl.max_batch_size
-steps = (pl.epoch_size()['CassReader'] + bs - 1)//bs
+steps = (pl.epoch_size()["CassReader"] + bs - 1) // bs
 
-for _ in range(5):
+for _ in range(10):
     for _ in trange(steps):
         x,y = pl.run()
 exit()
+
 
 ########################################################################
 # pytorch iterator
 ########################################################################
 
-ddl = DALIGenericIterator([pl], ["data", "label"], reader_name="CassReader")
+ddl = DALIGenericIterator(
+    [pl],
+    ["data", "label"],
+    reader_name="CassReader",
+    # last_batch_policy=LastBatchPolicy.FULL, # or PARTIAL, DROP
+)
 
-for _ in range(5):
+for _ in range(10):
     for data in tqdm(ddl):
         x, y = data[0]["data"], data[0]["label"]
     ddl.reset()  # rewind data loader
+
+#print(len(x))

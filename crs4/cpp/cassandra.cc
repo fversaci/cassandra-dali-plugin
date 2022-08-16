@@ -19,6 +19,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   cass_port(spec.GetArgument<int>("cass_port")),
   use_ssl(spec.GetArgument<bool>("use_ssl")),
   cass_conf(spec.GetArgument<std::vector<std::string>>("cass_conf")),
+  shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")),
   prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   tcp_connections(spec.GetArgument<int>("tcp_connections")),
   copy_threads(spec.GetArgument<int>("wait_par")),
@@ -86,6 +87,8 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
 .AddOptionalArg<std::vector<std::string>>("cass_conf",
    R"(Cassandra configuration parameters)", nullptr)
+.AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
+		false)
 .AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
 .AddOptionalArg("tcp_connections",
    R"(TCP connections used by Cassandra driver)", 2)
