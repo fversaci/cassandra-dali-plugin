@@ -69,10 +69,10 @@ void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
   prefetch_one();
   // copy features to output
   auto &features = ws.Output<::dali::CPUBackend>(0);
-  features = std::move(batch.first);
+  features.ShareData(batch.first);
   // copy labels to output
   auto &labels = ws.Output<::dali::CPUBackend>(1);
-  labels = std::move(batch.second);
+  labels.ShareData(batch.second);
 }
 
 }  // namespace crs4

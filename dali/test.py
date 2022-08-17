@@ -25,6 +25,7 @@ import getpass
 import numpy as np
 from time import sleep
 import os
+import gc
 import torch
 from torchvision import transforms
 
@@ -79,10 +80,10 @@ def get_dali_pipeline():
         id_col=id_col,
         username=username,
         password=password,
-        tcp_connections=10,
-        prefetch_buffers=32,
-        copy_threads=2,
-        wait_par=2,
+        tcp_connections=20,
+        prefetch_buffers=64,
+        copy_threads=4,
+        wait_par=3,
         comm_par=2,
         # use_ssl=True,
     )
@@ -129,6 +130,7 @@ bs = pl.max_batch_size
 steps = (pl.epoch_size()["CassReader"] + bs - 1) // bs
 
 for _ in range(10):
+    # gc.collect()
     for _ in trange(steps):
         x,y = pl.run()
 exit()
