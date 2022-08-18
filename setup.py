@@ -13,29 +13,29 @@ import sysconfig
 
 import os
 
-print(os.environ["LD_LIBRARY_PATH"])
+# print(os.environ["LD_LIBRARY_PATH"])
 
-EXTRA_COMPILE_ARGS = ["-fvisibility=hidden", "-g0"]
-LIBPY = (
-    "python"
-    + sysconfig.get_config_var("py_version_short")
-    + sysconfig.get_config_var("abiflags")
-)  # e.g. python3.6m or python3.8
+# EXTRA_COMPILE_ARGS = ["-fvisibility=hidden", "-g0"]
+# LIBPY = (
+#     "python"
+#     + sysconfig.get_config_var("py_version_short")
+#     + sysconfig.get_config_var("abiflags")
+# )  # e.g. python3.6m or python3.8
 
-cpp_handler = cpp_extension.CppExtension(
-    "CBH",
-    sorted(glob("cassandradl/cpp/*.cpp")),
-    include_dirs=[
-        "/usr/include/opencv4",
-        "/usr/local/cuda-11.3/targets/x86_64-linux/include",
-    ],
-    language="c++",
-    library_dirs=["/usr/local/lib/x86_64-linux-gnu"],
-    libraries=["cassandra", "opencv_core", "opencv_imgcodecs", LIBPY],
-    extra_compile_args=EXTRA_COMPILE_ARGS,
-)
+# cpp_handler = cpp_extension.CppExtension(
+#     "CBH",
+#     sorted(glob("cassandradl/cpp/*.cpp")),
+#     include_dirs=[
+#         "/usr/include/opencv4",
+#         "/usr/local/cuda-11.3/targets/x86_64-linux/include",
+#     ],
+#     language="c++",
+#     library_dirs=["/usr/local/lib/x86_64-linux-gnu"],
+#     libraries=["cassandra", "opencv_core", "opencv_imgcodecs", LIBPY],
+#     extra_compile_args=EXTRA_COMPILE_ARGS,
+# )
 
-ext_mods = [cpp_handler]
+# ext_mods = [cpp_handler]
 
 setup(
     name="cassandradl",
@@ -43,9 +43,9 @@ setup(
     author="Francesco Versaci, Giovanni Busonera",
     author_email="francesco.versaci@gmail.com, giovanni.busonera@crs4.it",
     description="Cassandra data loader for ML pipelines",
-    packages=["cassandradl"],
+    packages=["crs4/cassandra_utils"],
     url="https://github.com/bla",
-    ext_modules=ext_mods,
+    #ext_modules=ext_mods,
     cmdclass={"build_ext": cpp_extension.BuildExtension},
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -56,8 +56,6 @@ setup(
     ],
     install_requires=[
         "cassandra-driver",
-        "pybind11",
-        "opencv-python",
         "tqdm",
     ],
     python_requires=">=3.6",
