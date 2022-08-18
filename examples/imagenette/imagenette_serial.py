@@ -9,17 +9,20 @@ import imagenette_common
 from clize import run
 
 
-def save_images(src_dir, img_format="JPEG", *, target_dir=None):
+def save_images(src_dir, *, img_format="JPEG",
+                dataset="imagenette", target_dir=None):
     """Save center-cropped images to Cassandra DB or directory
 
     :param src_dir: Input directory for Imagenette
+    :param dataset: Name of dataset (for the Cassandra table)
+    :param img_format: Format for image saving
     :param target_dir: Output directory for the cropped images
     """
     jobs = imagenette_common.get_jobs(src_dir)
     if not target_dir:
         try:
             # Read Cassandra parameters
-            from private_data import cassandra_ip, cass_user, cass_pass
+            from private_data import cassandra_ips, cass_user, cass_pass
         except ImportError:
             cassandra_ip = getpass("Insert Cassandra's IP address: ")
             cassandra_ips = [cassandra_ip]
@@ -27,7 +30,7 @@ def save_images(src_dir, img_format="JPEG", *, target_dir=None):
             cass_pass = getpass("Insert Cassandra password: ")
 
         imagenette_common.send_images_to_db(
-            cassandra_ips, cass_user, cass_pass, img_format)(jobs)
+            cassandra_ips, cass_user, cass_pass, img_format, dataset)(jobs)
     else:
         imagenette_common.save_images_to_dir(target_dir, img_format)(jobs)
 

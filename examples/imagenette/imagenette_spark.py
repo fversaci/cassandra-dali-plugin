@@ -18,7 +18,15 @@ from pyspark.sql.session import SparkSession
 from clize import run
 
 
-def save_images(src_dir, img_format="JPEG", *, target_dir=None):
+def save_images(src_dir, *, img_format="JPEG",
+                dataset="imagenette", target_dir=None):
+    """Save center-cropped images to Cassandra DB or directory
+
+    :param src_dir: Input directory for Imagenette
+    :param dataset: Name of dataset (for the Cassandra table)
+    :param img_format: Format for image saving
+    :param target_dir: Output directory for the cropped images
+    """
     jobs = imagenette_common.get_jobs(src_dir)
     # run spark
     conf = SparkConf().setAppName("Imagenette_224")
@@ -38,7 +46,7 @@ def save_images(src_dir, img_format="JPEG", *, target_dir=None):
             
         par_jobs.foreachPartition(
             imagenette_common.send_images_to_db(
-                cassandra_ips, cass_user, cass_pass, img_format)
+                cassandra_ips, cass_user, cass_pass, img_format, dataset)
         )
     else:
         par_jobs.foreachPartition(

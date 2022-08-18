@@ -22,28 +22,33 @@ def get_data(img_format="JPEG"):
     # - JPEG: compressed JPEG, pixels as bytes
     # - TIFF: non-compressed TIFF, with pixels as bytes
     # - TIFF_FLOAT: non-compressed TIFF, with pixels as float32
+    # - UNCHANGED: unchanged input files (no resizing and cropping)
     def r(path):
-        img = Image.open(path).convert("RGB")
-        # resize and crop to 224x224
-        tg = 224
-        sz = np.array(img.size)
-        min_d = sz.min()
-        sc = float(tg) / min_d
-        new_sz = (sc * sz).astype(int)
-        img = img.resize(new_sz)
-        off = (new_sz.max() - tg) // 2
-        if new_sz[0] > new_sz[1]:
-            box = [off, 0, off + tg, tg]
-        else:
-            box = [0, off, tg, off + tg]
-        img = img.crop(box)
-        # save to stream
-        out_stream = io.BytesIO()
-        if img_format == "TIFF_FLOAT":
-            np_img = np.array(img).astype(np.float32) / 255.0
-            tifffile.imwrite(out_stream, np_img)
-        else:
-            img.save(out_stream, format=img_format)
+        if (img_format=="UNCHANGED"):
+            # just return the raw file
+            with open(path, "rb") as fh:
+                out_stream = io.BytesIO(fh.read())
+        else: # resize and crop to 224x224
+            img = Image.open(path).convert("RGB")
+            tg = 224
+            sz = np.array(img.size)
+            min_d = sz.min()
+            sc = float(tg) / min_d
+            new_sz = (sc * sz).astype(int)
+            img = img.resize(new_sz)
+            off = (new_sz.max() - tg) // 2
+            if new_sz[0] > new_sz[1]:
+                box = [off, 0, off + tg, tg]
+            else:
+                box = [0, off, tg, off + tg]
+            img = img.crop(box)
+            # save to stream
+            out_stream = io.BytesIO()
+            if img_format == "TIFF_FLOAT":
+                np_img = np.array(img).astype(np.float32) / 255.0
+                tifffile.imwrite(out_stream, np_img)
+            else:
+                img.save(out_stream, format=img_format)
         # write to db
         out_stream.flush()
         data = out_stream.getvalue()
@@ -73,24 +78,27 @@ def get_jobs(src_dir):
     return jobs
 
 
-def send_images_to_db(cassandra_ips, cass_user, cass_pass, img_format):
+def send_images_to_db(cassandra_ips, cass_user, cass_pass, img_format,
+                      dataset):
     if img_format == "JPEG":
-        suff="_jpg"
+        suff="224_jpg"
     elif img_format == "TIFF":
-        suff="_tiff"
+        suff="224_tiff"
     elif img_format == "TIFF_FLOAT":
-        suff="_float"
+        suff="224_float"
+    elif img_format == "UNCHANGED":
+        suff="orig"
     else:
-        raise("Supporting only JPEG, TIFF and TIFF_FLOAT")
+        raise("Supporting only JPEG, TIFF, TIFF_FLOAT and UNCHANGED")
     auth_prov = PlainTextAuthProvider(cass_user, cass_pass)
 
     def ret(jobs):
         cw = CassandraWriter(
             auth_prov,
             cassandra_ips,
-            table_ids=f"imagenette.ids_224{suff}",
-            table_data=f"imagenette.data_224{suff}",
-            table_metadata=f"imagenette.metadata_224{suff}",
+            table_ids=f"{dataset}.ids_{suff}",
+            table_data=f"{dataset}.data_{suff}",
+            table_metadata=f"{dataset}.metadata_{suff}",
             id_col="patch_id",
             label_col="label",
             data_col="data",
@@ -117,8 +125,10 @@ def save_images_to_dir(target_dir, img_format):
         suff=".tiff"
     elif img_format == "TIFF_FLOAT":
         suff=".tiff"
+    elif img_format == "UNCHANGED":
+        suff=".jpg"
     else:
-        raise("Supporting only JPEG, TIFF and TIFF_FLOAT")
+        raise("Supporting only JPEG, TIFF, TIFF_FLOAT and UNCHANGED")
     def ret(jobs):
         for path, label, _ in tqdm(jobs):
             raw_data = get_data(img_format)(path)
