@@ -16,7 +16,13 @@ from nvidia.dali.plugin.pytorch import DALIGenericIterator
 from nvidia.dali.plugin.base_iterator import LastBatchPolicy
 import nvidia.dali.plugin_manager as plugin_manager
 
-plugin_manager.load_library("../../crs4/cpp/build/libcrs4cassandra.so")
+# load cassandra-dali-plugin
+import crs4
+import pathlib
+plugin_path = pathlib.Path(crs4.__path__[-1])
+plugin_path = plugin_path.parent.joinpath("libcrs4cassandra.so")
+plugin_path = str(plugin_path)
+plugin_manager.load_library(plugin_path)
 
 # varia
 import pickle

@@ -5,48 +5,55 @@
 # https://opensource.org/licenses/MIT.
 
 from setuptools import setup
+from setuptools.command.build_ext import build_ext as build_ext_orig
 from distutils.core import Extension
-from torch.utils import cpp_extension
-import pybind11
 from glob import glob
 import sysconfig
-
 import os
+import nvidia.dali as dali
+import pathlib
 
-# print(os.environ["LD_LIBRARY_PATH"])
+class CMakeExtension(Extension):
+    def __init__(self, name):
+        super().__init__(name, sources=[])
 
-# EXTRA_COMPILE_ARGS = ["-fvisibility=hidden", "-g0"]
-# LIBPY = (
-#     "python"
-#     + sysconfig.get_config_var("py_version_short")
-#     + sysconfig.get_config_var("abiflags")
-# )  # e.g. python3.6m or python3.8
 
-# cpp_handler = cpp_extension.CppExtension(
-#     "CBH",
-#     sorted(glob("cassandradl/cpp/*.cpp")),
-#     include_dirs=[
-#         "/usr/include/opencv4",
-#         "/usr/local/cuda-11.3/targets/x86_64-linux/include",
-#     ],
-#     language="c++",
-#     library_dirs=["/usr/local/lib/x86_64-linux-gnu"],
-#     libraries=["cassandra", "opencv_core", "opencv_imgcodecs", LIBPY],
-#     extra_compile_args=EXTRA_COMPILE_ARGS,
-# )
+class build_ext(build_ext_orig):
+    def run(self):
+        for ext in self.extensions:
+            self.build_cmake(ext)
+        super().run()
 
-# ext_mods = [cpp_handler]
+    def build_cmake(self, ext):
+        if not os.path.exists(self.build_temp):
+            os.makedirs(self.build_temp)
+        extdir = pathlib.Path(self.get_ext_fullpath(ext.name))
+        print("----> " + str(extdir.parent.absolute()))
+        cmake_args = [
+            '-S', 'crs4/cpp',
+            '-B', self.build_temp,
+            '-DCMAKE_LIBRARY_OUTPUT_DIRECTORY='
+            + str(extdir.parent.absolute()),
+        ]
+        build_args = [
+            '--build',
+            self.build_temp,
+        ]
+        self.spawn(['cmake'] + cmake_args)
+        self.spawn(['cmake'] + build_args)          
 
 setup(
-    name="cassandradl",
+    name="cassandra-dali-plugin",
     version="0.1",
     author="Francesco Versaci, Giovanni Busonera",
     author_email="francesco.versaci@gmail.com, giovanni.busonera@crs4.it",
     description="Cassandra data loader for ML pipelines",
     packages=["crs4/cassandra_utils"],
     url="https://github.com/bla",
-    #ext_modules=ext_mods,
-    cmdclass={"build_ext": cpp_extension.BuildExtension},
+    ext_modules=[CMakeExtension('crs4cassandra')],
+    cmdclass={
+        'build_ext': build_ext,
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
