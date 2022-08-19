@@ -5,5 +5,5 @@
 # https://opensource.org/licenses/MIT.
 
 from crs4.cassandra_utils._list_manager import ListManager
-from crs4.cassandra_utils._cassandra_list_manager import CassandraListManager
+from crs4.cassandra_utils._mini_list_manager import MiniListManager
 from crs4.cassandra_utils._cassandra_writer import CassandraWriter
