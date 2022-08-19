@@ -15,8 +15,8 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   ::dali::Operator<dali::CPUBackend>(spec),
   batch_size(spec.GetArgument<int>("max_batch_size")),
   uuids(spec.GetArgument<std::vector<std::string>>("uuids")),
-  cass_ips(spec.GetArgument<std::vector<std::string>>("cass_ips")),
-  cass_port(spec.GetArgument<int>("cass_port")),
+  cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
+  cassandra_port(spec.GetArgument<int>("cassandra_port")),
   table(spec.GetArgument<std::string>("table")),
   label_col(spec.GetArgument<std::string>("label_col")),
   data_col(spec.GetArgument<std::string>("data_col")),
@@ -32,7 +32,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   comm_par(spec.GetArgument<int>("copy_threads"))
 {
   bh = new BatchHandler(table, label_col, data_col, id_col,
-			username, password, cass_ips, cass_port, use_ssl,
+			username, password, cassandra_ips, cassandra_port, use_ssl,
 			tcp_connections, prefetch_buffers, copy_threads,
 			wait_par, comm_par);
   Reset();
@@ -85,9 +85,9 @@ DALI_SCHEMA(crs4__cassandra)
 .NumOutput(2)
 .AddOptionalArg<std::vector<std::string>>("uuids",
    R"(A list of uuids)", nullptr)
-.AddOptionalArg<std::vector<std::string>>("cass_ips",
+.AddOptionalArg<std::vector<std::string>>("cassandra_ips",
    R"(List of Cassandra IPs)", nullptr)
-.AddOptionalArg("cass_port",
+.AddOptionalArg("cassandra_port",
    R"(Port to connect to in the Cassandra server)", 9042)
 .AddOptionalArg<std::string>("table", R"()", nullptr)
 .AddOptionalArg<std::string>("label_col", R"()", nullptr)
@@ -96,8 +96,6 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg<std::string>("username", R"()", nullptr)
 .AddOptionalArg<std::string>("password", R"()", nullptr)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
-.AddOptionalArg<std::vector<std::string>>("cass_conf",
-   R"(Cassandra configuration parameters)", nullptr)
 .AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
 		false)
 .AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)

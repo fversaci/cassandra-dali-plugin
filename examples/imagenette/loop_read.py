@@ -32,10 +32,10 @@ import os
 
 # Read Cassandra parameters
 try:
-    from private_data import cass_ips, username, password
+    from private_data import cassandra_ips, username, password
 except ImportError:
-    cass_ip = getpass("Insert Cassandra's IP address: ")
-    cass_ips = [cassandra_ip]
+    cassandra_ip = getpass("Insert Cassandra's IP address: ")
+    cassandra_ips = [cassandra_ip]
     username = getpass("Insert Cassandra user: ")
     password = getpass("Insert Cassandra password: ")
 
@@ -54,7 +54,7 @@ ap = PlainTextAuthProvider(username=username, password=password)
 if not os.path.exists(rows_fn):
     id_col = "patch_id"
     label_col = "label"
-    lm = MiniListManager(ap, cass_ips)
+    lm = MiniListManager(ap, cassandra_ips)
     conf = {
         "table": f"{dataset_nm}.ids_{suff}",
         "id_col": id_col,
@@ -96,7 +96,7 @@ def get_dali_pipeline():
         name="CassReader",
         uuids=uuids,
         shuffle_after_epoch=True,
-        cass_ips=cass_ips,
+        cassandra_ips=cassandra_ips,
         table=table,
         label_col=label_col,
         data_col=data_col,

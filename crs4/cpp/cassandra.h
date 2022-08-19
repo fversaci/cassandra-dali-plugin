@@ -63,8 +63,8 @@ private:
   void prefetch_one();
   // variables
   std::vector<std::string> uuids;  
-  std::vector<std::string> cass_ips;
-  int cass_port;  
+  std::vector<std::string> cassandra_ips;
+  int cassandra_port;  
   std::string table;
   std::string label_col;
   std::string data_col;

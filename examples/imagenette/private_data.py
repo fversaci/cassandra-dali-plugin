@@ -6,4 +6,4 @@
 
 username = "guest"
 password = "test"
-cass_ips = ["127.0.0.1"]
+cassandra_ips = ["127.0.0.1"]
