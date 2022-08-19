@@ -17,10 +17,10 @@ from nvidia.dali.plugin.base_iterator import LastBatchPolicy
 import nvidia.dali.plugin_manager as plugin_manager
 
 # load cassandra-dali-plugin
-import crs4
+import crs4.cassandra_utils
 import pathlib
-plugin_path = pathlib.Path(crs4.__path__[-1])
-plugin_path = plugin_path.parent.joinpath("libcrs4cassandra.so")
+plugin_path = pathlib.Path(crs4.cassandra_utils.__path__[0])
+plugin_path = plugin_path.parent.parent.joinpath("libcrs4cassandra.so")
 plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 
