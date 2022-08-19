@@ -135,5 +135,5 @@ RUN \
 COPY . /home/user/cassandra-dali-plugin
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'
 WORKDIR /home/user/cassandra-dali-plugin
-#RUN pip3 install .
+RUN pip3 install .
 USER user

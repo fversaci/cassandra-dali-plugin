@@ -28,12 +28,7 @@ plugin_manager.load_library(plugin_path)
 import pickle
 from tqdm import trange, tqdm
 import getpass
-import numpy as np
-from time import sleep
 import os
-import gc
-import torch
-from torchvision import transforms
 
 # Read Cassandra parameters
 try:
@@ -43,11 +38,15 @@ except ImportError:
     cass_ips = [cassandra_ip]
     username = getpass("Insert Cassandra user: ")
     password = getpass("Insert Cassandra password: ")
- 
+
 # read list of uuids
 dataset_nm = "imagenet"
 suff = "224_jpg"
-rows_fn = f"{dataset_nm}_{suff}.rows"
+
+ids_cache = "ids_cache"
+if not os.path.exists(ids_cache):
+    os.makedirs(ids_cache)
+rows_fn = os.path.join(ids_cache, f"{dataset_nm}_{suff}.rows")
 
 # Load list of uuids from Cassandra DB
 ap = PlainTextAuthProvider(username=username, password=password)
@@ -68,13 +67,13 @@ if not os.path.exists(rows_fn):
 else:
     print("Loading list of uuids from cached file...")
     with open(rows_fn, "rb") as f:
-        stuff = pickle.load(f) 
-        
-uuids = stuff["row_keys"]       
+        stuff = pickle.load(f)
+
+uuids = stuff["row_keys"]
 uuids = list(map(str, uuids))  # convert uuids to strings
 table = f"{dataset_nm}.data_{suff}"
 label_col = "label"
-data_col = "data" 
+data_col = "data"
 id_col = "patch_id"
 
 # alternatively: directory for fn.readers.file
@@ -84,7 +83,7 @@ src_dir = os.path.join(f"/data/{dataset_nm}-cropped/", suff)
 @pipeline_def(
     batch_size=128,
     num_threads=2,
-    device_id=1, # types.CPU_ONLY_DEVICE_ID,
+    device_id=1,  # types.CPU_ONLY_DEVICE_ID,
     # prefetch_queue_depth=2,
     # enable_memory_stats=True,
 )
@@ -154,9 +153,8 @@ bs = pl.max_batch_size
 steps = (pl.epoch_size()["CassReader"] + bs - 1) // bs
 
 for _ in range(10):
-    # gc.collect()
     for _ in trange(steps):
-        x,y = pl.run()
+        x, y = pl.run()
 exit()
 
 
@@ -176,4 +174,4 @@ for _ in range(10):
         x, y = data[0]["data"], data[0]["label"]
     ddl.reset()  # rewind data loader
 
-#print(len(x))
+# print(len(x))

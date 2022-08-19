@@ -61,7 +61,6 @@ class CassandraWriter:
         self.cluster.shutdown()
 
     def save_item(self, item):
-        # if buffer full pop two elements from top
         image_id, label, data, partition_items = item
         i1 = self.sess.execute_async(
             self.prep1,
@@ -75,7 +74,7 @@ class CassandraWriter:
             execution_profile="default",
             timeout=30,
         )
-        # wait for remaining async inserts to finish
+        # wait for previous inserts to finish
         i1.result()
         i3.result()
         # insert heavy data synchronously

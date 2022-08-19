@@ -15,13 +15,10 @@
 #include <mutex>
 #include "ThreadPool.h"
 #include "dali/pipeline/operator/operator.h"
-#include "credentials.h"
 
 using RawImage = std::vector<char>;
 using Label = int32_t;
-// using BatchRawImage = std::vector<RawImage>;
 using BatchRawImage = ::dali::TensorVector<::dali::CPUBackend>;
-// using TensImage = ::dali::Tensor<::dali::CPUBackend>;
 using BatchLabel = ::dali::TensorVector<::dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 

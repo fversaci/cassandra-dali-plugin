@@ -6,7 +6,6 @@
 
 from PIL import Image
 from cassandra.auth import PlainTextAuthProvider
-from getpass import getpass
 from tqdm import tqdm
 import io
 import numpy as np
@@ -24,11 +23,11 @@ def get_data(img_format="JPEG"):
     # - TIFF_FLOAT: non-compressed TIFF, with pixels as float32
     # - UNCHANGED: unchanged input files (no resizing and cropping)
     def r(path):
-        if (img_format=="UNCHANGED"):
+        if img_format == "UNCHANGED":
             # just return the raw file
             with open(path, "rb") as fh:
                 out_stream = io.BytesIO(fh.read())
-        else: # resize and crop to 224x224
+        else:  # resize and crop to 224x224
             img = Image.open(path).convert("RGB")
             tg = 224
             sz = np.array(img.size)
@@ -53,7 +52,9 @@ def get_data(img_format="JPEG"):
         out_stream.flush()
         data = out_stream.getvalue()
         return data
+
     return r
+
 
 def get_jobs(src_dir):
     jobs = []
@@ -78,19 +79,18 @@ def get_jobs(src_dir):
     return jobs
 
 
-def send_images_to_db(cassandra_ips, cass_user, cass_pass, img_format,
-                      dataset):
+def send_images_to_db(cassandra_ips, username, password, img_format, dataset):
     if img_format == "JPEG":
-        suff="224_jpg"
+        suff = "224_jpg"
     elif img_format == "TIFF":
-        suff="224_tiff"
+        suff = "224_tiff"
     elif img_format == "TIFF_FLOAT":
-        suff="224_float"
+        suff = "224_float"
     elif img_format == "UNCHANGED":
-        suff="orig"
+        suff = "orig"
     else:
-        raise("Supporting only JPEG, TIFF, TIFF_FLOAT and UNCHANGED")
-    auth_prov = PlainTextAuthProvider(cass_user, cass_pass)
+        raise ("Supporting only JPEG, TIFF, TIFF_FLOAT and UNCHANGED")
+    auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
         cw = CassandraWriter(
@@ -110,29 +110,31 @@ def send_images_to_db(cassandra_ips, cass_user, cass_pass, img_format,
 
     return ret
 
+
 def save_image_to_dir(target_dir, path, label, raw_data, suff):
     out_dir = os.path.join(target_dir, str(label))
-    if (not os.path.exists(out_dir)):
+    if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    out_name= os.path.join(out_dir, str(uuid.uuid4())+suff)
+    out_name = os.path.join(out_dir, str(uuid.uuid4()) + suff)
     with open(out_name, "wb") as fd:
         fd.write(raw_data)
 
+
 def save_images_to_dir(target_dir, img_format):
     if img_format == "JPEG":
-        suff=".jpg"
+        suff = ".jpg"
     elif img_format == "TIFF":
-        suff=".tiff"
+        suff = ".tiff"
     elif img_format == "TIFF_FLOAT":
-        suff=".tiff"
+        suff = ".tiff"
     elif img_format == "UNCHANGED":
-        suff=".jpg"
+        suff = ".jpg"
     else:
-        raise("Supporting only JPEG, TIFF, TIFF_FLOAT and UNCHANGED")
+        raise ("Supporting only JPEG, TIFF, TIFF_FLOAT and UNCHANGED")
+
     def ret(jobs):
         for path, label, _ in tqdm(jobs):
             raw_data = get_data(img_format)(path)
             save_image_to_dir(target_dir, path, label, raw_data, suff)
 
     return ret
-

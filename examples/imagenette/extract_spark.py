@@ -4,22 +4,20 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-# Run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py /tmp/imagenette2-320 JPEG
-# or
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files imagenette_common.py imagenette_spark.py /tmp/imagenette2-320 JPEG /data/imagenette-cropped/jpg
+### To insert in DB, run with, e.g.,
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --dataset=imagenette
+### To save files in a directory run, e.g.,
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --target-dir=/data/imagenette/jpg
 
 from getpass import getpass
-import imagenette_common
-from pyspark import StorageLevel
+import extract_common
 from pyspark.conf import SparkConf
 from pyspark.context import SparkContext
 from pyspark.sql.session import SparkSession
 from clize import run
 
 
-def save_images(src_dir, *, img_format="JPEG",
-                dataset="imagenette", target_dir=None):
+def save_images(src_dir, *, img_format="JPEG", dataset="imagenette", target_dir=None):
     """Save center-cropped images to Cassandra DB or directory
 
     :param src_dir: Input directory for Imagenette
@@ -27,9 +25,9 @@ def save_images(src_dir, *, img_format="JPEG",
     :param img_format: Format for image saving
     :param target_dir: Output directory for the cropped images
     """
-    jobs = imagenette_common.get_jobs(src_dir)
+    jobs = extract_common.get_jobs(src_dir)
     # run spark
-    conf = SparkConf().setAppName("Imagenette_224")
+    conf = SparkConf().setAppName("data-extract")
     # .setMaster("spark://spark-master:7077")
     sc = SparkContext(conf=conf)
     spark = SparkSession(sc)
@@ -37,20 +35,21 @@ def save_images(src_dir, *, img_format="JPEG",
     if not target_dir:
         try:
             # Read Cassandra parameters
-            from private_data import cassandra_ips, cass_user, cass_pass
+            from private_data import cassandra_ips, username, password
         except ImportError:
             cassandra_ip = getpass("Insert Cassandra's IP address: ")
             cassandra_ips = [cassandra_ip]
-            cass_user = getpass("Insert Cassandra user: ")
-            cass_pass = getpass("Insert Cassandra password: ")
-            
+            username = getpass("Insert Cassandra user: ")
+            password = getpass("Insert Cassandra password: ")
+
         par_jobs.foreachPartition(
-            imagenette_common.send_images_to_db(
-                cassandra_ips, cass_user, cass_pass, img_format, dataset)
+            extract_common.send_images_to_db(
+                cassandra_ips, username, password, img_format, dataset
+            )
         )
     else:
         par_jobs.foreachPartition(
-            imagenette_common.save_images_to_dir(target_dir, img_format)
+            extract_common.save_images_to_dir(target_dir, img_format)
         )
 
 
