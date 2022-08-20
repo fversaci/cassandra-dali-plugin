@@ -9,12 +9,12 @@ from cassandra.auth import PlainTextAuthProvider
 from crs4.cassandra_utils import MiniListManager
 
 # dali
-import nvidia.dali.fn as fn
 from nvidia.dali.pipeline import pipeline_def
-import nvidia.dali.types as types
-from nvidia.dali.plugin.pytorch import DALIGenericIterator
 from nvidia.dali.plugin.base_iterator import LastBatchPolicy
+from nvidia.dali.plugin.pytorch import DALIGenericIterator
+import nvidia.dali.fn as fn
 import nvidia.dali.plugin_manager as plugin_manager
+import nvidia.dali.types as types
 
 # load cassandra-dali-plugin
 import crs4.cassandra_utils
@@ -27,10 +27,10 @@ plugin_manager.load_library(plugin_path)
 
 # varia
 from clize import run
-import pickle
 from tqdm import trange, tqdm
 import getpass
 import os
+import pickle
 
 
 def get_cassandra_reader(dataset_nm, suff):
@@ -42,16 +42,15 @@ def get_cassandra_reader(dataset_nm, suff):
         cassandra_ips = [cassandra_ip]
         username = getpass("Insert Cassandra user: ")
         password = getpass("Insert Cassandra password: ")
-    # use Cassandra reader
+    # cache directory
     ids_cache = "ids_cache"
     if not os.path.exists(ids_cache):
         os.makedirs(ids_cache)
     rows_fn = os.path.join(ids_cache, f"{dataset_nm}_{suff}.rows")
     # Load list of uuids from Cassandra DB
     ap = PlainTextAuthProvider(username=username, password=password)
+    id_col = "patch_id"
     if not os.path.exists(rows_fn):
-        id_col = "patch_id"
-        label_col = "label"
         lm = MiniListManager(ap, cassandra_ips)
         conf = {
             "table": f"{dataset_nm}.ids_{suff}",
@@ -62,30 +61,27 @@ def get_cassandra_reader(dataset_nm, suff):
         lm.read_rows_from_db()
         lm.save_rows(rows_fn)
         stuff = lm.get_rows()
-    else:
+    else: # use cached file
         print("Loading list of uuids from cached file...")
         with open(rows_fn, "rb") as f:
             stuff = pickle.load(f)
     uuids = stuff["row_keys"]
     uuids = list(map(str, uuids))  # convert uuids to strings
     table = f"{dataset_nm}.data_{suff}"
-    label_col = "label"
-    data_col = "data"
-    id_col = "patch_id"
     cassandra_reader = fn.crs4.cassandra(
         name="CassReader",
         uuids=uuids,
         shuffle_after_epoch=True,
         cassandra_ips=cassandra_ips,
         table=table,
-        label_col=label_col,
-        data_col=data_col,
+        label_col="label",
+        data_col="data",
         id_col=id_col,
         username=username,
         password=password,
-        tcp_connections=10,
-        prefetch_buffers=32,
-        copy_threads=2,
+        tcp_connections=20,
+        prefetch_buffers=64,
+        copy_threads=3,
         wait_par=4,
         comm_par=2,
         # use_ssl=True,
