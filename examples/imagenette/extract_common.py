@@ -11,7 +11,6 @@ import io
 import numpy as np
 import os
 import uuid
-import tifffile
 import os
 from cassandradl import CassandraWriter
 
@@ -20,7 +19,6 @@ def get_data(img_format="JPEG"):
     # img_format:
     # - JPEG: compressed JPEG, pixels as bytes
     # - TIFF: non-compressed TIFF, with pixels as bytes
-    # - TIFF_FLOAT: non-compressed TIFF, with pixels as float32
     # - UNCHANGED: unchanged input files (no resizing and cropping)
     def r(path):
         if img_format == "UNCHANGED":
@@ -43,11 +41,7 @@ def get_data(img_format="JPEG"):
             img = img.crop(box)
             # save to stream
             out_stream = io.BytesIO()
-            if img_format == "TIFF_FLOAT":
-                np_img = np.array(img).astype(np.float32) / 255.0
-                tifffile.imwrite(out_stream, np_img)
-            else:
-                img.save(out_stream, format=img_format)
+            img.save(out_stream, format=img_format)
         # write to db
         out_stream.flush()
         data = out_stream.getvalue()
@@ -84,12 +78,10 @@ def send_images_to_db(cassandra_ips, username, password, img_format, dataset):
         suff = "224_jpg"
     elif img_format == "TIFF":
         suff = "224_tiff"
-    elif img_format == "TIFF_FLOAT":
-        suff = "224_float"
     elif img_format == "UNCHANGED":
         suff = "orig"
     else:
-        raise ("Supporting only JPEG, TIFF, TIFF_FLOAT and UNCHANGED")
+        raise ("Supporting only JPEG, TIFF, and UNCHANGED")
     auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
@@ -125,12 +117,10 @@ def save_images_to_dir(target_dir, img_format):
         suff = ".jpg"
     elif img_format == "TIFF":
         suff = ".tiff"
-    elif img_format == "TIFF_FLOAT":
-        suff = ".tiff"
     elif img_format == "UNCHANGED":
         suff = ".jpg"
     else:
-        raise ("Supporting only JPEG, TIFF, TIFF_FLOAT and UNCHANGED")
+        raise ("Supporting only JPEG, TIFF, and UNCHANGED")
 
     def ret(jobs):
         for path, label, _ in tqdm(jobs):
