@@ -18,8 +18,8 @@
 
 using RawImage = std::vector<char>;
 using Label = int32_t;
-using BatchRawImage = ::dali::TensorVector<::dali::CPUBackend>;
-using BatchLabel = ::dali::TensorVector<::dali::CPUBackend>;
+using BatchRawImage = ::dali::TensorList<::dali::CPUBackend>;
+using BatchLabel = ::dali::TensorList<::dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 
 class BatchHandler {
