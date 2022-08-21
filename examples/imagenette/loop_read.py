@@ -61,7 +61,7 @@ def get_cassandra_reader(dataset_nm, suff):
         lm.read_rows_from_db()
         lm.save_rows(rows_fn)
         stuff = lm.get_rows()
-    else: # use cached file
+    else:  # use cached file
         print("Loading list of uuids from cached file...")
         with open(rows_fn, "rb") as f:
             stuff = pickle.load(f)
@@ -81,7 +81,7 @@ def get_cassandra_reader(dataset_nm, suff):
         password=password,
         tcp_connections=20,
         prefetch_buffers=64,
-        copy_threads=3,
+        copy_threads=4,
         wait_par=4,
         comm_par=2,
         # use_ssl=True,
@@ -140,7 +140,13 @@ def fn_crop_normalize(images):
     )
 
 
-def read_data(*, dataset_nm="imagenet", suff="224_jpg", reader="cassandra"):
+def read_data(
+    *,
+    dataset_nm="imagenet",
+    suff="224_jpg",
+    reader="cassandra",
+    device_id=types.CPU_ONLY_DEVICE_ID,
+):
     if reader == "cassandra":
         chosen_reader = get_cassandra_reader(dataset_nm, suff)
     elif reader == "file":
@@ -158,7 +164,7 @@ def read_data(*, dataset_nm="imagenet", suff="224_jpg", reader="cassandra"):
     @pipeline_def(
         batch_size=128,
         num_threads=20,
-        device_id=1,  # types.CPU_ONLY_DEVICE_ID,
+        device_id=device_id,
         # prefetch_queue_depth=2,
         # enable_memory_stats=True,
     )
@@ -174,8 +180,9 @@ def read_data(*, dataset_nm="imagenet", suff="224_jpg", reader="cassandra"):
         # images = fn_resize(images)
         # images = fn_crop_normalize(images)
         ####################################################################
-        images = images.gpu()  # redundant if already in gpu
-        labels = labels.gpu()
+        if device_id != types.CPU_ONLY_DEVICE_ID:
+            images = images.gpu()
+            labels = labels.gpu()
         return images, labels
 
     pl = get_dali_pipeline()
