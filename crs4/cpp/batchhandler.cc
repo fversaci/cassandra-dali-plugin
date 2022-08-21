@@ -112,8 +112,10 @@ void BatchHandler::allocTens(int wb) {
   shape_count[wb]=0;
   v_feats[wb] = BatchRawImage();
   v_feats[wb].set_pinned(false);
-  v_feats[wb].SetContiguous(true);
+  // v_feats[wb].SetContiguous(true);
   v_labs[wb] = BatchLabel();
+  v_labs[wb].set_pinned(false);
+  // v_labs[wb].SetContiguous(true);
   std::vector<long int> v_sz(bs[wb], 1);
   ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
   v_labs[wb].Resize(t_sz, ::dali::DALI_INT32);
