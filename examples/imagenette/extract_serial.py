@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 ### To insert in DB, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --dataset-name=imagenette
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette
 
 ### To save files in a directory, run with, e.g.,
 # python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --target-dir=/data/imagenette/224_jpg

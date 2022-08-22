@@ -1,6 +1,4 @@
 FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
-#FROM pytorch/pytorch:1.11.0-cuda11.3-cudnn8-devel
-#FROM nvcr.io/nvidia/pytorch:20.10-py3
 
 RUN rm /etc/apt/sources.list.d/cuda.list
 RUN apt-key del 7fa2af80
