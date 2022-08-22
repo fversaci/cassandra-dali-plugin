@@ -24,6 +24,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   username(spec.GetArgument<std::string>("username")),
   password(spec.GetArgument<std::string>("password")),
   use_ssl(spec.GetArgument<bool>("use_ssl")),
+  ssl_certificate(spec.GetArgument<std::string>("ssl_certificate")),
   shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")),
   prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   tcp_connections(spec.GetArgument<int>("tcp_connections")),
@@ -32,7 +33,8 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   comm_par(spec.GetArgument<int>("copy_threads"))
 {
   bh = new BatchHandler(table, label_col, data_col, id_col,
-			username, password, cassandra_ips, cassandra_port, use_ssl,
+			username, password, cassandra_ips, cassandra_port,
+			use_ssl, ssl_certificate,
 			tcp_connections, prefetch_buffers, copy_threads,
 			wait_par, comm_par);
   Reset();
@@ -96,6 +98,8 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg<std::string>("username", R"()", nullptr)
 .AddOptionalArg<std::string>("password", R"()", nullptr)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
+.AddOptionalArg<std::string>("ssl_certificate",
+			     R"(Optional SSL certificate)", "")
 .AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
 		false)
 .AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)

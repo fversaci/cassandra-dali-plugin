@@ -36,6 +36,7 @@ private:
   std::string s_cassandra_ips;
   int port = 9042;
   bool use_ssl = false;
+  std::string ssl_certificate;
   // Cassandra connection and execution
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
@@ -77,8 +78,9 @@ public:
   BatchHandler(std::string table, std::string label_col, std::string data_col,
                std::string id_col, std::string username, std::string password,
 	       std::vector<std::string> cassandra_ips, int port, bool use_ssl,
-	       int tcp_connections, int prefetch_buffers, int copy_threads,
-               int wait_par, int comm_par);
+	       std::string ssl_certificate, int tcp_connections,
+	       int prefetch_buffers, int copy_threads, int wait_par,
+	       int comm_par);
   ~BatchHandler();
   void prefetch_batch(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();

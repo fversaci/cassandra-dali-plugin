@@ -85,6 +85,7 @@ def get_cassandra_reader(dataset_name, suff):
         wait_par=4,
         comm_par=2,
         # use_ssl=True,
+        # ssl_certificate="node0.cer.pem",
     )
     return cassandra_reader
 

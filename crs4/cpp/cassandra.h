@@ -79,6 +79,7 @@ private:
   int wait_par;
   int comm_par;
   bool use_ssl;
+  std::string ssl_certificate;
   std::vector<std::string>::iterator current;
   bool shuffle_after_epoch;
   int current_epoch=-1;  

@@ -24,9 +24,43 @@ BatchHandler::~BatchHandler() {
   }
 }
 
-void set_ssl(CassCluster* cluster) {
+void load_trusted_cert_file(std::string file, CassSsl* ssl) {
+  CassError rc;
+  char* cert;
+  long cert_size;
+
+  FILE *in = fopen(file.c_str(), "rb");
+  if (in == NULL) {
+    throw std::runtime_error("Error loading certificate file " + file);
+  }
+
+  fseek(in, 0, SEEK_END);
+  cert_size = ftell(in);
+  rewind(in);
+
+  cert = (char*)malloc(cert_size);
+  fread(cert, sizeof(char), cert_size, in);
+  fclose(in);
+
+  // Add the trusted certificate (or chain) to the driver
+  rc = cass_ssl_add_trusted_cert_n(ssl, cert, cert_size);
+  if (rc != CASS_OK) {
+    free(cert);
+    throw std::runtime_error("Error loading SSL certificate: "
+			     + std::string(cass_error_desc(rc)));
+  }
+
+  free(cert);
+}
+
+void set_ssl(CassCluster* cluster, std::string ssl_certificate) {
   CassSsl* ssl = cass_ssl_new();
-  cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
+  if (ssl_certificate.empty()) {
+    cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
+  }
+  else {
+    load_trusted_cert_file(ssl_certificate, ssl);
+  }
   cass_cluster_set_ssl(cluster, ssl);
   cass_ssl_free(ssl);
 }
@@ -41,7 +75,7 @@ void BatchHandler::connect() {
   cass_cluster_set_queue_size_io(cluster, 65536); // max pending requests
   // set ssl if required
   if (use_ssl) {
-    set_ssl(cluster);
+    set_ssl(cluster, ssl_certificate);
   }
   CassFuture* connect_future = cass_session_connect(session, cluster);
   CassError rc = cass_future_error_code(connect_future);
@@ -73,13 +107,13 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
                            std::string data_col, std::string id_col,
                            std::string username, std::string password,
                            std::vector<std::string> cassandra_ips, int port,
-                           bool use_ssl, int tcp_connections,
-                           int prefetch_buffers, int copy_threads,
-                           int wait_par, int comm_par) :
+                           bool use_ssl, std::string ssl_certificate,
+                           int tcp_connections, int prefetch_buffers,
+                           int copy_threads, int wait_par, int comm_par) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   // label_map(label_map),
-  username(username), password(password),
-  cassandra_ips(cassandra_ips), port(port), use_ssl(use_ssl),
+  username(username), password(password), cassandra_ips(cassandra_ips),
+  port(port), use_ssl(use_ssl), ssl_certificate(ssl_certificate),
   tcp_connections(tcp_connections), prefetch_buffers(prefetch_buffers),
   copy_threads(copy_threads), wait_par(wait_par), comm_par(comm_par)
 {
