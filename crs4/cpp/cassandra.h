@@ -74,10 +74,10 @@ private:
   BatchHandler* bh = nullptr;
   int batch_size;
   int prefetch_buffers;
-  int tcp_connections;
+  int io_threads;
   int copy_threads;
-  int wait_par;
-  int comm_par;
+  int wait_threads;
+  int comm_threads;
   bool use_ssl;
   std::string ssl_certificate;
   std::vector<std::string>::iterator current;

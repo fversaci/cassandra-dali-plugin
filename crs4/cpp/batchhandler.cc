@@ -70,7 +70,7 @@ void BatchHandler::connect() {
   cass_cluster_set_credentials(cluster, username.c_str(), password.c_str());
   cass_cluster_set_port(cluster, port);
   cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4);
-  cass_cluster_set_num_threads_io(cluster, tcp_connections);
+  cass_cluster_set_num_threads_io(cluster, io_threads);
   cass_cluster_set_application_name(cluster, "Cassandra module for NVIDIA DALI, CRS4");
   cass_cluster_set_queue_size_io(cluster, 65536); // max pending requests
   // set ssl if required
@@ -98,9 +98,9 @@ void BatchHandler::connect() {
   }
   cass_future_free(prepare_future);
   // init thread pools
-  comm_pool = new ThreadPool(comm_par);
+  comm_pool = new ThreadPool(comm_threads);
   copy_pool = new ThreadPool(copy_threads);
-  wait_pool = new ThreadPool(wait_par);
+  wait_pool = new ThreadPool(wait_threads);
 }
 
 BatchHandler::BatchHandler(std::string table, std::string label_col,
@@ -108,14 +108,14 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
                            std::string username, std::string password,
                            std::vector<std::string> cassandra_ips, int port,
                            bool use_ssl, std::string ssl_certificate,
-                           int tcp_connections, int prefetch_buffers,
-                           int copy_threads, int wait_par, int comm_par) :
+                           int io_threads, int prefetch_buffers,
+                           int copy_threads, int wait_threads, int comm_threads) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   // label_map(label_map),
   username(username), password(password), cassandra_ips(cassandra_ips),
   port(port), use_ssl(use_ssl), ssl_certificate(ssl_certificate),
-  tcp_connections(tcp_connections), prefetch_buffers(prefetch_buffers),
-  copy_threads(copy_threads), wait_par(wait_par), comm_par(comm_par)
+  io_threads(io_threads), prefetch_buffers(prefetch_buffers),
+  copy_threads(copy_threads), wait_threads(wait_threads), comm_threads(comm_threads)
 {
   // init multi-buffering variables
   bs.resize(prefetch_buffers);

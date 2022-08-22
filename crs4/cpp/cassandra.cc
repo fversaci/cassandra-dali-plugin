@@ -27,16 +27,16 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   ssl_certificate(spec.GetArgument<std::string>("ssl_certificate")),
   shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")),
   prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
-  tcp_connections(spec.GetArgument<int>("tcp_connections")),
-  copy_threads(spec.GetArgument<int>("wait_par")),
-  wait_par(spec.GetArgument<int>("comm_par")),
-  comm_par(spec.GetArgument<int>("copy_threads"))
+  io_threads(spec.GetArgument<int>("io_threads")),
+  copy_threads(spec.GetArgument<int>("copy_threads")),
+  wait_threads(spec.GetArgument<int>("wait_threads")),
+  comm_threads(spec.GetArgument<int>("comm_threads"))
 {
   bh = new BatchHandler(table, label_col, data_col, id_col,
 			username, password, cassandra_ips, cassandra_port,
 			use_ssl, ssl_certificate,
-			tcp_connections, prefetch_buffers, copy_threads,
-			wait_par, comm_par);
+			io_threads, prefetch_buffers, copy_threads,
+			wait_threads, comm_threads);
   Reset();
   // start prefetching
   for (int i=0; i<prefetch_buffers; ++i) {
@@ -103,9 +103,9 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
 		false)
 .AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
-.AddOptionalArg("tcp_connections",
-   R"(TCP connections used by Cassandra driver)", 2)
+.AddOptionalArg("io_threads",
+   R"(Number of io threads used by the Cassandra driver)", 2)
 .AddOptionalArg("copy_threads",
-   R"(Number of thread copying data in parallel)", 2)
-.AddOptionalArg("wait_par", R"(Parallelism for waiting threads)", 2)
-.AddOptionalArg("comm_par", R"(Parallelism for communication threads)", 2);
+   R"(Number of threads copying data in parallel)", 2)
+.AddOptionalArg("wait_threads", R"(Parallelism for waiting threads)", 2)
+.AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2);

@@ -45,10 +45,10 @@ private:
   ThreadPool* comm_pool;
   ThreadPool* copy_pool;
   ThreadPool* wait_pool;
-  int tcp_connections;
+  int io_threads;
   int copy_threads; // copy parallelism
-  int wait_par;
-  int comm_par; // number of communication threads
+  int wait_threads;
+  int comm_threads; // number of communication threads
   int prefetch_buffers; // multi-buffering
   std::vector<std::mutex> alloc_mtx;
   std::vector<std::condition_variable> alloc_cv;
@@ -78,9 +78,9 @@ public:
   BatchHandler(std::string table, std::string label_col, std::string data_col,
                std::string id_col, std::string username, std::string password,
 	       std::vector<std::string> cassandra_ips, int port, bool use_ssl,
-	       std::string ssl_certificate, int tcp_connections,
-	       int prefetch_buffers, int copy_threads, int wait_par,
-	       int comm_par);
+	       std::string ssl_certificate, int io_threads,
+	       int prefetch_buffers, int copy_threads, int wait_threads,
+	       int comm_threads);
   ~BatchHandler();
   void prefetch_batch(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();
