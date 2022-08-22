@@ -14,8 +14,8 @@ provided Dockerfile, which also contains PyTorch, NVIDIA DALI,
 Cassandra C++ and Python drivers, an Apache Cassandra server and
 Apache Spark.
 
-The details of how to install the Cassandra Data Loader in a system
-which already provides some of the package above can be deduced from
+The details of how to install the cassandra-dali-plugin in a system
+which already provides some of the packages above can be deduced from
 the [Dockerfile](Dockerfile).
 
 For better performance and for data persistence, it is advised to
@@ -24,7 +24,7 @@ mount a host directory for Cassandra on a fast disk (e.g.,
 
 ```bash
 ## Build and run cassandradl docker container
-$ docker build -t cassandradl .
+$ docker build -t cassandra-dali-plugin .
 $ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw --cap-add=sys_nice cassandra-dali-plugin
 
 ## Inside the Docker container:
@@ -34,8 +34,10 @@ $ /cassandra/bin/cassandra   # Note that the shell prompt is immediately returne
                              # Wait until "state jump to NORMAL" is shown (about 1 minute)
 ```
 
-## Dataset examples
+## Dataset example
 
+See the following example for details on how to use and optimize this
+plugin:
 - [Imagenette](examples/imagenette/)
 
 ## Requirements
