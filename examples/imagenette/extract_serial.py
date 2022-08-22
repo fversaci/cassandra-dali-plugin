@@ -4,20 +4,36 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
+### To insert in DB, run with, e.g.,
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --dataset-name=imagenette
+
+### To save files in a directory, run with, e.g.,
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --target-dir=/data/imagenette/224_jpg
+
+
 from getpass import getpass
 import extract_common
 from clize import run
 
 
-def save_images(src_dir, *, img_format="JPEG", dataset="imagenette", target_dir=None):
+def save_images(
+    src_dir,
+    *,
+    img_format="JPEG",
+    keyspace="imagenette",
+    target_dir=None,
+    split="train",
+):
     """Save center-cropped images to Cassandra DB or directory
 
     :param src_dir: Input directory for Imagenette
-    :param dataset: Name of dataset (for the Cassandra table)
-    :param img_format: Format for image saving
-    :param target_dir: Output directory for the cropped images
+    :param img_format: Format of output images
+    :param keyspace: Name of dataset (for the Cassandra table)
+    :param target_dir: Output directory (is savinf to filesystem)
+    :param split: Subdir to be processed
     """
-    jobs = extract_common.get_jobs(src_dir)
+    splits = [split]
+    jobs = extract_common.get_jobs(src_dir, splits)
     if not target_dir:
         try:
             # Read Cassandra parameters
@@ -29,7 +45,7 @@ def save_images(src_dir, *, img_format="JPEG", dataset="imagenette", target_dir=
             password = getpass("Insert Cassandra password: ")
 
         extract_common.send_images_to_db(
-            cassandra_ips, username, password, img_format, dataset
+            cassandra_ips, username, password, img_format, keyspace
         )(jobs)
     else:
         extract_common.save_images_to_dir(target_dir, img_format)(jobs)

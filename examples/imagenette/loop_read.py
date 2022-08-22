@@ -33,7 +33,7 @@ import os
 import pickle
 
 
-def get_cassandra_reader(dataset_name, suff):
+def get_cassandra_reader(keyspace, table_suffix):
     # Read Cassandra parameters
     try:
         from private_data import cassandra_ips, username, password
@@ -46,14 +46,14 @@ def get_cassandra_reader(dataset_name, suff):
     ids_cache = "ids_cache"
     if not os.path.exists(ids_cache):
         os.makedirs(ids_cache)
-    rows_fn = os.path.join(ids_cache, f"{dataset_name}_{suff}.rows")
+    rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
     # Load list of uuids from Cassandra DB
     ap = PlainTextAuthProvider(username=username, password=password)
     id_col = "patch_id"
     if not os.path.exists(rows_fn):
         lm = MiniListManager(ap, cassandra_ips)
         conf = {
-            "table": f"{dataset_name}.ids_{suff}",
+            "table": f"{keyspace}.ids_{table_suffix}",
             "id_col": id_col,
         }
         lm.set_config(conf)
@@ -67,7 +67,7 @@ def get_cassandra_reader(dataset_name, suff):
             stuff = pickle.load(f)
     uuids = stuff["row_keys"]
     uuids = list(map(str, uuids))  # convert uuids to strings
-    table = f"{dataset_name}.data_{suff}"
+    table = f"{keyspace}.data_{table_suffix}"
     cassandra_reader = fn.crs4.cassandra(
         name="CassReader",
         uuids=uuids,
@@ -143,18 +143,26 @@ def fn_crop_normalize(images):
 
 def read_data(
     *,
-    dataset_name="imagenet",
-    suff="224_jpg",
+    keyspace="imagenette",
+    table_suffix="224_jpg",
     reader="cassandra",
     device_id=types.CPU_ONLY_DEVICE_ID,
+    file_root=None,
 ):
+    """Read images from DB or filesystem, in tight loop
+
+    :param keyspace: Name of the dataset (i.e., used keyspace in Cassandra)
+    :param table_suffix: Suffix for table names
+    :param reader: "cassandra" o "file"
+    :param device_id: Device id (>=0 for GPUs)
+    :param file_root: File root to be used when reading from filesystem
+    """
     if reader == "cassandra":
-        chosen_reader = get_cassandra_reader(dataset_name, suff)
+        chosen_reader = get_cassandra_reader(keyspace, table_suffix)
     elif reader == "file":
         # alternatively: use fn.readers.file
-        src_dir = os.path.join(f"/data/{dataset_name}-cropped/", suff)
         file_reader = fn.readers.file(
-            file_root=src_dir,
+            file_root=file_root,
             name="CassReader",
         )
         chosen_reader = file_reader

@@ -5,9 +5,10 @@
 # https://opensource.org/licenses/MIT.
 
 ### To insert in DB, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --dataset=imagenette
-### To save files in a directory run, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --target-dir=/data/imagenette/jpg
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --dataset-name=imagenette
+
+### To save files in a directory, run with, e.g.,
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --target-dir=/data/imagenette/224_jpg
 
 from getpass import getpass
 import extract_common
@@ -17,15 +18,24 @@ from pyspark.sql.session import SparkSession
 from clize import run
 
 
-def save_images(src_dir, *, img_format="JPEG", dataset="imagenette", target_dir=None):
+def save_images(
+    src_dir,
+    *,
+    img_format="JPEG",
+    keyspace="imagenette",
+    target_dir=None,
+    split="train",
+):
     """Save center-cropped images to Cassandra DB or directory
 
     :param src_dir: Input directory for Imagenette
-    :param dataset: Name of dataset (for the Cassandra table)
-    :param img_format: Format for image saving
-    :param target_dir: Output directory for the cropped images
+    :param img_format: Format of output images
+    :param keyspace: Name of dataset (for the Cassandra table)
+    :param target_dir: Output directory (is savinf to filesystem)
+    :param split: Subdir to be processed
     """
-    jobs = extract_common.get_jobs(src_dir)
+    splits = [split]
+    jobs = extract_common.get_jobs(src_dir, splits)
     # run spark
     conf = SparkConf().setAppName("data-extract")
     # .setMaster("spark://spark-master:7077")
@@ -44,7 +54,7 @@ def save_images(src_dir, *, img_format="JPEG", dataset="imagenette", target_dir=
 
         par_jobs.foreachPartition(
             extract_common.send_images_to_db(
-                cassandra_ips, username, password, img_format, dataset
+                cassandra_ips, username, password, img_format, keyspace
             )
         )
     else:
