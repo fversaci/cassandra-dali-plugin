@@ -4,141 +4,28 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-# cassandra
-from cassandra.auth import PlainTextAuthProvider
-from crs4.cassandra_utils import MiniListManager
+# cassandra reader
+from cassandra_reader import get_cassandra_reader
 
 # dali
 from nvidia.dali.pipeline import pipeline_def
 from nvidia.dali.plugin.base_iterator import LastBatchPolicy
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 import nvidia.dali.fn as fn
-import nvidia.dali.plugin_manager as plugin_manager
 import nvidia.dali.types as types
 
-# load cassandra-dali-plugin
-import crs4.cassandra_utils
-import pathlib
-
-plugin_path = pathlib.Path(crs4.cassandra_utils.__path__[0])
-plugin_path = plugin_path.parent.parent.joinpath("libcrs4cassandra.so")
-plugin_path = str(plugin_path)
-plugin_manager.load_library(plugin_path)
+# some preconfigured operators
+from fn_shortcuts import (
+    fn_decode,
+    fn_normalize,
+    fn_image_random_crop,
+    fn_resize,
+    fn_crop_normalize,
+)
 
 # varia
 from clize import run
 from tqdm import trange, tqdm
-import getpass
-import os
-import pickle
-
-
-def get_cassandra_reader(keyspace, table_suffix):
-    # Read Cassandra parameters
-    try:
-        from private_data import cassandra_ips, username, password
-    except ImportError:
-        cassandra_ip = getpass("Insert Cassandra's IP address: ")
-        cassandra_ips = [cassandra_ip]
-        username = getpass("Insert Cassandra user: ")
-        password = getpass("Insert Cassandra password: ")
-    # cache directory
-    ids_cache = "ids_cache"
-    if not os.path.exists(ids_cache):
-        os.makedirs(ids_cache)
-    rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
-    # Load list of uuids from Cassandra DB
-    ap = PlainTextAuthProvider(username=username, password=password)
-    id_col = "patch_id"
-    if not os.path.exists(rows_fn):
-        lm = MiniListManager(ap, cassandra_ips)
-        conf = {
-            "table": f"{keyspace}.ids_{table_suffix}",
-            "id_col": id_col,
-        }
-        lm.set_config(conf)
-        print("Loading list of uuids from DB...")
-        lm.read_rows_from_db()
-        lm.save_rows(rows_fn)
-        stuff = lm.get_rows()
-    else:  # use cached file
-        print("Loading list of uuids from cached file...")
-        with open(rows_fn, "rb") as f:
-            stuff = pickle.load(f)
-    uuids = stuff["row_keys"]
-    uuids = list(map(str, uuids))  # convert uuids to strings
-    table = f"{keyspace}.data_{table_suffix}"
-    cassandra_reader = fn.crs4.cassandra(
-        name="CassReader",
-        uuids=uuids,
-        shuffle_after_epoch=True,
-        cassandra_ips=cassandra_ips,
-        table=table,
-        label_col="label",
-        data_col="data",
-        id_col=id_col,
-        username=username,
-        password=password,
-        prefetch_buffers=32,
-        io_threads=10,
-        # comm_threads=4,
-        # copy_threads=4,
-        # wait_threads=2,
-        # use_ssl=True,
-        # ssl_certificate="node0.cer.pem",
-    )
-    return cassandra_reader
-
-
-def fn_decode(images):
-    return fn.decoders.image(
-        images,
-        device="cpu",
-        output_type=types.RGB,
-        # hybrid_huffman_threshold=100000,
-        # memory_stats=True,
-    )  # note: output is HWC (channels-last)
-
-
-def fn_normalize(images):
-    return fn.crop_mirror_normalize(
-        images,
-        dtype=types.FLOAT,
-        output_layout="CHW",
-        mean=[0.485 * 255, 0.456 * 255, 0.406 * 255],
-        std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
-    )
-
-
-def fn_image_random_crop(images):
-    return fn.decoders.image_random_crop(
-        images,
-        device="mixed",
-        output_type=types.RGB,
-        hybrid_huffman_threshold=100000,
-        random_aspect_ratio=[0.8, 1.25],
-        random_area=[0.1, 1.0],
-        # memory_stats=True,
-    )  # note: output is HWC (channels-last)
-
-
-def fn_resize(images):
-    return fn.resize(
-        images,
-        resize_x=256,
-        resize_y=256,
-    )
-
-
-def fn_crop_normalize(images):
-    return fn.crop_mirror_normalize(
-        images.gpu(),
-        dtype=types.FLOAT,
-        output_layout="CHW",
-        crop=(224, 224),
-        mean=[0.485 * 255, 0.456 * 255, 0.406 * 255],
-        std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
-    )
 
 
 def read_data(
@@ -172,7 +59,7 @@ def read_data(
     # create dali pipeline
     @pipeline_def(
         batch_size=128,
-        num_threads=20,
+        num_threads=4,
         device_id=device_id,
         # prefetch_queue_depth=2,
         # enable_memory_stats=True,
