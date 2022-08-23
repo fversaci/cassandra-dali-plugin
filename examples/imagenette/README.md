@@ -110,7 +110,7 @@ As an extreme example, when raw loading, without any decoding or
 processing, 224x224 JPEG images with `batch_size=128`, over a 25 GbE
 network with an (artificial) latency of 50 ms (set with `tc-netem`,
 with no packet loss), we can achieve about 1000 batches per second
-(and a throughput of roughly 1.4 GB/s) using the following parameters:
+(and a throughput of roughly 1.5 GB/s) using the following parameters:
 
 - `prefetch_buffers`: 256 (to hide the high latency)
 - `io_threads`: 20
