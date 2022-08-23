@@ -24,7 +24,8 @@ mount a host directory for Cassandra on a fast disk (e.g.,
 ```bash
 ## Build and run cassandradl docker container
 $ docker build -t cassandra-dali-plugin .
-$ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw --cap-add=sys_nice cassandra-dali-plugin
+$ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
+  --cap-add=sys_nice cassandra-dali-plugin
 
 ## Inside the Docker container:
 

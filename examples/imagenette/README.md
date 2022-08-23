@@ -19,7 +19,8 @@ $ cd examples/imagenette/
 $ /cassandra/bin/cqlsh -f create_tables.cql
 
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette
+$ python3 extract_serial.py /tmp/imagenette2-320 \
+  --img-format=JPEG --keyspace=imagenette
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py
@@ -34,13 +35,15 @@ filesystem and to read them using the standard DALI file reader.
 
 ```bash
 # - Save the center-cropped files in the filesystem
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --target-dir=/data/imagenette/224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG \
+  --target-dir=/data/imagenette/224_jpg
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --reader=file --file-root=/data/imagenette/224_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --device-id=0 --reader=file --file-root=/data/imagenette/224_jpg
+$ python3 loop_read.py --device-id=0 --reader=file \
+  --file-root=/data/imagenette/224_jpg
 ```
 
 ## Storing the unchanged images in the DB (no resize)
@@ -48,7 +51,8 @@ We can also store the original, unchanged images in the DB:
 
 ```bash
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --keyspace=imagenette
+$ python3 extract_serial.py /tmp/imagenette2-320 \
+  --img-format=UNCHANGED --keyspace=imagenette
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --table-suffix=orig
@@ -76,7 +80,11 @@ $ sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
 $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 
 # - Fill the tables in parallel (10 jobs) with Spark
-$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /data/imagenet/ILSVRC/Data/CLS-LOC/ --img-format=JPEG --keyspace=imagenet
+$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 \
+  --conf spark.default.parallelism=20 \
+  --py-files extract_common.py extract_spark.py \
+  /data/imagenet/ILSVRC/Data/CLS-LOC/ \
+  --img-format=JPEG --keyspace=imagenet
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --keyspace=imagenet
@@ -94,7 +102,8 @@ removing any possibile bottleneck.
   network latencies. Default: 2.
 - `io_threads`: number of IO threads used by the Cassandra driver
   (which also limits the number of TCP connections). Default: 2.
-- `comm_threads`: number of threads handling the communication. Default: 2.
+- `comm_threads`: number of threads handling the
+  communication. Default: 2.
 - `copy_threads`: number of threads copying the data. Default: 2.
 
 As an extreme example, when raw loading, without any decoding or
