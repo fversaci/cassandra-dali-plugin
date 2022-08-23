@@ -103,7 +103,7 @@ removing any possibile bottleneck.
 - `io_threads`: number of IO threads used by the Cassandra driver
   (which also limits the number of TCP connections). Default: 2.
 - `comm_threads`: number of threads handling the
-  communication. Default: 2.
+  communications. Default: 2.
 - `copy_threads`: number of threads copying the data. Default: 2.
 
 As an extreme example, when raw loading, without any decoding or
