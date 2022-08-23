@@ -36,7 +36,7 @@ $ /cassandra/bin/cassandra   # Note that the shell prompt is immediately returne
 
 ## Dataset example
 
-See the following example for details on how to use and optimize this
+See the following annotated example for details on how to use and optimize this
 plugin:
 - [Imagenette](examples/imagenette/)
 
