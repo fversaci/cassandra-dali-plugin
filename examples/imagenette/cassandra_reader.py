@@ -34,12 +34,14 @@ def get_cassandra_reader(keyspace, table_suffix):
         cassandra_ips = [cassandra_ip]
         username = getpass("Insert Cassandra user: ")
         password = getpass("Insert Cassandra password: ")
-    # cache directory
+        
+    # set uuids cache directory
     ids_cache = "ids_cache"
     if not os.path.exists(ids_cache):
         os.makedirs(ids_cache)
     rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
-    # Load list of uuids from Cassandra DB
+    
+    # Load list of uuids from Cassandra DB...
     ap = PlainTextAuthProvider(username=username, password=password)
     id_col = "patch_id"
     if not os.path.exists(rows_fn):
@@ -53,10 +55,11 @@ def get_cassandra_reader(keyspace, table_suffix):
         lm.read_rows_from_db()
         lm.save_rows(rows_fn)
         stuff = lm.get_rows()
-    else:  # use cached file
+    else:  # ...or from the cached file
         print("Loading list of uuids from cached file...")
         with open(rows_fn, "rb") as f:
             stuff = pickle.load(f)
+    # init and return Cassandra reader
     uuids = stuff["row_keys"]
     uuids = list(map(str, uuids))  # convert uuids to strings
     table = f"{keyspace}.data_{table_suffix}"
@@ -71,10 +74,10 @@ def get_cassandra_reader(keyspace, table_suffix):
         id_col=id_col,
         username=username,
         password=password,
-        prefetch_buffers=32,
-        io_threads=10,
-        # comm_threads=4,
-        # copy_threads=4,
+        prefetch_buffers=256,
+        io_threads=20,
+        comm_threads=4,
+        copy_threads=4,
         # wait_threads=2,
         # use_ssl=True,
         # ssl_certificate="node0.cer.pem",

@@ -36,13 +36,13 @@ def read_data(
     device_id=types.CPU_ONLY_DEVICE_ID,
     file_root=None,
 ):
-    """Read images from DB or filesystem, in tight loop
+    """Read images from DB or filesystem, in a tight loop
 
-    :param keyspace: Name of the dataset (i.e., used keyspace in Cassandra)
+    :param keyspace: Cassandra keyspace (i.e., name of the dataset)
     :param table_suffix: Suffix for table names
-    :param reader: "cassandra" o "file"
-    :param device_id: Device id (>=0 for GPUs)
-    :param file_root: File root to be used when reading from filesystem
+    :param reader: "cassandra" or "file"
+    :param device_id: DALI device id (>=0 for GPUs)
+    :param file_root: File root to be used (only when reading from the filesystem)
     """
     if reader == "cassandra":
         chosen_reader = get_cassandra_reader(keyspace, table_suffix)
@@ -71,7 +71,7 @@ def read_data(
         # images = fn_decode(images)
         # images = fn_normalize(images)
         ####################################################################
-        # - alternatively: resize images
+        # - alternatively: resize images (if using originals)
         # images = fn_image_random_crop(images)
         # images = fn_resize(images)
         # images = fn_crop_normalize(images)
@@ -97,17 +97,16 @@ def read_data(
     ########################################################################
     # alternatively: use pytorch iterator
     ########################################################################
-
-    ddl = DALIGenericIterator(
-        [pl],
-        ["data", "label"],
-        reader_name="CassReader",
-        # last_batch_policy=LastBatchPolicy.FULL, # or PARTIAL, DROP
-    )
-    for _ in range(10):
-        for data in tqdm(ddl):
-            x, y = data[0]["data"], data[0]["label"]
-        ddl.reset()  # rewind data loader
+    # ddl = DALIGenericIterator(
+    #     [pl],
+    #     ["data", "label"],
+    #     reader_name="CassReader",
+    #     # last_batch_policy=LastBatchPolicy.FULL, # or PARTIAL, DROP
+    # )
+    # for _ in range(10):
+    #     for data in tqdm(ddl):
+    #         x, y = data[0]["data"], data[0]["label"]
+    #     ddl.reset()  # rewind data loader
 
 
 # parse arguments

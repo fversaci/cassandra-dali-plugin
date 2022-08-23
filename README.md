@@ -2,20 +2,19 @@
 
 ## Overview
 
-This is a plugin that enables data loading from an [Apache Cassandra
-DB](https://cassandra.apache.org) into [NVIDIA Data Loading Library
-(DALI)](https://github.com/NVIDIA/DALI) (which can be used to load and
-preprocess images for Pytorch or TensorFlow).
+This plugin enables data loading from an [Apache Cassandra NoSQL
+database](https://cassandra.apache.org) to [NVIDIA Data Loading
+Library (DALI)](https://github.com/NVIDIA/DALI) (which can be used to
+load and preprocess images for Pytorch or TensorFlow).
 
 ## Installation
 
 The easiest way to test the cassandra-dali-plugin is by using the
-provided Dockerfile, which also contains PyTorch, NVIDIA DALI,
-Cassandra C++ and Python drivers, an Apache Cassandra server and
-Apache Spark.
+provided Dockerfile, which also contains NVIDIA DALI, Cassandra C++
+and Python drivers, a Cassandra server, PyTorch and Apache Spark.
 
-The details of how to install the cassandra-dali-plugin in a system
-which already provides some of the packages above can be deduced from
+The details of how to install the cassandra-dali-plugin, in a system
+which already provides some of the packages above, can be deduced from
 the [Dockerfile](Dockerfile).
 
 For better performance and for data persistence, it is advised to
