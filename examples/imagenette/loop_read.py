@@ -59,7 +59,7 @@ def read_data(
     # create dali pipeline
     @pipeline_def(
         batch_size=128,
-        num_threads=4,
+        num_threads=16,
         device_id=device_id,
         # prefetch_queue_depth=2,
         # enable_memory_stats=True,
@@ -68,8 +68,8 @@ def read_data(
         images, labels = chosen_reader
         ####################################################################
         # - do not resize (images have already been already resized)
-        # images = fn_decode(images)
-        # images = fn_normalize(images)
+        images = fn_decode(images)
+        images = fn_normalize(images)
         ####################################################################
         # - alternatively: resize images (if using originals)
         # images = fn_image_random_crop(images)
@@ -87,26 +87,26 @@ def read_data(
     ########################################################################
     # DALI iterator
     ########################################################################
-    bs = pl.max_batch_size
-    steps = (pl.epoch_size()["CassReader"] + bs - 1) // bs
-    for _ in range(10):
-        for _ in trange(steps):
-            x, y = pl.run()
-    return
+    # bs = pl.max_batch_size
+    # steps = (pl.epoch_size()["CassReader"] + bs - 1) // bs
+    # for _ in range(10):
+    #     for _ in trange(steps):
+    #         x, y = pl.run()
+    # return
 
     ########################################################################
     # alternatively: use pytorch iterator
     ########################################################################
-    # ddl = DALIGenericIterator(
-    #     [pl],
-    #     ["data", "label"],
-    #     reader_name="CassReader",
-    #     # last_batch_policy=LastBatchPolicy.FULL, # or PARTIAL, DROP
-    # )
-    # for _ in range(10):
-    #     for data in tqdm(ddl):
-    #         x, y = data[0]["data"], data[0]["label"]
-    #     ddl.reset()  # rewind data loader
+    ddl = DALIGenericIterator(
+        [pl],
+        ["data", "label"],
+        reader_name="CassReader",
+        last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
+    )
+    for _ in range(10):
+        for data in tqdm(ddl):
+            x, y = data[0]["data"], data[0]["label"]            
+        ddl.reset()  # rewind data loader
 
 
 # parse arguments

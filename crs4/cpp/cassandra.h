@@ -10,6 +10,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cmath>
 #include "dali/pipeline/operator/operator.h"
 #include "dali/operators/reader/reader_op.h"
 #include "batchhandler.h"
@@ -27,9 +28,10 @@ public:
   ::dali::ReaderMeta GetReaderMeta() const override {
     ::dali::ReaderMeta ret;
     ret.epoch_size = uuids.size();
-    ret.epoch_size_padded = uuids.size();
-    ret.number_of_shards = 1;
-    ret.shard_id = 0;
+    ret.epoch_size_padded = num_shards
+      * std::ceil(uuids.size() / (double)num_shards);
+    ret.number_of_shards = num_shards;
+    ret.shard_id = shard_id;
     ret.pad_last_batch = true;
     ret.stick_to_shard = true;
     return ret;
@@ -48,7 +50,7 @@ protected:
   }
 
   inline void Reset() {
-    current = uuids.begin();
+    current = shard_begin;
     current_epoch++;
 
     if (shuffle_after_epoch) {
@@ -58,6 +60,14 @@ protected:
   }
 
   void RunImpl(::dali::workspace_t<dali::CPUBackend> &ws) override;
+
+  void set_shard_sizes(){
+    int dataset_size = uuids.size();
+    shard_size = std::ceil(uuids.size() / (double)num_shards);
+    int pos_begin = std::floor(shard_id*dataset_size/(double)num_shards);
+    shard_begin = uuids.begin() + pos_begin;
+    shard_end = shard_begin + shard_size;
+  }
 
 private:
   void prefetch_one();
@@ -82,7 +92,12 @@ private:
   std::string ssl_certificate;
   std::vector<std::string>::iterator current;
   bool shuffle_after_epoch;
-  int current_epoch=-1;  
+  int current_epoch=-1;
+  const int shard_id;
+  const int num_shards;
+  std::vector<std::string>::iterator shard_begin;
+  std::vector<std::string>::iterator shard_end;
+  int shard_size;
 };
 
 }  // namespace crs4

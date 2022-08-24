@@ -78,6 +78,8 @@ def get_cassandra_reader(keyspace, table_suffix):
         io_threads=20,
         comm_threads=4,
         copy_threads=4,
+        # num_shards=3,
+        # shard_id=0,
         # wait_threads=2,
         # use_ssl=True,
         # ssl_certificate="node0.cer.pem",

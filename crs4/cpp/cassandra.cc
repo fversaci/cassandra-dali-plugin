@@ -30,8 +30,12 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   io_threads(spec.GetArgument<int>("io_threads")),
   copy_threads(spec.GetArgument<int>("copy_threads")),
   wait_threads(spec.GetArgument<int>("wait_threads")),
-  comm_threads(spec.GetArgument<int>("comm_threads"))
+  comm_threads(spec.GetArgument<int>("comm_threads")),
+  shard_id(spec.GetArgument<int>("shard_id")),
+  num_shards(spec.GetArgument<int>("num_shards"))
 {
+  DALI_ENFORCE(num_shards > shard_id, "num_shards needs to be greater than shard_id");
+  set_shard_sizes();
   bh = new BatchHandler(table, label_col, data_col, id_col,
 			username, password, cassandra_ips, cassandra_port,
 			use_ssl, ssl_certificate,
@@ -45,11 +49,11 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
 }
 
 void Cassandra::prefetch_one() {
-  auto dist = std::distance(current, uuids.end());
+  auto dist = std::distance(current, shard_end);
   // if reached the end, rewind
   if (dist==0) {
     Reset();
-    dist = uuids.size();
+    dist = shard_size;
   }
   // full batch
   if (dist>=batch_size) {
@@ -59,10 +63,10 @@ void Cassandra::prefetch_one() {
     return;
   }
   // pad partial batch
-  auto batch_ids = std::vector(current, uuids.end());
+  auto batch_ids = std::vector(current, shard_end);
   for (int i=dist; i!=batch_size; ++i)
-    batch_ids.push_back(*uuids.rbegin());
-  current = uuids.end();
+    batch_ids.push_back(*(shard_end-1));
+  current = shard_end;
   bh->prefetch_batch(batch_ids);
 }
 
@@ -99,13 +103,18 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg<std::string>("password", R"()", nullptr)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
 .AddOptionalArg<std::string>("ssl_certificate",
-			     R"(Optional SSL certificate)", "")
+   R"(Optional SSL certificate)", "")
 .AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
-		false)
+   false)
 .AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
 .AddOptionalArg("io_threads",
    R"(Number of io threads used by the Cassandra driver)", 2)
 .AddOptionalArg("copy_threads",
    R"(Number of threads copying data in parallel)", 2)
 .AddOptionalArg("wait_threads", R"(Parallelism for waiting threads)", 2)
-.AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2);
+.AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2)
+.AddOptionalArg("num_shards",
+   R"code(Partitions the data into the specified number of parts (shards).
+This is typically used for multi-GPU or multi-node training.)code", 1)
+.AddOptionalArg("shard_id",
+   R"code(Index of the shard to read.)code", 0);
