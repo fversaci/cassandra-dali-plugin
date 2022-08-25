@@ -76,7 +76,7 @@ RUN \
     export SPARK_VER=$(curl 'https://downloads.apache.org/spark/' | grep -o "$SPARK_V\.." | tail -n 1) \
     && cd /tmp && wget "https://downloads.apache.org/spark/spark-$SPARK_VER/spark-$SPARK_VER-bin-hadoop3.tgz" \
     && cd / && tar xfz "/tmp/spark-$SPARK_VER-bin-hadoop3.tgz" \
-    && ln -s "spark-$SPARK_VER-bin-hadoop3.tgz" spark
+    && ln -s "spark-$SPARK_VER-bin-hadoop3" spark
 
 # Install jdk
 RUN \
