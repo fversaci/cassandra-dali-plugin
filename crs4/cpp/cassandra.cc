@@ -34,7 +34,10 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   shard_id(spec.GetArgument<int>("shard_id")),
   num_shards(spec.GetArgument<int>("num_shards"))
 {
-  DALI_ENFORCE(num_shards > shard_id, "num_shards needs to be greater than shard_id");
+  DALI_ENFORCE(num_shards > shard_id,
+	       "num_shards needs to be greater than shard_id");
+  DALI_ENFORCE(uuids.size() > 0,
+	       "dataset cannot be empty");
   set_shard_sizes();
   bh = new BatchHandler(table, label_col, data_col, id_col,
 			username, password, cassandra_ips, cassandra_port,
@@ -64,19 +67,19 @@ void Cassandra::prefetch_one() {
   }
   // pad partial batch
   auto batch_ids = std::vector(current, shard_end);
+  current = shard_end;
   for (int i=dist; i!=batch_size; ++i)
     batch_ids.push_back(*(shard_end-1));
-  current = shard_end;
   bh->prefetch_batch(batch_ids);
 }
 
 void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
   BatchImgLab batch = bh->blocking_get_batch();
   prefetch_one();
-  // copy features to output
+  // share features with output
   auto &features = ws.Output<::dali::CPUBackend>(0);
   features.ShareData(batch.first);
-  // copy labels to output
+  // share labels with output
   auto &labels = ws.Output<::dali::CPUBackend>(1);
   labels.ShareData(batch.second);
 }
