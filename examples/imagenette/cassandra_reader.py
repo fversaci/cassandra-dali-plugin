@@ -51,17 +51,18 @@ def get_cassandra_reader(keyspace, table_suffix):
             "id_col": id_col,
         }
         lm.set_config(conf)
-        print("Loading list of uuids from DB...")
+        print("Loading list of uuids from DB... ", end="")
         lm.read_rows_from_db()
         lm.save_rows(rows_fn)
         stuff = lm.get_rows()
     else:  # ...or from the cached file
-        print("Loading list of uuids from cached file...")
+        print("Loading list of uuids from cached file... ", end="")
         with open(rows_fn, "rb") as f:
             stuff = pickle.load(f)
     # init and return Cassandra reader
     uuids = stuff["row_keys"]
     uuids = list(map(str, uuids))  # convert uuids to strings
+    print(f" {len(uuids)} images")
     table = f"{keyspace}.data_{table_suffix}"
     cassandra_reader = fn.crs4.cassandra(
         name="CassReader",
@@ -78,9 +79,9 @@ def get_cassandra_reader(keyspace, table_suffix):
         io_threads=20,
         comm_threads=4,
         copy_threads=4,
-        # num_shards=3,
-        # shard_id=0,
         # wait_threads=2,
+        # num_shards=1,
+        # shard_id=0,
         # use_ssl=True,
         # ssl_certificate="node0.cer.pem",
     )
