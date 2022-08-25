@@ -1,8 +1,6 @@
-FROM nvidia/cuda:11.3.1-cudnn8-devel-ubuntu20.04
-
-RUN rm /etc/apt/sources.list.d/cuda.list
-RUN apt-key del 7fa2af80
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
+# Starting from NVIDIA PyTorch NGC Container
+# https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
+FROM nvcr.io/nvidia/pytorch:22.07-py3
 
 # install some useful tools
 RUN \
@@ -42,6 +40,10 @@ RUN \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
+########################################################################
+# Cassandra C++ and Python drivers
+########################################################################
+
 # install cassandra C++ driver
 RUN \
     export DEBIAN_FRONTEND=noninteractive \
@@ -66,22 +68,15 @@ RUN \
       opencv-python cassandra-driver pybind11 tqdm tifffile
 
 ########################################################################
-# Install PyTorch
-########################################################################
-
-RUN \
-    pip3 install --upgrade --no-cache torch torchvision torchaudio \
-      --extra-index-url https://download.pytorch.org/whl/cu113
-ENV LD_LIBRARY_PATH=/usr/local/lib/python3.8/dist-packages/torch/lib:$LD_LIBRARY_PATH
-
-########################################################################
 # SPARK installation, to test examples
 ########################################################################
 # download and install spark
+ARG SPARK_V=3.3
 RUN \
-    cd /tmp && wget 'https://downloads.apache.org/spark/spark-3.1.2/spark-3.1.2-bin-hadoop3.2.tgz' \
-    && cd / && tar xfz '/tmp/spark-3.1.2-bin-hadoop3.2.tgz' \
-    && ln -s 'spark-3.1.2-bin-hadoop3.2' spark
+    export SPARK_VER=$(curl 'https://downloads.apache.org/spark/' | grep -o "$SPARK_V\.." | tail -n 1) \
+    && cd /tmp && wget "https://downloads.apache.org/spark/spark-$SPARK_VER/spark-$SPARK_VER-bin-hadoop3.tgz" \
+    && cd / && tar xfz "/tmp/spark-$SPARK_VER-bin-hadoop3.tgz" \
+    && ln -s "spark-$SPARK_VER-bin-hadoop3.tgz" spark
 
 # Install jdk
 RUN \
@@ -94,14 +89,14 @@ ENV PYSPARK_PYTHON=python3
 EXPOSE 8080
 EXPOSE 7077
 EXPOSE 4040
-########################################################################
 
 ########################################################################
 # Cassandra server installation, to test examples
 ########################################################################
-ARG CASS_VERS=4.0.4
+ARG CASS_V=4.0
 RUN \
-    cd /tmp && wget "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
+    export CASS_VERS=$(curl 'https://downloads.apache.org/cassandra/' | grep -o "$CASS_V\.." | tail -n 1) \
+    && cd /tmp && wget "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && ln -s "apache-cassandra-$CASS_VERS" cassandra
 
@@ -110,11 +105,6 @@ RUN \
     sed -i 's/^\(write_request_timeout_in_ms:\)\(.*\)/\1 20000/' /cassandra/conf/cassandra.yaml
 
 EXPOSE 9042
-########################################################################
-
-# Install NVIDIA DALI: https://github.com/NVIDIA/DALI
-RUN \
-    pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110
 
 ########################################################################
 # Download the Imagenette dataset
@@ -125,13 +115,21 @@ RUN \
     && tar xfz 'imagenette2-320.tgz' \
     && rm 'imagenette2-320.tgz'
 
+########################################################################
+# Install plugin and run as user
+########################################################################
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
-    && chown -R user.user "/apache-cassandra-$CASS_VERS"
+    && chown -R user.user /apache-cassandra-$CASS_V*
 
 COPY . /home/user/cassandra-dali-plugin
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'
 WORKDIR /home/user/cassandra-dali-plugin
 RUN pip3 install .
 USER user
+
+# Fix for error given by "from nvidia.dali.plugin.pytorch import DALIGenericIterator"
+# - https://forums.developer.nvidia.com/t/issues-building-docker-image-from-ngc-container-nvcr-io-nvidia-pytorch-22-py3/209034
+ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib"
