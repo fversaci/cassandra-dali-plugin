@@ -5,10 +5,10 @@
 # https://opensource.org/licenses/MIT.
 
 ### To insert in DB, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split=train --table-suffix=train_224_jpg
 
 ### To save files in a directory, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --target-dir=/data/imagenette/224_jpg
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --split=train --target-dir=/data/imagenette/224_jpg
 
 from getpass import getpass
 import extract_common
@@ -23,15 +23,17 @@ def save_images(
     *,
     img_format="JPEG",
     keyspace="imagenette",
-    target_dir=None,
+    table_suffix="224_jpg",
     split="train",
+    target_dir=None,
 ):
     """Save center-cropped images to Cassandra DB or directory
 
     :param src_dir: Input directory for Imagenette
     :param img_format: Format of output images
     :param keyspace: Name of dataset (for the Cassandra table)
-    :param target_dir: Output directory (is savinf to filesystem)
+    :param table_suffix: Suffix for table names
+    :param target_dir: Output directory (when saving to filesystem)
     :param split: Subdir to be processed
     """
     splits = [split]
@@ -54,7 +56,7 @@ def save_images(
 
         par_jobs.foreachPartition(
             extract_common.send_images_to_db(
-                cassandra_ips, username, password, img_format, keyspace
+                cassandra_ips, username, password, img_format, keyspace, table_suffix
             )
         )
     else:

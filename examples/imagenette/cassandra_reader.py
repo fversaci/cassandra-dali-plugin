@@ -25,7 +25,7 @@ plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 
 
-def get_cassandra_reader(keyspace, table_suffix):
+def get_cassandra_reader(keyspace, table_suffix, shard_id=0, num_shards=1, name="Reader"):
     # Read Cassandra parameters
     try:
         from private_data import cassandra_ips, username, password
@@ -34,13 +34,13 @@ def get_cassandra_reader(keyspace, table_suffix):
         cassandra_ips = [cassandra_ip]
         username = getpass("Insert Cassandra user: ")
         password = getpass("Insert Cassandra password: ")
-        
+
     # set uuids cache directory
     ids_cache = "ids_cache"
     if not os.path.exists(ids_cache):
         os.makedirs(ids_cache)
     rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
-    
+
     # Load list of uuids from Cassandra DB...
     ap = PlainTextAuthProvider(username=username, password=password)
     id_col = "patch_id"
@@ -65,7 +65,7 @@ def get_cassandra_reader(keyspace, table_suffix):
     print(f" {len(uuids)} images")
     table = f"{keyspace}.data_{table_suffix}"
     cassandra_reader = fn.crs4.cassandra(
-        name="CassReader",
+        name=name,
         uuids=uuids,
         shuffle_after_epoch=True,
         cassandra_ips=cassandra_ips,
@@ -79,9 +79,9 @@ def get_cassandra_reader(keyspace, table_suffix):
         io_threads=20,
         comm_threads=4,
         copy_threads=4,
+        num_shards=num_shards,
+        shard_id=shard_id,
         # wait_threads=2,
-        # num_shards=1,
-        # shard_id=0,
         # use_ssl=True,
         # ssl_certificate="node0.cer.pem",
     )

@@ -19,14 +19,14 @@ $ cd examples/imagenette/
 $ /cassandra/bin/cqlsh -f create_tables.cql
 
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 \
-  --img-format=JPEG --keyspace=imagenette
+$ python3 extract_serial.py /tmp/imagenette2-320 --split=train --table-suffix=train_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split=val --table-suffix=val_224_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py
+$ python3 loop_read.py --table-suffix=train_224_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --device-id=0
+$ python3 loop_read.py --table-suffix=train_224_jpg --device-id=0
 ```
 
 ## Compare with DALI fn.readers.file
@@ -35,37 +35,38 @@ filesystem and to read them using the standard DALI file reader.
 
 ```bash
 # - Save the center-cropped files in the filesystem
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG \
-  --target-dir=/data/imagenette/224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split=train \
+  --target-dir=/data/imagenette/train_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split=val \
+  --target-dir=/data/imagenette/val_224_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --reader=file --file-root=/data/imagenette/224_jpg
+$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_224_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --device-id=0 --reader=file \
-  --file-root=/data/imagenette/224_jpg
+$ python3 loop_read.py --reader=file --file-root=/data/imagenette/224_jpg --device-id=0
 ```
 
 ## Storing the unchanged images in the DB (no resize)
-We can also store the original, unchanged images in the DB:
+We can also store the original, unchanged files in the DB:
 
 ```bash
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 \
-  --img-format=UNCHANGED --keyspace=imagenette
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED \
+  --table-suffix=train_orig
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --table-suffix=orig
+$ python3 loop_read.py --table-suffix=train_orig
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --table-suffix=orig --device-id=0
+$ python3 loop_read.py --table-suffix=train_orig --device-id=0
 ```
 
 ## Insert Imagenet dataset in parallel (with Apache Spark)
 The same scripts can also be used to process the full ImageNet dataset
 (166 GB), which can be downloaded from
 [Kaggle](https://www.kaggle.com/competitions/imagenet-object-localization-challenge/data).
-We assume that the dataset has been unzipped in the `/data/imagenet/`
+We assume that the dataset has been stored in the `/data/imagenet/`
 directory.
 
 Since this dataset is much larger, it is convenient to process it in
@@ -73,18 +74,16 @@ parallel, using Apache Spark (pre-installed in the Docker container).
 
 ```bash
 # - Start Spark master+worker
-$ sudo /spark/sbin/start-master.sh
-$ sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
+$ /spark/sbin/start-master.sh
+$ /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
 
 # - Create the tables in the Cassandra DB
 $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 
 # - Fill the tables in parallel (10 jobs) with Spark
-$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 \
-  --conf spark.default.parallelism=20 \
-  --py-files extract_common.py extract_spark.py \
-  /data/imagenet/ILSVRC/Data/CLS-LOC/ \
-  --img-format=JPEG --keyspace=imagenet
+$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 \
+  --py-files extract_common.py extract_spark.py /data/imagenet/ \
+  --keyspace=imagenet --split=train --table-suffix=train_224_jpg
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --keyspace=imagenet

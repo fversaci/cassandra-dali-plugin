@@ -6,7 +6,7 @@ CREATE KEYSPACE imagenette WITH replication = {'class': 'SimpleStrategy', 'repli
 // Tables with original files
 
 // Mapping patch metadata to data via uuid
-CREATE TABLE imagenette.ids_orig(
+CREATE TABLE imagenette.ids_train_orig(
   label int,
   or_label text,
   or_split text,
@@ -15,7 +15,7 @@ CREATE TABLE imagenette.ids_orig(
 );
 
 // Mapping patch uuid to data and label
-CREATE TABLE imagenette.data_orig(
+CREATE TABLE imagenette.data_train_orig(
   patch_id uuid,
   label int,
   data blob,
@@ -23,7 +23,33 @@ CREATE TABLE imagenette.data_orig(
 );
 
 // Mapping patch uuid to metadata
-CREATE TABLE imagenette.metadata_orig(
+CREATE TABLE imagenette.metadata_train_orig(
+  label int,
+  or_label text,
+  or_split text,
+  patch_id uuid,
+  PRIMARY KEY ((patch_id))
+);
+
+// Mapping patch metadata to data via uuid
+CREATE TABLE imagenette.ids_val_orig(
+  label int,
+  or_label text,
+  or_split text,
+  patch_id uuid,
+  PRIMARY KEY ((or_split, label), patch_id)
+);
+
+// Mapping patch uuid to data and label
+CREATE TABLE imagenette.data_val_orig(
+  patch_id uuid,
+  label int,
+  data blob,
+  PRIMARY KEY ((patch_id))
+);
+
+// Mapping patch uuid to metadata
+CREATE TABLE imagenette.metadata_val_orig(
   label int,
   or_label text,
   or_split text,
@@ -34,7 +60,7 @@ CREATE TABLE imagenette.metadata_orig(
 // Tables with center-cropped JPEGs
 
 // Mapping patch metadata to data via uuid
-CREATE TABLE imagenette.ids_224_jpg(
+CREATE TABLE imagenette.ids_train_224_jpg(
   label int,
   or_label text,
   or_split text,
@@ -43,7 +69,7 @@ CREATE TABLE imagenette.ids_224_jpg(
 );
 
 // Mapping patch uuid to data and label
-CREATE TABLE imagenette.data_224_jpg(
+CREATE TABLE imagenette.data_train_224_jpg(
   patch_id uuid,
   label int,
   data blob,
@@ -51,18 +77,16 @@ CREATE TABLE imagenette.data_224_jpg(
 );
 
 // Mapping patch uuid to metadata
-CREATE TABLE imagenette.metadata_224_jpg(
+CREATE TABLE imagenette.metadata_train_224_jpg(
   label int,
   or_label text,
   or_split text,
   patch_id uuid,
   PRIMARY KEY ((patch_id))
 );
-
-// Tables with center-cropped TIFFs
 
 // Mapping patch metadata to data via uuid
-CREATE TABLE imagenette.ids_224_tiff(
+CREATE TABLE imagenette.ids_val_224_jpg(
   label int,
   or_label text,
   or_split text,
@@ -71,7 +95,7 @@ CREATE TABLE imagenette.ids_224_tiff(
 );
 
 // Mapping patch uuid to data and label
-CREATE TABLE imagenette.data_224_tiff(
+CREATE TABLE imagenette.data_val_224_jpg(
   patch_id uuid,
   label int,
   data blob,
@@ -79,7 +103,7 @@ CREATE TABLE imagenette.data_224_tiff(
 );
 
 // Mapping patch uuid to metadata
-CREATE TABLE imagenette.metadata_224_tiff(
+CREATE TABLE imagenette.metadata_val_224_jpg(
   label int,
   or_label text,
   or_split text,

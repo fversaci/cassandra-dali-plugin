@@ -73,24 +73,18 @@ def get_jobs(src_dir, splits=["train", "val"]):
     return jobs
 
 
-def send_images_to_db(cassandra_ips, username, password, img_format, dataset):
-    if img_format == "JPEG":
-        table_suffix = "224_jpg"
-    elif img_format == "TIFF":
-        table_suffix = "224_tiff"
-    elif img_format == "UNCHANGED":
-        table_suffix = "orig"
-    else:
-        raise ("Supporting only JPEG, TIFF, and UNCHANGED")
+def send_images_to_db(
+    cassandra_ips, username, password, img_format, keyspace, table_suffix
+):
     auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
         cw = CassandraWriter(
             auth_prov,
             cassandra_ips,
-            table_ids=f"{dataset}.ids_{table_suffix}",
-            table_data=f"{dataset}.data_{table_suffix}",
-            table_metadata=f"{dataset}.metadata_{table_suffix}",
+            table_ids=f"{keyspace}.ids_{table_suffix}",
+            table_data=f"{keyspace}.data_{table_suffix}",
+            table_metadata=f"{keyspace}.metadata_{table_suffix}",
             id_col="patch_id",
             label_col="label",
             data_col="data",

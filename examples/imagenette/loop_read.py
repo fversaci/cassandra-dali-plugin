@@ -31,7 +31,7 @@ from tqdm import trange, tqdm
 def read_data(
     *,
     keyspace="imagenette",
-    table_suffix="224_jpg",
+    table_suffix="train_224_jpg",
     reader="cassandra",
     device_id=types.CPU_ONLY_DEVICE_ID,
     file_root=None,
@@ -45,12 +45,12 @@ def read_data(
     :param file_root: File root to be used (only when reading from the filesystem)
     """
     if reader == "cassandra":
-        chosen_reader = get_cassandra_reader(keyspace, table_suffix)
+        chosen_reader = get_cassandra_reader(keyspace, table_suffix, name="Reader")
     elif reader == "file":
         # alternatively: use fn.readers.file
         file_reader = fn.readers.file(
             file_root=file_root,
-            name="CassReader",
+            name="Reader",
         )
         chosen_reader = file_reader
     else:
@@ -88,7 +88,7 @@ def read_data(
     # DALI iterator
     ########################################################################
     bs = pl.max_batch_size
-    steps = (pl.epoch_size()["CassReader"] + bs - 1) // bs
+    steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
     for _ in range(10):
         for _ in trange(steps):
             x, y = pl.run()
@@ -100,12 +100,12 @@ def read_data(
     # ddl = DALIGenericIterator(
     #     [pl],
     #     ["data", "label"],
-    #     reader_name="CassReader",
+    #     reader_name="Reader",
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )
     # for _ in range(10):
     #     for data in tqdm(ddl):
-    #         x, y = data[0]["data"], data[0]["label"]            
+    #         x, y = data[0]["data"], data[0]["label"]
     #     ddl.reset()  # rewind data loader
 
 
