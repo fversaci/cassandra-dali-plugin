@@ -35,10 +35,8 @@ filesystem and to read them using the standard DALI file reader.
 
 ```bash
 # - Save the center-cropped files in the filesystem
-$ python3 extract_serial.py /tmp/imagenette2-320 --split=train \
-  --target-dir=/data/imagenette/train_224_jpg
-$ python3 extract_serial.py /tmp/imagenette2-320 --split=val \
-  --target-dir=/data/imagenette/val_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split=train --target-dir=/data/imagenette/train_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split=val --target-dir=/data/imagenette/val_224_jpg
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_224_jpg
@@ -52,8 +50,8 @@ We can also store the original, unchanged files in the DB:
 
 ```bash
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED \
-  --table-suffix=train_orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split=train --table-suffix=train_orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split=val --table-suffix=val_orig
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --table-suffix=train_orig
@@ -66,8 +64,9 @@ $ python3 loop_read.py --table-suffix=train_orig --device-id=0
 The same scripts can also be used to process the full ImageNet dataset
 (166 GB), which can be downloaded from
 [Kaggle](https://www.kaggle.com/competitions/imagenet-object-localization-challenge/data).
-We assume that the dataset has been stored in the `/data/imagenet/`
-directory.
+We assume that the dataset has been stored in
+`/data/imagenet/{train,val}`, with `val` having the same directory
+structure as `train` (i.e., non-flat, with labels as subdirs).
 
 Since this dataset is much larger, it is convenient to process it in
 parallel, using Apache Spark (pre-installed in the Docker container).
@@ -84,9 +83,12 @@ $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
   --keyspace=imagenet --split=train --table-suffix=train_224_jpg
+$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 \
+  --py-files extract_common.py extract_spark.py /data/imagenet/ \
+  --keyspace=imagenet --split=val --table-suffix=val_224_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --keyspace=imagenet
+$ python3 loop_read.py --keyspace=imagenet --table-suffix=train_224_jpg
 
 ```
 
@@ -117,3 +119,20 @@ parameters:
 - `comm_threads`: 4
 - `copy_threads`: 4
 
+## Multi-GPU training
+
+We have adapted NVIDIA DALI [ImageNet Training in PyTorch
+example](https://github.com/NVIDIA/DALI/tree/main/docs/examples/use_cases/pytorch/resnet50)
+to read data from Cassandra using our plugin.
+
+```bash
+# Original script, reading from filesystem:
+$ python -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
+  -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
+  /tmp/imagenette2-320/train /tmp/imagenette2-320/val
+
+# Cassandra version of it:
+$ python3 -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
+  -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
+  --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
+```
