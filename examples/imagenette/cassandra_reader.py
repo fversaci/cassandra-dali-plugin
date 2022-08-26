@@ -25,7 +25,7 @@ plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 
 
-def get_cassandra_reader(keyspace, table_suffix, shard_id=0, num_shards=1, name="Reader"):
+def get_cassandra_reader(keyspace, table_suffix, shard_id=0, num_shards=1, io_threads=2, name="Reader"):
     # Read Cassandra parameters
     try:
         from private_data import cassandra_ips, username, password
@@ -76,11 +76,11 @@ def get_cassandra_reader(keyspace, table_suffix, shard_id=0, num_shards=1, name=
         username=username,
         password=password,
         prefetch_buffers=256,
-        io_threads=20,
-        comm_threads=4,
-        copy_threads=4,
+        io_threads=io_threads,
         num_shards=num_shards,
         shard_id=shard_id,
+        # comm_threads=4,
+        # copy_threads=4,
         # wait_threads=2,
         # use_ssl=True,
         # ssl_certificate="node0.cer.pem",
