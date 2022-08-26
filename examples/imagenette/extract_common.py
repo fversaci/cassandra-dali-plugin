@@ -17,9 +17,10 @@ import uuid
 
 def get_data(img_format="JPEG"):
     # img_format:
-    # - JPEG: compressed JPEG, pixels as bytes
-    # - TIFF: non-compressed TIFF, with pixels as bytes
     # - UNCHANGED: unchanged input files (no resizing and cropping)
+    # - JPEG: compressed JPEG
+    # - PNG: compressed PNG
+    # - TIFF: non-compressed TIFF
     def r(path):
         if img_format == "UNCHANGED":
             # just return the unchanged raw file
@@ -109,12 +110,14 @@ def save_image_to_dir(target_dir, path, label, raw_data, table_suffix):
 def save_images_to_dir(target_dir, img_format):
     if img_format == "JPEG":
         table_suffix = ".jpg"
+    elif img_format == "PNG":
+        table_suffix = ".png"
     elif img_format == "TIFF":
         table_suffix = ".tiff"
     elif img_format == "UNCHANGED":
         table_suffix = ".jpg"
     else:
-        raise ("Supporting only JPEG, TIFF, and UNCHANGED")
+        raise ("Supporting only JPEG, PNG, TIFF, and UNCHANGED")
 
     def ret(jobs):
         for path, label, _ in tqdm(jobs):
