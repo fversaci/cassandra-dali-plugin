@@ -5,10 +5,10 @@
 # https://opensource.org/licenses/MIT.
 
 ### To insert in DB, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split=train --table-suffix=train_224_jpg
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split=train --table-suffix=train_224_jpg
 
 ### To save files in a directory, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --split=train --target-dir=/data/imagenette/224_jpg
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --split=train --target-dir=/data/imagenette/224_jpg
 
 from getpass import getpass
 import extract_common

@@ -80,10 +80,10 @@ $ /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
 $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 
 # - Fill the tables in parallel (10 jobs) with Spark
-$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 \
+$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
   --keyspace=imagenet --split=train --table-suffix=train_224_jpg
-$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=20 \
+$ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
   --keyspace=imagenet --split=val --table-suffix=val_224_jpg
 
