@@ -208,7 +208,7 @@ def create_dali_pipeline(
         shard_id=shard_id,
         num_shards=num_shards,
         io_threads=2,
-        prefetch_buffers=4,
+        prefetch_buffers=2,
         name="Reader",
     )
     dali_device = "cpu" if dali_cpu else "gpu"
