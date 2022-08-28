@@ -125,12 +125,16 @@ We have adapted NVIDIA DALI [ImageNet Training in PyTorch
 example](https://github.com/NVIDIA/DALI/tree/main/docs/examples/use_cases/pytorch/resnet50)
 to read data from Cassandra using our plugin.
 
+The [original script](distrib_train_from_file.py) can be run with:
 ```bash
 # Original script, reading from filesystem:
 $ python -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   /tmp/imagenette2-320/train /tmp/imagenette2-320/val
+```
 
+while [our modified version](distrib_train_from_cassandra.py) with:
+```bash
 # Cassandra version of it:
 $ python3 -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
