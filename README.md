@@ -10,8 +10,10 @@ load and preprocess images for Pytorch or TensorFlow).
 ## Installation
 
 The easiest way to test the cassandra-dali-plugin is by using the
-provided Dockerfile, which also contains NVIDIA DALI, Cassandra C++
-and Python drivers, a Cassandra server, PyTorch and Apache Spark.
+provided Dockerfile (derived from [NVIDIA PyTorch
+NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch)),
+which also contains NVIDIA DALI, Cassandra C++ and Python drivers,
+a Cassandra server, PyTorch and Apache Spark.
 
 The details of how to install the cassandra-dali-plugin, in a system
 which already provides some of the packages above, can be deduced from
