@@ -34,6 +34,9 @@ def get_cassandra_reader(
     prefetch_buffers=2,
     name="Reader",
     shuffle_after_epoch=True,
+    comm_threads=2,
+    copy_threads=2,
+    wait_threads=2,
 ):
     # Read Cassandra parameters
     try:
@@ -88,9 +91,9 @@ def get_cassandra_reader(
         io_threads=io_threads,
         num_shards=num_shards,
         shard_id=shard_id,
-        # comm_threads=4,
-        # copy_threads=4,
-        # wait_threads=2,
+        comm_threads=comm_threads,
+        copy_threads=copy_threads,
+        wait_threads=wait_threads,
         # use_ssl=True,
         # ssl_certificate="node0.cer.pem",
     )

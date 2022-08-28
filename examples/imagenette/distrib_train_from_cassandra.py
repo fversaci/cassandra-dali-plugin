@@ -201,14 +201,22 @@ def create_dali_pipeline(
     num_shards,
     dali_cpu=False,
     is_training=True,
+    prefetch_buffers=2,
+    io_threads=2,
+    comm_threads=2,
+    copy_threads=2,
+    wait_threads=2,
 ):
     images, labels = get_cassandra_reader(
         keyspace=keyspace,
         table_suffix=table_suffix,
         shard_id=shard_id,
         num_shards=num_shards,
-        io_threads=2,
-        prefetch_buffers=2,
+        prefetch_buffers=prefetch_buffers,
+        io_threads=io_threads,
+        comm_threads=comm_threads,
+        copy_threads=copy_threads,
+        wait_threads=wait_threads,
         name="Reader",
     )
     dali_device = "cpu" if dali_cpu else "gpu"
