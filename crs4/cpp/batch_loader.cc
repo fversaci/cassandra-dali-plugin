@@ -11,8 +11,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <numeric>
-namespace crs4 {
 
+namespace crs4 {
 
 BatchHandler::~BatchHandler() {
   if (connected) {

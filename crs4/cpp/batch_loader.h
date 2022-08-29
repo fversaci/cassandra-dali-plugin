@@ -15,6 +15,7 @@
 #include <mutex>
 #include <dali/pipeline/operator/operator.h>
 #include "ThreadPool.h"
+
 namespace crs4 {
 
 using LABEL_TYPE = int32_t;
@@ -24,7 +25,7 @@ using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 
 class BatchHandler {
 private:
-  // types
+  // dali types
   dali::DALIDataType DALI_LABEL_TYPE = ::dali::DALI_INT32;
   dali::DALIDataType DALI_FEAT_TYPE = ::dali::DALI_UINT8;
   // parameters

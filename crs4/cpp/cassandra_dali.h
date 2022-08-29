@@ -14,6 +14,7 @@
 #include <dali/pipeline/operator/operator.h>
 #include <dali/operators/reader/reader_op.h>
 #include "batch_loader.h"
+
 namespace crs4 {
 
 class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
