@@ -4,15 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#ifndef CRS4_CASSANDRA_H_
-#define CRS4_CASSANDRA_H_
+#ifndef CRS4_CASSANDRA_DALI_H_
+#define CRS4_CASSANDRA_DALI_H_
 
 #include <vector>
 #include <map>
 #include <string>
 #include <cmath>
-#include "dali/pipeline/operator/operator.h"
-#include "dali/operators/reader/reader_op.h"
+#include <dali/pipeline/operator/operator.h>
+#include <dali/operators/reader/reader_op.h>
 #include "batch_loader.h"
 namespace crs4 {
 

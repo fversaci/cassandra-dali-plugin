@@ -11,6 +11,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <numeric>
+namespace crs4 {
 
 
 BatchHandler::~BatchHandler() {
@@ -125,7 +126,6 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
   v_feats.resize(prefetch_buffers);
   v_labs.resize(prefetch_buffers);
   shapes.resize(prefetch_buffers);
-  shape_count.resize(prefetch_buffers);
   alloc_cv = std::vector<std::condition_variable>(prefetch_buffers);
   alloc_mtx = std::vector<std::mutex>(prefetch_buffers);
   for(int i=0; i<prefetch_buffers; ++i) {
@@ -143,7 +143,6 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
 void BatchHandler::allocTens(int wb) {
   shapes[wb].clear();
   shapes[wb].resize(bs[wb]);
-  shape_count[wb]=0;
   v_feats[wb] = BatchRawImage();
   v_feats[wb].set_pinned(false);
   // v_feats[wb].SetContiguous(true);
@@ -152,10 +151,10 @@ void BatchHandler::allocTens(int wb) {
   // v_labs[wb].SetContiguous(true);
   std::vector<long int> v_sz(bs[wb], 1);
   ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
-  v_labs[wb].Resize(t_sz, ::dali::DALI_INT32);
+  v_labs[wb].Resize(t_sz, DALI_LABEL_TYPE);
 }
 
-void BatchHandler::img2tensor(const CassResult* result,
+void BatchHandler::copy_data(const CassResult* result,
                               const cass_byte_t* data, size_t sz,
                               cass_int32_t lab, int off, int wb) {
   // wait for feature tensor to be allocated
@@ -167,12 +166,15 @@ void BatchHandler::img2tensor(const CassResult* result,
   }
   // copy data in batch
   std::memcpy(v_feats[wb].raw_mutable_tensor(off), data, sz);
-  *(v_labs[wb].mutable_tensor<Label>(off)) = lab;
+  std::memcpy(v_labs[wb].raw_mutable_tensor(off), &lab, sizeof(LABEL_TYPE));
+  // Alternative:
+  // *(v_labs[wb].mutable_tensor<LABEL_TYPE>(off)) = lab;
+  
   // free Cassandra result memory (data included)
   cass_result_free(result);
 }
 
-void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i) {
+void BatchHandler::transfer2copy(CassFuture* query_future, int wb, int i) {
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
     // Handle error
@@ -201,7 +203,7 @@ void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i) {
   cass_value_get_bytes(c_data, &data, &sz);
   shapes[wb][i] = sz;
   // enqueue image copy
-  auto cj = copy_pool->enqueue(&BatchHandler::img2tensor, this,
+  auto cj = copy_pool->enqueue(&BatchHandler::copy_data, this,
                                result, data, sz, lab, i, wb);
   // saving raw image size
   {
@@ -211,7 +213,7 @@ void BatchHandler::transfer2conv(CassFuture* query_future, int wb, int i) {
     if (copy_jobs[wb].size()==bs[wb]) {
       // allocate feature tensor and notify waiting threads
       ::dali::TensorListShape t_sz(shapes[wb], bs[wb], 1);
-      v_feats[wb].Resize(t_sz, ::dali::DALI_UINT8);
+      v_feats[wb].Resize(t_sz, DALI_FEAT_TYPE);
       alloc_cv[wb].notify_all();
     }
   }
@@ -223,11 +225,11 @@ void BatchHandler::wrap_t2c(CassFuture* query_future, void* v_fd) {
   int wb = fd->wb;
   int i = fd->i;
   delete(fd);
-  bh->transfer2conv(query_future, wb, i);
+  bh->transfer2copy(query_future, wb, i);
 }
 
 void BatchHandler::keys2transfers(const std::vector<std::string>& keys, int wb) {
-  // start all transfers in parallel
+  // start all transfers in parallel (send requests to driver)
   for(size_t i=0; i!=keys.size(); ++i) {
     std::string id = keys[i];
     // prepare query
@@ -308,9 +310,11 @@ void BatchHandler::ignore_batch() {
   if (!connected) {
     return;
   }
-  // wait for flying batches to be computed
+  // wait for flying batches to be retrieved
   while(!read_buf.empty()) {
     auto b = blocking_get_batch();
   }
   return;
 }
+
+}  // namespace crs4

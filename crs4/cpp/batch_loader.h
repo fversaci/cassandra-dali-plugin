@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#ifndef BATCHHANDLER_H
-#define BATCHHANDLER_H
+#ifndef CRS4_BATCH_LOADER_H
+#define CRS4_BATCH_LOADER_H
 
 #include <cassandra.h>
 #include <string>
@@ -13,17 +13,20 @@
 #include <future>
 #include <utility>
 #include <mutex>
+#include <dali/pipeline/operator/operator.h>
 #include "ThreadPool.h"
-#include "dali/pipeline/operator/operator.h"
+namespace crs4 {
 
-using RawImage = std::vector<char>;
-using Label = int32_t;
+using LABEL_TYPE = int32_t;
 using BatchRawImage = ::dali::TensorList<::dali::CPUBackend>;
 using BatchLabel = ::dali::TensorList<::dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 
 class BatchHandler {
 private:
+  // types
+  dali::DALIDataType DALI_LABEL_TYPE = ::dali::DALI_INT32;
+  dali::DALIDataType DALI_FEAT_TYPE = ::dali::DALI_UINT8;
   // parameters
   bool connected = false;
   std::string table;
@@ -62,16 +65,15 @@ private:
   std::queue<int> read_buf;
   std::queue<int> write_buf;
   std::vector<std::vector<int64_t>> shapes;
-  std::vector<int> shape_count;
   // methods
   void connect();
   void check_connection();
-  void img2tensor(const CassResult* result, const cass_byte_t* data,
+  void copy_data(const CassResult* result, const cass_byte_t* data,
                   size_t sz, cass_int32_t lab, int off, int wb);
   std::future<BatchImgLab> start_transfers(const std::vector<std::string>& keys, int wb);
   BatchImgLab wait4images(int wb);
   void keys2transfers(const std::vector<std::string>& keys, int wb);
-  void transfer2conv(CassFuture* query_future, int wb, int i);
+  void transfer2copy(CassFuture* query_future, int wb, int i);
   static void wrap_t2c(CassFuture* query_future, void* v_fd);
   void allocTens(int wb);
 public:
@@ -93,4 +95,6 @@ struct futdata {
   int i;
 };
 
-#endif
+}  // namespace crs4
+
+#endif  // CRS4_BATCH_LOADER_H
