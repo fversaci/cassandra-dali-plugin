@@ -7,7 +7,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "cassandra.h"
+#include "cassandra_dali.h"
 
 namespace crs4 {
 
