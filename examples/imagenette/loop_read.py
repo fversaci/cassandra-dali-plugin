@@ -45,7 +45,13 @@ def read_data(
     :param file_root: File root to be used (only when reading from the filesystem)
     """
     if reader == "cassandra":
-        chosen_reader = get_cassandra_reader(keyspace, table_suffix, io_threads=10, prefetch_buffers=32, name="Reader")
+        chosen_reader = get_cassandra_reader(
+            keyspace,
+            table_suffix,
+            io_threads=8,
+            prefetch_buffers=16,
+            name="Reader",
+        )
     elif reader == "file":
         # alternatively: use fn.readers.file
         file_reader = fn.readers.file(
