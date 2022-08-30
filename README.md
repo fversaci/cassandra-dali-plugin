@@ -7,6 +7,16 @@ database](https://cassandra.apache.org) to [NVIDIA Data Loading
 Library (DALI)](https://github.com/NVIDIA/DALI) (which can be used to
 load and preprocess images for Pytorch or TensorFlow).
 
+## Requirements
+
+cassandra-dali-plugin requires:
+- NVIDIA DALI
+- Cassandra C/C++ driver
+- Cassandra Python driver
+
+All the required packages are already installed in the provided
+Dockerfile.
+
 ## Installation
 
 The easiest way to test the cassandra-dali-plugin is by using the
@@ -49,16 +59,6 @@ $ /cassandra/bin/cassandra   # Note that the shell prompt is immediately returne
 See the following annotated example for details on how to use and optimize this
 plugin:
 - [Imagenette](examples/imagenette/)
-
-## Requirements
-
-cassandra-dali-plugin requires:
-- Cassandra C/C++ driver
-- Cassandra Python driver
-- NVIDIA DALI
-
-All the required packages are already installed in the provided
-Dockerfile.
 
 ## Authors
 
