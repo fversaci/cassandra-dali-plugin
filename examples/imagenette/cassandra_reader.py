@@ -49,7 +49,7 @@ def get_cassandra_reader(
 
     # set uuids cache directory
     ids_cache = "ids_cache"
-    if not os.path.exists(ids_cache):
+    if not os.path.exists(ids_cache) and shard_id == 0:
         os.makedirs(ids_cache)
     rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
 
@@ -65,7 +65,8 @@ def get_cassandra_reader(
         lm.set_config(conf)
         print("Loading list of uuids from DB... ", end="")
         lm.read_rows_from_db()
-        lm.save_rows(rows_fn)
+        if shard_id == 0:
+            lm.save_rows(rows_fn)
         stuff = lm.get_rows()
     else:  # ...or from the cached file
         print("Loading list of uuids from cached file... ", end="")
