@@ -110,9 +110,9 @@ removing any possibile bottleneck.
 As an extreme example, when raw loading, without any decoding or
 processing, 224x224 JPEG images with `batch_size=128`, over a 25 GbE
 network with an (artificial) latency of 50 ms (set with `tc-netem`,
-with no packet loss), we can achieve over 1000 batches per second
-(with a throughput of roughly 1.5 GB/s) using the following
-parameters:
+with no packet loss), we can achieve about 1000 batches per second
+(with a throughput of roughly 1.2 GB/s) on our test nodes (Intel Xeon
+CPU E5-2650 v4 @ 2.20GHz), using the following parameters:
 
 - `prefetch_buffers`: 256 (to hide the high latency)
 - `io_threads`: 20
