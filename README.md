@@ -15,9 +15,17 @@ NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch)),
 which also contains NVIDIA DALI, Cassandra C++ and Python drivers,
 a Cassandra server, PyTorch and Apache Spark.
 
-The details of how to install the cassandra-dali-plugin, in a system
-which already provides some of the packages above, can be deduced from
-the [Dockerfile](Dockerfile).
+In a system which already provides the dependencies above, the plugin
+can easily be installed with pip:
+```bash
+$ pip3 install .
+```
+
+The details of how to install missing dependencies in a system which
+provides only some of the packages above, can be deduced from the
+[Dockerfile](Dockerfile).
+
+## Running the docker container
 
 For better performance and for data persistence, it is advised to
 mount a host directory for Cassandra on a fast disk (e.g.,
