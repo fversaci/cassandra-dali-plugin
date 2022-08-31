@@ -42,7 +42,7 @@ $ python3 extract_serial.py /tmp/imagenette2-320 --split=val --target-dir=/cassa
 $ python3 loop_read.py --reader=file --file-root=/cassandra/data/imagenette/train_224_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --reader=file --file-root=/cassandra/data/imagenette/224_jpg --device-id=0
+$ python3 loop_read.py --reader=file --file-root=/cassandra/data/imagenette/train_224_jpg --device-id=0
 ```
 
 ## Storing the unchanged images in the DB (no resize)
