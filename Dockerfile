@@ -124,6 +124,10 @@ RUN \
 
 COPY . /home/user/cassandra-dali-plugin
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'
+# create data dir
+RUN mkdir /data
+RUN chown user.user '/data'
+# install plugin
 WORKDIR /home/user/cassandra-dali-plugin
 RUN pip3 install .
 USER user
