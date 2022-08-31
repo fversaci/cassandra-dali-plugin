@@ -17,25 +17,13 @@ cassandra-dali-plugin requires:
 All the required packages are already installed in the provided
 Dockerfile.
 
-## Installation
+## Running the docker container
 
 The easiest way to test the cassandra-dali-plugin is by using the
 provided Dockerfile (derived from [NVIDIA PyTorch
 NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch)),
 which also contains NVIDIA DALI, Cassandra C++ and Python drivers,
 a Cassandra server, PyTorch and Apache Spark.
-
-In a system which already provides the dependencies above, the plugin
-can easily be installed with pip:
-```bash
-$ pip3 install .
-```
-
-The details of how to install missing dependencies in a system which
-provides only some of the packages above, can be deduced from the
-[Dockerfile](Dockerfile).
-
-## Running the docker container
 
 For better performance and for data persistence, it is advised to
 mount a host directory for Cassandra on a fast disk (e.g.,
@@ -53,6 +41,19 @@ $ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
 $ /cassandra/bin/cassandra   # Note that the shell prompt is immediately returned
                              # Wait until "state jump to NORMAL" is shown (about 1 minute)
 ```
+
+## Installation
+
+In a system which **already provides the dependencies above**, the plugin
+can easily be installed with pip:
+```bash
+$ pip3 install .
+```
+
+The details of how to install missing dependencies in a system which
+provides only some of the packages above, can be deduced from the
+[Dockerfile](Dockerfile).
+
 
 ## Dataset example
 
