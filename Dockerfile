@@ -23,7 +23,6 @@ RUN \
     iperf \
     iproute2 \
     iputils-ping \
-    ipython3 \
     less \
     libtool \
     libopencv-dev \
@@ -31,7 +30,6 @@ RUN \
     nload \
     nmon \
     psutils \
-    python3-pip \
     source-highlight \
     ssh \
     sudo \
@@ -51,10 +49,11 @@ RUN \
     && apt-get install -y libuv1-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/* 
 
+ARG CASS_DRIVER_VER=2.16.2
 RUN \
-    wget 'https://github.com/datastax/cpp-driver/archive/2.16.0.tar.gz' \
-    && tar xfz 2.16.0.tar.gz \
-    && cd cpp-driver-2.16.0 \
+    wget -nv "https://github.com/datastax/cpp-driver/archive/$CASS_DRIVER_VER.tar.gz" \
+    && tar xfz $CASS_DRIVER_VER.tar.gz \
+    && cd cpp-driver-$CASS_DRIVER_VER \
     && mkdir build \
     && cd build \
     && cmake .. \
@@ -74,7 +73,7 @@ RUN \
 ARG SPARK_V=3.3
 RUN \
     export SPARK_VER=$(curl 'https://downloads.apache.org/spark/' | grep -o "$SPARK_V\.." | tail -n 1) \
-    && cd /tmp && wget "https://downloads.apache.org/spark/spark-$SPARK_VER/spark-$SPARK_VER-bin-hadoop3.tgz" \
+    && cd /tmp && wget -nv "https://downloads.apache.org/spark/spark-$SPARK_VER/spark-$SPARK_VER-bin-hadoop3.tgz" \
     && cd / && tar xfz "/tmp/spark-$SPARK_VER-bin-hadoop3.tgz" \
     && ln -s "spark-$SPARK_VER-bin-hadoop3" spark
 
@@ -96,7 +95,7 @@ EXPOSE 4040
 ARG CASS_V=4.0
 RUN \
     export CASS_VERS=$(curl 'https://downloads.apache.org/cassandra/' | grep -o "$CASS_V\.." | tail -n 1) \
-    && cd /tmp && wget "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
+    && cd /tmp && wget -nv "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && ln -s "apache-cassandra-$CASS_VERS" cassandra
 
@@ -111,7 +110,7 @@ EXPOSE 9042
 ########################################################################
 WORKDIR /tmp
 RUN \
-    wget 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz' \
+    wget -nv 'https://s3.amazonaws.com/fast-ai-imageclas/imagenette2-320.tgz' \
     && tar xfz 'imagenette2-320.tgz' \
     && rm 'imagenette2-320.tgz'
 
