@@ -23,15 +23,20 @@ The easiest way to test the cassandra-dali-plugin is by using the
 provided Dockerfile (derived from [NVIDIA PyTorch
 NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch)),
 which also contains NVIDIA DALI, Cassandra C++ and Python drivers,
-a Cassandra server, PyTorch and Apache Spark.
-
-For better performance and for data persistence, it is advised to
-mount a host directory for Cassandra on a fast disk (e.g.,
-`/mnt/fast_disk/cassandra`), as shown in the commands below.
+a Cassandra server, PyTorch and Apache Spark, as shown in the commands below.
 
 ```bash
 ## Build and run cassandradl docker container
 $ docker build -t cassandra-dali-plugin .
+$ docker run --rm -it --cap-add=sys_nice cassandra-dali-plugin
+```
+
+Alternatively, for better performance and for data persistence, it is
+advised to mount a host directory for Cassandra on a fast disk (e.g.,
+`/mnt/fast_disk/cassandra`):
+
+```bash
+## Run cassandradl docker container with external data dir
 $ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
   --cap-add=sys_nice cassandra-dali-plugin
 ```
@@ -39,10 +44,13 @@ $ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
 Then, **inside** the running Docker container:
 
 ```bash
-## - Start Cassandra server
-$ /cassandra/bin/cassandra   # Note that the shell prompt is immediately returned
-                             # Wait until "state jump to NORMAL" is shown (about 1 minute)
+## Start Cassandra server
+$ /cassandra/bin/cassandra
+
 ```
+
+Note that the shell prompt is immediately returned.  Wait until `state
+jump to NORMAL` is shown (about 1 minute).
 
 ## Installation
 
