@@ -34,9 +34,11 @@ mount a host directory for Cassandra on a fast disk (e.g.,
 $ docker build -t cassandra-dali-plugin .
 $ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
   --cap-add=sys_nice cassandra-dali-plugin
+```
 
-## Inside the Docker container:
+Then, **inside** the running Docker container:
 
+```bash
 ## - Start Cassandra server
 $ /cassandra/bin/cassandra   # Note that the shell prompt is immediately returned
                              # Wait until "state jump to NORMAL" is shown (about 1 minute)
