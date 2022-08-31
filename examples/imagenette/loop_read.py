@@ -48,8 +48,10 @@ def read_data(
         chosen_reader = get_cassandra_reader(
             keyspace,
             table_suffix,
-            io_threads=8,
             prefetch_buffers=16,
+            io_threads=8,
+            # comm_threads=4,
+            # copy_threads=4,
             name="Reader",
         )
     elif reader == "file":
@@ -57,6 +59,10 @@ def read_data(
         file_reader = fn.readers.file(
             file_root=file_root,
             name="Reader",
+            # speed up reading
+            prefetch_queue_depth=2,
+            dont_use_mmap=True,
+            read_ahead=True,
         )
         chosen_reader = file_reader
     else:
