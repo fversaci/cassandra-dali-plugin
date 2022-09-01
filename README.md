@@ -44,7 +44,7 @@ cassandra-dali-plugin requires:
 - Cassandra C/C++ driver
 - Cassandra Python driver
 
-The details of how to install missing dependencies in a system which
+The details of how to install missing dependencies, in a system which
 provides only some of the dependencies, can be deduced from the
 [Dockerfile](Dockerfile), which contains all the installation
 commands for the packages above.
