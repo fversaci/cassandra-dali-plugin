@@ -5,8 +5,8 @@ dataset](https://github.com/fastai/imagenette) (a subset of ImageNet)
 as a Cassandra dataset and then read the data into NVIDIA DALI.
 
 The raw files are already present in the `/tmp` directory of the
-provided [Docker container](../../), from which the following commands
-can be run.
+provided [Docker container](../../README.md#running-the-docker-container),
+from which the following commands can be run.
 
 ## Starting Cassandra server
 We begin by starting the Cassandra server shipped with the provided
