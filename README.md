@@ -7,16 +7,6 @@ database](https://cassandra.apache.org) to [NVIDIA Data Loading
 Library (DALI)](https://github.com/NVIDIA/DALI) (which can be used to
 load and preprocess images for Pytorch or TensorFlow).
 
-## Requirements
-
-cassandra-dali-plugin requires:
-- NVIDIA DALI
-- Cassandra C/C++ driver
-- Cassandra Python driver
-
-All the required packages are already installed in the provided
-Dockerfile.
-
 ## Running the docker container
 
 The easiest way to test the cassandra-dali-plugin is by using the
@@ -26,7 +16,7 @@ which also contains NVIDIA DALI, Cassandra C++ and Python drivers,
 a Cassandra server, PyTorch and Apache Spark, as shown in the commands below.
 
 ```bash
-## Build and run cassandradl docker container
+# Build and run cassandradl docker container
 $ docker build -t cassandra-dali-plugin .
 $ docker run --rm -it --cap-add=sys_nice cassandra-dali-plugin
 ```
@@ -36,40 +26,34 @@ advised to mount a host directory for Cassandra on a fast disk (e.g.,
 `/mnt/fast_disk/cassandra`):
 
 ```bash
-## Run cassandradl docker container with external data dir
+# Run cassandradl docker container with external data dir
 $ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
   --cap-add=sys_nice cassandra-dali-plugin
 ```
 
-Then, **inside** the running Docker container:
+## Dataset example
 
-```bash
-## Start Cassandra server
-$ /cassandra/bin/cassandra
+See the following annotated example for details on how to use and
+optimize this plugin:
+- [Imagenette](examples/imagenette/)
 
-```
+## Installation on a bare machine
 
-Note that the shell prompt is immediately returned.  Wait until `state
-jump to NORMAL` is shown (about 1 minute).
+cassandra-dali-plugin requires:
+- NVIDIA DALI
+- Cassandra C/C++ driver
+- Cassandra Python driver
 
-## Installation
+The details of how to install missing dependencies in a system which
+provides only some of the packages above, can be deduced from the
+[Dockerfile](Dockerfile), which contains all the installation
+commands for the packages above.
 
-In a system which **already provides the dependencies above**, the plugin
+**Once the dependencies have been installed**, the plugin
 can easily be installed with pip:
 ```bash
 $ pip3 install .
 ```
-
-The details of how to install missing dependencies in a system which
-provides only some of the packages above, can be deduced from the
-[Dockerfile](Dockerfile).
-
-
-## Dataset example
-
-See the following annotated example for details on how to use and optimize this
-plugin:
-- [Imagenette](examples/imagenette/)
 
 ## Authors
 

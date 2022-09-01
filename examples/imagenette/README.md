@@ -8,6 +8,19 @@ The raw files are already present in the `/tmp` directory of the
 provided [Docker container](../../), from which the following commands
 can be run.
 
+## Starting Cassandra server
+We begin by starting the Cassandra server shipped with the provided
+Docker container:
+
+```bash
+# Start Cassandra server
+$ /cassandra/bin/cassandra
+
+```
+
+Note that the shell prompt is immediately returned.  Wait until `state
+jump to NORMAL` is shown (about 1 minute).
+
 ## Resized and center-cropped dataset
 The following commands will create a resized and center-cropped (to
 224x224 pixels) dataset in Cassandra and use the plugin to read the
@@ -19,8 +32,8 @@ $ cd examples/imagenette/
 $ /cassandra/bin/cqlsh -f create_tables.cql
 
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --split=train --table-suffix=train_224_jpg
-$ python3 extract_serial.py /tmp/imagenette2-320 --split=val --table-suffix=val_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --table-suffix=train_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --table-suffix=val_224_jpg
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --table-suffix=train_224_jpg
@@ -35,8 +48,8 @@ filesystem and to read them using the standard DALI file reader.
 
 ```bash
 # - Save the center-cropped files in the filesystem
-$ python3 extract_serial.py /tmp/imagenette2-320 --split=train --target-dir=/data/imagenette/train_224_jpg
-$ python3 extract_serial.py /tmp/imagenette2-320 --split=val --target-dir=/data/imagenette/val_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --target-dir=/data/imagenette/train_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --target-dir=/data/imagenette/val_224_jpg
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_224_jpg
@@ -50,8 +63,8 @@ We can also store the original, unchanged files in the DB:
 
 ```bash
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split=train --table-suffix=train_orig
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split=val --table-suffix=val_orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=train --table-suffix=train_orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --table-suffix=val_orig
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --table-suffix=train_orig
@@ -82,10 +95,10 @@ $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 # - Fill the tables in parallel (10 jobs) with Spark
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --keyspace=imagenet --split=train --table-suffix=train_224_jpg
+  --keyspace=imagenet --split-subdir=train --table-suffix=train_224_jpg
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --keyspace=imagenet --split=val --table-suffix=val_224_jpg
+  --keyspace=imagenet --split-subdir=val --table-suffix=val_224_jpg
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --keyspace=imagenet --table-suffix=train_224_jpg

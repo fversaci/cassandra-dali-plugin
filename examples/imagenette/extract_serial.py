@@ -5,10 +5,10 @@
 # https://opensource.org/licenses/MIT.
 
 ### To insert in DB, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split=train --table-suffix=train_224_jpg
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split-subdir=train --table-suffix=train_224_jpg
 
 ### To save files in a directory, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --split=train --target-dir=/data/imagenette/train_224_jpg
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_224_jpg
 
 
 from getpass import getpass
@@ -22,7 +22,7 @@ def save_images(
     img_format="JPEG",
     keyspace="imagenette",
     table_suffix="train_224_jpg",
-    split="train",
+    split_subdir="train",
     target_dir=None,
 ):
     """Save center-cropped images to Cassandra DB or directory
@@ -32,9 +32,9 @@ def save_images(
     :param keyspace: Name of dataset (for the Cassandra table)
     :param table_suffix: Suffix for table names
     :param target_dir: Output directory (when saving to filesystem)
-    :param split: Subdir to be processed
+    :param split_subdir: Subdir to be processed
     """
-    splits = [split]
+    splits = [split_subdir]
     jobs = extract_common.get_jobs(src_dir, splits)
     if not target_dir:
         try:
