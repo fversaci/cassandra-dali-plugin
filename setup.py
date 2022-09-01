@@ -47,7 +47,7 @@ setup(
     author_email="francesco.versaci@gmail.com, giovanni.busonera@crs4.it",
     description="Cassandra data loader for ML pipelines",
     packages=["crs4/cassandra_utils"],
-    url="https://github.com/fversaci/cassandra-dali-plugin",
+    url="https://github.com/crs4/cassandra-dali-plugin",
     ext_modules=[CMakeExtension("crs4cassandra")],
     cmdclass={
         "build_ext": build_ext,
