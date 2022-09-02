@@ -23,7 +23,7 @@ using BatchRawImage = ::dali::TensorList<::dali::CPUBackend>;
 using BatchLabel = ::dali::TensorList<::dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 
-class BatchHandler {
+class BatchLoader {
 private:
   // dali types
   dali::DALIDataType DALI_LABEL_TYPE = ::dali::DALI_INT32;
@@ -78,20 +78,20 @@ private:
   static void wrap_t2c(CassFuture* query_future, void* v_fd);
   void allocTens(int wb);
 public:
-  BatchHandler(std::string table, std::string label_col, std::string data_col,
+  BatchLoader(std::string table, std::string label_col, std::string data_col,
                std::string id_col, std::string username, std::string password,
 	       std::vector<std::string> cassandra_ips, int port, bool use_ssl,
 	       std::string ssl_certificate, int io_threads,
 	       int prefetch_buffers, int copy_threads, int wait_threads,
 	       int comm_threads);
-  ~BatchHandler();
+  ~BatchLoader();
   void prefetch_batch(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();
   void ignore_batch();
 };
 
 struct futdata {
-  BatchHandler* bh;
+  BatchLoader* batch_ldr;
   int wb;
   int i;
 };

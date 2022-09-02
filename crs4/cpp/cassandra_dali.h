@@ -39,8 +39,8 @@ public:
   }
 
   ~Cassandra() override {
-    if (bh!=nullptr) {
-      delete bh;
+    if (batch_ldr!=nullptr) {
+      delete batch_ldr;
     }
   }
 
@@ -82,7 +82,7 @@ private:
   std::string id_col;
   std::string username;
   std::string password;
-  BatchHandler* bh = nullptr;
+  BatchLoader* batch_ldr = nullptr;
   int batch_size;
   int prefetch_buffers;
   int io_threads;
