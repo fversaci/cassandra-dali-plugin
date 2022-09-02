@@ -5,7 +5,7 @@
 This plugin enables data loading from an [Apache Cassandra NoSQL
 database](https://cassandra.apache.org) to [NVIDIA Data Loading
 Library (DALI)](https://github.com/NVIDIA/DALI) (which can be used to
-load and preprocess images for Pytorch or TensorFlow).
+load and preprocess images for PyTorch or TensorFlow).
 
 ## Running the docker container
 
