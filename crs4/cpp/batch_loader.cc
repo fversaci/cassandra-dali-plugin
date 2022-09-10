@@ -14,7 +14,7 @@
 
 namespace crs4 {
 
-BatchHandler::~BatchHandler() {
+BatchLoader::~BatchLoader() {
   if (connected) {
     ignore_batch();
     cass_session_free(session);
@@ -66,7 +66,7 @@ void set_ssl(CassCluster* cluster, std::string ssl_certificate) {
   cass_ssl_free(ssl);
 }
 
-void BatchHandler::connect() {
+void BatchLoader::connect() {
   cass_cluster_set_contact_points(cluster, s_cassandra_ips.c_str());
   cass_cluster_set_credentials(cluster, username.c_str(), password.c_str());
   cass_cluster_set_port(cluster, port);
@@ -104,7 +104,7 @@ void BatchHandler::connect() {
   wait_pool = new ThreadPool(wait_threads);
 }
 
-BatchHandler::BatchHandler(std::string table, std::string label_col,
+BatchLoader::BatchLoader(std::string table, std::string label_col,
                            std::string data_col, std::string id_col,
                            std::string username, std::string password,
                            std::vector<std::string> cassandra_ips, int port,
@@ -140,7 +140,7 @@ BatchHandler::BatchHandler(std::string table, std::string label_col,
   });
 }
 
-void BatchHandler::allocTens(int wb) {
+void BatchLoader::allocTens(int wb) {
   shapes[wb].clear();
   shapes[wb].resize(bs[wb]);
   v_feats[wb] = BatchRawImage();
@@ -154,7 +154,7 @@ void BatchHandler::allocTens(int wb) {
   v_labs[wb].Resize(t_sz, DALI_LABEL_TYPE);
 }
 
-void BatchHandler::copy_data(const CassResult* result,
+void BatchLoader::copy_data(const CassResult* result,
                               const cass_byte_t* data, size_t sz,
                               cass_int32_t lab, int off, int wb) {
   // wait for feature tensor to be allocated
@@ -174,7 +174,7 @@ void BatchHandler::copy_data(const CassResult* result,
   cass_result_free(result);
 }
 
-void BatchHandler::transfer2copy(CassFuture* query_future, int wb, int i) {
+void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
     // Handle error
@@ -203,7 +203,7 @@ void BatchHandler::transfer2copy(CassFuture* query_future, int wb, int i) {
   cass_value_get_bytes(c_data, &data, &sz);
   shapes[wb][i] = sz;
   // enqueue image copy
-  auto cj = copy_pool->enqueue(&BatchHandler::copy_data, this,
+  auto cj = copy_pool->enqueue(&BatchLoader::copy_data, this,
                                result, data, sz, lab, i, wb);
   // saving raw image size
   {
@@ -219,16 +219,16 @@ void BatchHandler::transfer2copy(CassFuture* query_future, int wb, int i) {
   }
 }
 
-void BatchHandler::wrap_t2c(CassFuture* query_future, void* v_fd) {
+void BatchLoader::wrap_t2c(CassFuture* query_future, void* v_fd) {
   futdata* fd = static_cast<futdata*>(v_fd);
-  BatchHandler* bh = fd->bh;
+  BatchLoader* batch_ldr = fd->batch_ldr;
   int wb = fd->wb;
   int i = fd->i;
   delete(fd);
-  bh->transfer2copy(query_future, wb, i);
+  batch_ldr->transfer2copy(query_future, wb, i);
 }
 
-void BatchHandler::keys2transfers(const std::vector<std::string>& keys, int wb) {
+void BatchLoader::keys2transfers(const std::vector<std::string>& keys, int wb) {
   // start all transfers in parallel (send requests to driver)
   for(size_t i=0; i!=keys.size(); ++i) {
     std::string id = keys[i];
@@ -240,7 +240,7 @@ void BatchHandler::keys2transfers(const std::vector<std::string>& keys, int wb) 
     CassFuture* query_future = cass_session_execute(session, statement);
     cass_statement_free(statement);
     futdata* fd = new futdata();
-    fd->bh=this;
+    fd->batch_ldr=this;
     fd->wb=wb;
     fd->i=i;
     cass_future_set_callback(query_future, wrap_t2c, fd);
@@ -248,17 +248,17 @@ void BatchHandler::keys2transfers(const std::vector<std::string>& keys, int wb) 
   }
 }
 
-std::future<BatchImgLab> BatchHandler::start_transfers(const std::vector<std::string>& keys, int wb) {
+std::future<BatchImgLab> BatchLoader::start_transfers(const std::vector<std::string>& keys, int wb) {
   bs[wb] = keys.size();
   copy_jobs[wb].reserve(bs[wb]);
   allocTens(wb); // allocate space for tensors
   // enqueue keys for transfers
-  comm_jobs[wb] = comm_pool->enqueue(&BatchHandler::keys2transfers, this, keys, wb);
-  auto r = wait_pool->enqueue(&BatchHandler::wait4images, this, wb);
+  comm_jobs[wb] = comm_pool->enqueue(&BatchLoader::keys2transfers, this, keys, wb);
+  auto r = wait_pool->enqueue(&BatchLoader::wait4images, this, wb);
   return(r);
 }
 
-BatchImgLab BatchHandler::wait4images(int wb) {
+BatchImgLab BatchLoader::wait4images(int wb) {
   // check if tranfers succeeded
   comm_jobs[wb].get();
   // wait for all copy_jobs to be scheduled
@@ -282,14 +282,14 @@ BatchImgLab BatchHandler::wait4images(int wb) {
   return(r);
 }
 
-void BatchHandler::check_connection() {
+void BatchLoader::check_connection() {
   if(!connected) {
     connect();
     connected = true;
   }
 }
 
-void BatchHandler::prefetch_batch(const std::vector<std::string>& ks) {
+void BatchLoader::prefetch_batch(const std::vector<std::string>& ks) {
   int wb = write_buf.front();
   write_buf.pop();
   check_connection();
@@ -297,7 +297,7 @@ void BatchHandler::prefetch_batch(const std::vector<std::string>& ks) {
   read_buf.push(wb);
 }
 
-BatchImgLab BatchHandler::blocking_get_batch() {
+BatchImgLab BatchLoader::blocking_get_batch() {
   // recover
   int rb = read_buf.front();
   read_buf.pop();
@@ -306,7 +306,7 @@ BatchImgLab BatchHandler::blocking_get_batch() {
   return(r);
 }
 
-void BatchHandler::ignore_batch() {
+void BatchLoader::ignore_batch() {
   if (!connected) {
     return;
   }
