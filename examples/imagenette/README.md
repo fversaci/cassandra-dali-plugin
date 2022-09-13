@@ -141,7 +141,7 @@ to read data from Cassandra using our plugin.
 The [original script](distrib_train_from_file.py) can be run with:
 ```bash
 # Original script, reading from filesystem:
-$ python -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
+$ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   /tmp/imagenette2-320/train /tmp/imagenette2-320/val
 ```
@@ -149,7 +149,7 @@ $ python -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_fro
 while [our modified version](distrib_train_from_cassandra.py) with:
 ```bash
 # Cassandra version of it:
-$ python3 -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
+$ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 ```

@@ -60,14 +60,14 @@ def parse():
         "--train-table-suffix",
         metavar="SUFF",
         default="train_orig",
-        choices=["train_orig", "train_224_jpg"],
+        choices=["train_orig", "train_224_jpg", "train_small"],
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(
         "--val-table-suffix",
         metavar="SUFF",
         default="val_orig",
-        choices=["val_orig", "val_224_jpg"],
+        choices=["val_orig", "val_224_jpg", "val_small"],
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(
@@ -166,7 +166,6 @@ def parse():
     )
     parser.add_argument("--deterministic", action="store_true")
 
-    parser.add_argument("--local_rank", default=0, type=int)
     parser.add_argument("--sync_bn", action="store_true", help="enabling apex sync BN.")
 
     parser.add_argument("--opt-level", type=str, default=None)
@@ -273,9 +272,12 @@ def create_dali_pipeline(
 
 
 def main():
-    global best_prec1, args
+    global best_prec1, args, local_rank
     best_prec1 = 0
+    local_rank = int(os.environ["LOCAL_RANK"])
     args = parse()
+
+    print (f"Local_rank: {local_rank}")
 
     # test mode, use default args for sanity test
     if args.test:
@@ -316,14 +318,14 @@ def main():
     if args.deterministic:
         cudnn.benchmark = False
         cudnn.deterministic = True
-        torch.manual_seed(args.local_rank)
+        torch.manual_seed(local_rank)
         torch.set_printoptions(precision=10)
 
     args.gpu = 0
     args.world_size = 1
 
     if args.distributed:
-        args.gpu = args.local_rank
+        args.gpu = local_rank
         torch.cuda.set_device(args.gpu)
         torch.distributed.init_process_group(backend="nccl", init_method="env://")
         args.world_size = torch.distributed.get_world_size()
@@ -428,12 +430,12 @@ def main():
         table_suffix=args.train_table_suffix,
         batch_size=args.batch_size,
         num_threads=args.workers,
-        device_id=args.local_rank,
-        seed=12 + args.local_rank,
+        device_id=local_rank,
+        seed=12 + local_rank,
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
-        shard_id=args.local_rank,
+        shard_id=local_rank,
         num_shards=args.world_size,
         is_training=True,
     )
@@ -448,12 +450,12 @@ def main():
         table_suffix=args.val_table_suffix,
         batch_size=args.batch_size,
         num_threads=args.workers,
-        device_id=args.local_rank,
-        seed=12 + args.local_rank,
+        device_id=local_rank,
+        seed=12 + local_rank,
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
-        shard_id=args.local_rank,
+        shard_id=local_rank,
         num_shards=args.world_size,
         is_training=False,
     )
@@ -478,7 +480,7 @@ def main():
         [prec1, prec5] = validate(val_loader, model, criterion)
 
         # remember best prec@1 and save checkpoint
-        if args.local_rank == 0:
+        if local_rank == 0:
             is_best = prec1 > best_prec1
             best_prec1 = max(prec1, best_prec1)
             save_checkpoint(
@@ -584,7 +586,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             batch_time.update((time.time() - end) / args.print_freq)
             end = time.time()
 
-            if args.local_rank == 0:
+            if local_rank == 0:
                 print(
                     "Epoch: [{0}][{1}/{2}]\t"
                     "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
@@ -656,7 +658,7 @@ def validate(val_loader, model, criterion):
         end = time.time()
 
         # TODO:  Change timings to mirror train().
-        if args.local_rank == 0 and i % args.print_freq == 0:
+        if local_rank == 0 and i % args.print_freq == 0:
             print(
                 "Test: [{0}/{1}]\t"
                 "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
