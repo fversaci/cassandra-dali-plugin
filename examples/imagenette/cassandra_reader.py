@@ -59,7 +59,7 @@ def get_cassandra_reader(
     if not os.path.exists(rows_fn):
         lm = MiniListManager(ap, cassandra_ips)
         conf = {
-            "table": f"{keyspace}.ids_{table_suffix}",
+            "table": f"{keyspace}.metadata_{table_suffix}",
             "id_col": id_col,
         }
         lm.set_config(conf)
