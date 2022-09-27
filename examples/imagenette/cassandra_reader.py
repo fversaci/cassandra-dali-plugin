@@ -37,6 +37,8 @@ def get_cassandra_reader(
     comm_threads=2,
     copy_threads=2,
     wait_threads=2,
+    use_ssl=False, #True,
+    ssl_certificate="" #"node0.cer.pem",
 ):
     # Read Cassandra parameters
     try:
@@ -57,7 +59,7 @@ def get_cassandra_reader(
     if not os.path.exists(rows_fn):
         lm = MiniListManager(ap, cassandra_ips)
         conf = {
-            "table": f"{keyspace}.ids_{table_suffix}",
+            "table": f"{keyspace}.metadata_{table_suffix}",
             "id_col": id_col,
         }
         lm.set_config(conf)
@@ -95,7 +97,7 @@ def get_cassandra_reader(
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
-        # use_ssl=True,
-        # ssl_certificate="node0.cer.pem",
+        use_ssl=use_ssl,
+        ssl_certificate=ssl_certificate,
     )
     return cassandra_reader
