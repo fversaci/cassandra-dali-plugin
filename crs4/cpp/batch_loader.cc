@@ -182,9 +182,10 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     size_t error_message_length;
     cass_future_error_message(query_future,
                               &error_message, &error_message_length);
+    fprintf(stderr, "Unable to run query: '%.*s'\n",
+	    (int)error_message_length, error_message);
     cass_future_free(query_future);
-    throw std::runtime_error("Error: unable to execute query, " +
-                             std::string(error_message));
+    throw std::runtime_error("Error: unable to execute query");
   }
   // decode result
   const CassRow* row = cass_result_first_row(result);
