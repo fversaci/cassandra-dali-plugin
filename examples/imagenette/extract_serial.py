@@ -14,7 +14,7 @@
 from getpass import getpass
 import extract_common
 from clize import run
-
+import uuid
 
 def save_images(
     src_dir,
@@ -46,6 +46,7 @@ def save_images(
             username = getpass("Insert Cassandra user: ")
             password = getpass("Insert Cassandra password: ")
 
+        buckets = [uuid.uuid4() for _ in range(500)]
         extract_common.send_images_to_db(
             cassandra_ips,
             username,
@@ -53,6 +54,7 @@ def save_images(
             img_format,
             keyspace,
             table_suffix,
+            buckets,
         )(jobs)
     else:
         extract_common.save_images_to_dir(target_dir, img_format)(jobs)

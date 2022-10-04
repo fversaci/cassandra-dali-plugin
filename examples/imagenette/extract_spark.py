@@ -16,6 +16,7 @@ from pyspark.conf import SparkConf
 from pyspark.context import SparkContext
 from pyspark.sql.session import SparkSession
 from clize import run
+import uuid
 
 
 def save_images(
@@ -54,9 +55,16 @@ def save_images(
             username = getpass("Insert Cassandra user: ")
             password = getpass("Insert Cassandra password: ")
 
+        buckets = [uuid.uuid4() for _ in range(50000)]
         par_jobs.foreachPartition(
             extract_common.send_images_to_db(
-                cassandra_ips, username, password, img_format, keyspace, table_suffix
+                cassandra_ips,
+                username,
+                password,
+                img_format,
+                keyspace,
+                table_suffix,
+                buckets,
             )
         )
     else:

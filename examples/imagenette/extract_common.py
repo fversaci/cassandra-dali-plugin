@@ -75,7 +75,13 @@ def get_jobs(src_dir, splits=["train", "val"]):
 
 
 def send_images_to_db(
-    cassandra_ips, username, password, img_format, keyspace, table_suffix
+    cassandra_ips,
+    username,
+    password,
+    img_format,
+    keyspace,
+    table_suffix,
+    buckets=None,
 ):
     auth_prov = PlainTextAuthProvider(username, password)
 
@@ -91,6 +97,8 @@ def send_images_to_db(
             data_col="data",
             cols=["or_split", "or_label"],
             get_data=get_data(img_format),
+            bucket_col="bucket",
+            buckets=buckets,
         )
         for path, label, partition_items in tqdm(jobs):
             cw.save_image(path, label, partition_items)
