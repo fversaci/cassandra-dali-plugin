@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#include "batch_loader.h"
+#include "./batch_loader.h"
 
 #include <iostream>
 #include <fstream>
@@ -28,7 +28,7 @@ BatchLoader::~BatchLoader() {
 void load_trusted_cert_file(std::string file, CassSsl* ssl) {
   CassError rc;
   char* cert;
-  long cert_size;
+  int64_t cert_size;
 
   FILE *in = fopen(file.c_str(), "rb");
   if (in == NULL) {
@@ -39,7 +39,7 @@ void load_trusted_cert_file(std::string file, CassSsl* ssl) {
   cert_size = ftell(in);
   rewind(in);
 
-  cert = (char*)malloc(cert_size);
+  cert = reinterpret_cast<char*>(malloc(cert_size));
   fread(cert, sizeof(char), cert_size, in);
   fclose(in);
 
@@ -48,7 +48,7 @@ void load_trusted_cert_file(std::string file, CassSsl* ssl) {
   if (rc != CASS_OK) {
     free(cert);
     throw std::runtime_error("Error loading SSL certificate: "
-			     + std::string(cass_error_desc(rc)));
+                             + std::string(cass_error_desc(rc)));
   }
 
   free(cert);
@@ -58,8 +58,7 @@ void set_ssl(CassCluster* cluster, std::string ssl_certificate) {
   CassSsl* ssl = cass_ssl_new();
   if (ssl_certificate.empty()) {
     cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
-  }
-  else {
+  } else {
     load_trusted_cert_file(ssl_certificate, ssl);
   }
   cass_cluster_set_ssl(cluster, ssl);
@@ -72,8 +71,9 @@ void BatchLoader::connect() {
   cass_cluster_set_port(cluster, port);
   cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4);
   cass_cluster_set_num_threads_io(cluster, io_threads);
-  cass_cluster_set_application_name(cluster, "Cassandra module for NVIDIA DALI, CRS4");
-  cass_cluster_set_queue_size_io(cluster, 65536); // max pending requests
+  cass_cluster_set_application_name(cluster,
+                               "Cassandra module for NVIDIA DALI, CRS4");
+  cass_cluster_set_queue_size_io(cluster, 65536);  // max pending requests
   // set ssl if required
   if (use_ssl) {
     set_ssl(cluster, ssl_certificate);
@@ -105,19 +105,19 @@ void BatchLoader::connect() {
 }
 
 BatchLoader::BatchLoader(std::string table, std::string label_col,
-                           std::string data_col, std::string id_col,
-                           std::string username, std::string password,
-                           std::vector<std::string> cassandra_ips, int port,
-                           bool use_ssl, std::string ssl_certificate,
-                           int io_threads, int prefetch_buffers,
-                           int copy_threads, int wait_threads, int comm_threads) :
+                         std::string data_col, std::string id_col,
+                         std::string username, std::string password,
+                         std::vector<std::string> cassandra_ips, int port,
+                         bool use_ssl, std::string ssl_certificate,
+                         int io_threads, int prefetch_buffers,
+                         int copy_threads, int wait_threads, int comm_threads) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   // label_map(label_map),
   username(username), password(password), cassandra_ips(cassandra_ips),
   port(port), use_ssl(use_ssl), ssl_certificate(ssl_certificate),
   io_threads(io_threads), prefetch_buffers(prefetch_buffers),
-  copy_threads(copy_threads), wait_threads(wait_threads), comm_threads(comm_threads)
-{
+  copy_threads(copy_threads), wait_threads(wait_threads),
+  comm_threads(comm_threads) {
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
   batch.resize(prefetch_buffers);
@@ -128,7 +128,7 @@ BatchLoader::BatchLoader(std::string table, std::string label_col,
   shapes.resize(prefetch_buffers);
   alloc_cv = std::vector<std::condition_variable>(prefetch_buffers);
   alloc_mtx = std::vector<std::mutex>(prefetch_buffers);
-  for(int i=0; i<prefetch_buffers; ++i) {
+  for (int i = 0; i < prefetch_buffers; ++i) {
     write_buf.push(i);
   }
   // join cassandra ip's into comma seperated string
@@ -149,7 +149,7 @@ void BatchLoader::allocTens(int wb) {
   v_labs[wb] = BatchLabel();
   v_labs[wb].set_pinned(false);
   // v_labs[wb].SetContiguous(true);
-  std::vector<long int> v_sz(bs[wb], 1);
+  std::vector<int64_t> v_sz(bs[wb], 1);
   ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
   v_labs[wb].Resize(t_sz, DALI_LABEL_TYPE);
 }
@@ -160,7 +160,7 @@ void BatchLoader::copy_data(const CassResult* result,
   // wait for feature tensor to be allocated
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    while(copy_jobs[wb].size()!=bs[wb]) {
+    while (copy_jobs[wb].size() != bs[wb]) {
       alloc_cv[wb].wait(lck);
     }
   }
@@ -169,7 +169,7 @@ void BatchLoader::copy_data(const CassResult* result,
   std::memcpy(v_labs[wb].raw_mutable_tensor(off), &lab, sizeof(LABEL_TYPE));
   // Alternative:
   // *(v_labs[wb].mutable_tensor<LABEL_TYPE>(off)) = lab;
-  
+
   // free Cassandra result memory (data included)
   cass_result_free(result);
 }
@@ -183,7 +183,7 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     cass_future_error_message(query_future,
                               &error_message, &error_message_length);
     fprintf(stderr, "Unable to run query: '%.*s'\n",
-	    (int)error_message_length, error_message);
+            static_cast<int>(error_message_length), error_message);
     cass_future_free(query_future);
     throw std::runtime_error("Error: unable to execute query");
   }
@@ -211,7 +211,7 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
     copy_jobs[wb].emplace_back(std::move(cj));
     // if all copy_jobs added
-    if (copy_jobs[wb].size()==bs[wb]) {
+    if (copy_jobs[wb].size() == bs[wb]) {
       // allocate feature tensor and notify waiting threads
       ::dali::TensorListShape t_sz(shapes[wb], bs[wb], 1);
       v_feats[wb].Resize(t_sz, DALI_FEAT_TYPE);
@@ -231,7 +231,7 @@ void BatchLoader::wrap_t2c(CassFuture* query_future, void* v_fd) {
 
 void BatchLoader::keys2transfers(const std::vector<std::string>& keys, int wb) {
   // start all transfers in parallel (send requests to driver)
-  for(size_t i=0; i!=keys.size(); ++i) {
+  for (size_t i=0; i != keys.size(); ++i) {
     std::string id = keys[i];
     // prepare query
     CassStatement* statement = cass_prepared_bind(prepared);
@@ -241,20 +241,22 @@ void BatchLoader::keys2transfers(const std::vector<std::string>& keys, int wb) {
     CassFuture* query_future = cass_session_execute(session, statement);
     cass_statement_free(statement);
     futdata* fd = new futdata();
-    fd->batch_ldr=this;
-    fd->wb=wb;
-    fd->i=i;
+    fd->batch_ldr = this;
+    fd->wb = wb;
+    fd->i = i;
     cass_future_set_callback(query_future, wrap_t2c, fd);
     cass_future_free(query_future);
   }
 }
 
-std::future<BatchImgLab> BatchLoader::start_transfers(const std::vector<std::string>& keys, int wb) {
+std::future<BatchImgLab> BatchLoader::start_transfers(
+                             const std::vector<std::string>& keys, int wb) {
   bs[wb] = keys.size();
   copy_jobs[wb].reserve(bs[wb]);
-  allocTens(wb); // allocate space for tensors
+  allocTens(wb);  // allocate space for tensors
   // enqueue keys for transfers
-  comm_jobs[wb] = comm_pool->enqueue(&BatchLoader::keys2transfers, this, keys, wb);
+  comm_jobs[wb] = comm_pool->enqueue(
+                             &BatchLoader::keys2transfers, this, keys, wb);
   auto r = wait_pool->enqueue(&BatchLoader::wait4images, this, wb);
   return(r);
 }
@@ -265,13 +267,13 @@ BatchImgLab BatchLoader::wait4images(int wb) {
   // wait for all copy_jobs to be scheduled
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    while(copy_jobs[wb].size()!=bs[wb]) {
+    while (copy_jobs[wb].size() != bs[wb]) {
       alloc_cv[wb].wait(lck);
     }
   }
   // check if all images were copied correctly
-  for(auto it=copy_jobs[wb].begin(); it!=copy_jobs[wb].end(); ++it) {
-    it->get(); // using get to propagates exceptions
+  for (auto it=copy_jobs[wb].begin(); it != copy_jobs[wb].end(); ++it) {
+    it->get();  // using get to propagates exceptions
   }
   // reset job queues
   copy_jobs[wb].clear();
@@ -284,7 +286,7 @@ BatchImgLab BatchLoader::wait4images(int wb) {
 }
 
 void BatchLoader::check_connection() {
-  if(!connected) {
+  if (!connected) {
     connect();
     connected = true;
   }
@@ -312,7 +314,7 @@ void BatchLoader::ignore_batch() {
     return;
   }
   // wait for flying batches to be retrieved
-  while(!read_buf.empty()) {
+  while (!read_buf.empty()) {
     auto b = blocking_get_batch();
   }
   return;
