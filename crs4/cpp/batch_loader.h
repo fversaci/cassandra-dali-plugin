@@ -19,7 +19,9 @@
 
 namespace crs4 {
 
-using LABEL_TYPE = int32_t;
+enum lab_type {lab_int, lab_img, lab_none};
+
+using INT_LABEL_T = int32_t;
 using BatchRawImage = ::dali::TensorList<::dali::CPUBackend>;
 using BatchLabel = ::dali::TensorList<::dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
@@ -27,11 +29,12 @@ using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 class BatchLoader {
  private:
   // dali types
-  dali::DALIDataType DALI_LABEL_TYPE = ::dali::DALI_INT32;
-  dali::DALIDataType DALI_FEAT_TYPE = ::dali::DALI_UINT8;
+  dali::DALIDataType DALI_INT_TYPE = ::dali::DALI_INT32;
+  dali::DALIDataType DALI_IMG_TYPE = ::dali::DALI_UINT8;
   // parameters
   bool connected = false;
   std::string table;
+  lab_type label_t = lab_none;
   std::string label_col;
   std::string data_col;
   std::string id_col;
@@ -67,11 +70,16 @@ class BatchLoader {
   std::queue<int> read_buf;
   std::queue<int> write_buf;
   std::vector<std::vector<int64_t>> shapes;
+  std::vector<std::vector<int64_t>> lab_shapes;
   // methods
   void connect();
   void check_connection();
-  void copy_data(const CassResult* result, const cass_byte_t* data,
-                  size_t sz, cass_int32_t lab, int off, int wb);
+  void copy_data_none(const CassResult* result, const cass_byte_t* data,
+                      size_t sz, int off, int wb);
+  void copy_data_int(const CassResult* result, const cass_byte_t* data,
+                     size_t sz, cass_int32_t lab, int off, int wb);
+  void copy_data_img(const CassResult* result, const cass_byte_t* data,
+                     size_t sz, const cass_byte_t* lab, size_t l_sz, int off, int wb);
   std::future<BatchImgLab> start_transfers(const std::vector<std::string>& keys,
                                            int wb);
   BatchImgLab wait4images(int wb);
@@ -81,12 +89,13 @@ class BatchLoader {
   void allocTens(int wb);
 
  public:
-  BatchLoader(std::string table, std::string label_col, std::string data_col,
-               std::string id_col, std::string username, std::string password,
-               std::vector<std::string> cassandra_ips, int port, bool use_ssl,
-               std::string ssl_certificate, int io_threads,
-               int prefetch_buffers, int copy_threads, int wait_threads,
-               int comm_threads);
+  BatchLoader(std::string table, std::string label_type,
+              std::string label_col, std::string data_col, std::string id_col,
+              std::string username, std::string password,
+              std::vector<std::string> cassandra_ips, int port, bool use_ssl,
+              std::string ssl_certificate, int io_threads,
+              int prefetch_buffers, int copy_threads, int wait_threads,
+              int comm_threads);
   ~BatchLoader();
   void prefetch_batch(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();

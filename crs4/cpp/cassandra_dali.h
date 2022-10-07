@@ -78,6 +78,7 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
   std::vector<std::string> cassandra_ips;
   int cassandra_port;
   std::string table;
+  std::string label_type;
   std::string label_col;
   std::string data_col;
   std::string id_col;

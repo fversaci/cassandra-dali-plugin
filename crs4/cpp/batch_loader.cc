@@ -86,8 +86,12 @@ void BatchLoader::connect() {
   }
   // assemble query
   std::stringstream ss;
-  ss << "SELECT " << label_col << ", " << data_col <<
-     " FROM " << table << " WHERE " << id_col << "=?" << std::endl;
+  ss << "SELECT " ;
+  if (label_t != lab_none) {  // getting label/mask?
+    ss << label_col << ", ";
+  }
+  ss << data_col << " FROM " << table << " WHERE "
+     << id_col << "=?" << std::endl;
   std::string query = ss.str();
   // prepare statement
   CassFuture* prepare_future = cass_session_prepare(session, query.c_str());
@@ -104,20 +108,27 @@ void BatchLoader::connect() {
   wait_pool = new ThreadPool(wait_threads);
 }
 
-BatchLoader::BatchLoader(std::string table, std::string label_col,
-                         std::string data_col, std::string id_col,
+BatchLoader::BatchLoader(std::string table, std::string label_type,
+			 std::string label_col, std::string data_col,
+			 std::string id_col,
                          std::string username, std::string password,
                          std::vector<std::string> cassandra_ips, int port,
                          bool use_ssl, std::string ssl_certificate,
                          int io_threads, int prefetch_buffers,
                          int copy_threads, int wait_threads, int comm_threads) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
-  // label_map(label_map),
   username(username), password(password), cassandra_ips(cassandra_ips),
   port(port), use_ssl(use_ssl), ssl_certificate(ssl_certificate),
   io_threads(io_threads), prefetch_buffers(prefetch_buffers),
   copy_threads(copy_threads), wait_threads(wait_threads),
   comm_threads(comm_threads) {
+  // setting label type, default is lab_none
+  if (label_type == "int") {
+    label_t = lab_int;
+  } else if (label_type == "image") {
+    label_t = lab_img;
+    lab_shapes.resize(prefetch_buffers);
+  }                     
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
   batch.resize(prefetch_buffers);
@@ -149,12 +160,35 @@ void BatchLoader::allocTens(int wb) {
   v_labs[wb] = BatchLabel();
   v_labs[wb].set_pinned(false);
   // v_labs[wb].SetContiguous(true);
-  std::vector<int64_t> v_sz(bs[wb], 1);
-  ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
-  v_labs[wb].Resize(t_sz, DALI_LABEL_TYPE);
+  if (label_t == lab_img) {
+    lab_shapes[wb].clear();
+    lab_shapes[wb].resize(bs[wb]);
+  } else {
+    // if labels are not images we can already allocate the memory
+    std::vector<int64_t> v_sz(bs[wb], 1);
+    ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
+    v_labs[wb].Resize(t_sz, DALI_INT_TYPE);
+  } 
 }
 
-void BatchLoader::copy_data(const CassResult* result,
+void BatchLoader::copy_data_none(const CassResult* result,
+                                 const cass_byte_t* data, size_t sz,
+                                 int off, int wb) {
+  // wait for feature tensor to be allocated
+  {
+    std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
+    while (copy_jobs[wb].size() != bs[wb]) {
+      alloc_cv[wb].wait(lck);
+    }
+  }
+  // copy data in batch
+  std::memcpy(v_feats[wb].raw_mutable_tensor(off), data, sz);
+
+  // free Cassandra result memory (data included)
+  cass_result_free(result);
+}
+
+void BatchLoader::copy_data_int(const CassResult* result,
                               const cass_byte_t* data, size_t sz,
                               cass_int32_t lab, int off, int wb) {
   // wait for feature tensor to be allocated
@@ -166,14 +200,31 @@ void BatchLoader::copy_data(const CassResult* result,
   }
   // copy data in batch
   std::memcpy(v_feats[wb].raw_mutable_tensor(off), data, sz);
-  std::memcpy(v_labs[wb].raw_mutable_tensor(off), &lab, sizeof(LABEL_TYPE));
-  // Alternative:
-  // *(v_labs[wb].mutable_tensor<LABEL_TYPE>(off)) = lab;
+  std::memcpy(v_labs[wb].raw_mutable_tensor(off), &lab, sizeof(INT_LABEL_T));
 
   // free Cassandra result memory (data included)
   cass_result_free(result);
 }
 
+void BatchLoader::copy_data_img(const CassResult* result,
+                                const cass_byte_t* data, size_t sz,
+                                const cass_byte_t* lab, size_t l_sz,
+                                int off, int wb) {
+  // wait for feature tensor to be allocated
+  {
+    std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
+    while (copy_jobs[wb].size() != bs[wb]) {
+      alloc_cv[wb].wait(lck);
+    }
+  }
+  // copy data in batch
+  std::memcpy(v_feats[wb].raw_mutable_tensor(off), data, sz);
+  std::memcpy(v_labs[wb].raw_mutable_tensor(off), lab, l_sz);
+
+  // free Cassandra result memory (data included)
+  cass_result_free(result);
+}
+  
 void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
@@ -193,19 +244,38 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     // Handle error
     throw std::runtime_error("Error: query returned empty set");
   }
-  const CassValue* c_lab =
-    cass_row_get_column_by_name(row, label_col.c_str());
+  // feature
   const CassValue* c_data =
     cass_row_get_column_by_name(row, data_col.c_str());
-  cass_int32_t lab;
-  cass_value_get_int32(c_lab, &lab);
   const cass_byte_t* data;
   size_t sz;
   cass_value_get_bytes(c_data, &data, &sz);
   shapes[wb][i] = sz;
-  // enqueue image copy
-  auto cj = copy_pool->enqueue(&BatchLoader::copy_data, this,
-                               result, data, sz, lab, i, wb);
+  // label/mask/none
+  std::future<void> cj;
+  if (label_t == lab_none) {
+    // enqueue image copy
+    cj = copy_pool->enqueue(&BatchLoader::copy_data_none, this,
+                            result, data, sz, i, wb);
+  } else if (label_t == lab_int) {
+    const CassValue* c_lab =
+      cass_row_get_column_by_name(row, label_col.c_str());
+    cass_int32_t lab;
+    cass_value_get_int32(c_lab, &lab);
+    // enqueue image copy + int label
+    cj = copy_pool->enqueue(&BatchLoader::copy_data_int, this,
+                            result, data, sz, lab, i, wb);
+  } else if (label_t == lab_img) {
+    const CassValue* c_lab =
+      cass_row_get_column_by_name(row, label_col.c_str());
+    const cass_byte_t* lab;
+    size_t l_sz;
+    cass_value_get_bytes(c_lab, &lab, &l_sz);
+    lab_shapes[wb][i] = l_sz;
+    // enqueue image copy + image label (e.g., mask)
+    cj = copy_pool->enqueue(&BatchLoader::copy_data_img, this,
+                            result, data, sz, lab, l_sz, i, wb);
+  }    
   // saving raw image size
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
@@ -214,7 +284,11 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     if (copy_jobs[wb].size() == bs[wb]) {
       // allocate feature tensor and notify waiting threads
       ::dali::TensorListShape t_sz(shapes[wb], bs[wb], 1);
-      v_feats[wb].Resize(t_sz, DALI_FEAT_TYPE);
+      v_feats[wb].Resize(t_sz, DALI_IMG_TYPE);
+      if (label_t == lab_img) {
+        ::dali::TensorListShape t_sz(lab_shapes[wb], bs[wb], 1);
+        v_labs[wb].Resize(t_sz, DALI_IMG_TYPE);
+      }
       alloc_cv[wb].notify_all();
     }
   }
