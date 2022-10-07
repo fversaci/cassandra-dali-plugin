@@ -28,6 +28,7 @@ plugin_manager.load_library(plugin_path)
 def get_cassandra_reader(
     keyspace,
     table_suffix,
+    id_col="patch_id",
     shard_id=0,
     num_shards=1,
     io_threads=2,
@@ -55,7 +56,6 @@ def get_cassandra_reader(
 
     # Load list of uuids from Cassandra DB...
     ap = PlainTextAuthProvider(username=username, password=password)
-    id_col = "patch_id"
     if not os.path.exists(rows_fn):
         lm = MiniListManager(ap, cassandra_ips)
         conf = {
@@ -63,7 +63,7 @@ def get_cassandra_reader(
             "id_col": id_col,
         }
         lm.set_config(conf)
-        print("Loading list of uuids from DB... ", end="")
+        print("Loading list of uuids from DB... ", end="", flush=True)
         lm.read_rows_from_db()
         if shard_id == 0:
             if not os.path.exists(ids_cache):
@@ -71,7 +71,7 @@ def get_cassandra_reader(
             lm.save_rows(rows_fn)
         stuff = lm.get_rows()
     else:  # ...or from the cached file
-        print("Loading list of uuids from cached file... ", end="")
+        print("Loading list of uuids from cached file... ", end="", flush=True)
         with open(rows_fn, "rb") as f:
             stuff = pickle.load(f)
     # init and return Cassandra reader

@@ -7,7 +7,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "cassandra_dali.h"
+#include "./cassandra_dali.h"
 
 namespace crs4 {
 
@@ -32,21 +32,20 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   wait_threads(spec.GetArgument<int>("wait_threads")),
   comm_threads(spec.GetArgument<int>("comm_threads")),
   shard_id(spec.GetArgument<int>("shard_id")),
-  num_shards(spec.GetArgument<int>("num_shards"))
-{
+  num_shards(spec.GetArgument<int>("num_shards")) {
   DALI_ENFORCE(num_shards > shard_id,
-	       "num_shards needs to be greater than shard_id");
+               "num_shards needs to be greater than shard_id");
   DALI_ENFORCE(uuids.size() > 0,
-	       "dataset cannot be empty");
+               "dataset cannot be empty");
   set_shard_sizes();
   batch_ldr = new BatchLoader(table, label_col, data_col, id_col,
-			username, password, cassandra_ips, cassandra_port,
-			use_ssl, ssl_certificate,
-			io_threads, prefetch_buffers, copy_threads,
-			wait_threads, comm_threads);
+                        username, password, cassandra_ips, cassandra_port,
+                        use_ssl, ssl_certificate,
+                        io_threads, prefetch_buffers, copy_threads,
+                        wait_threads, comm_threads);
   Reset();
   // start prefetching
-  for (int i=0; i<prefetch_buffers; ++i) {
+  for (int i=0; i < prefetch_buffers; ++i) {
     prefetch_one();
   }
 }
@@ -54,12 +53,12 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
 void Cassandra::prefetch_one() {
   auto dist = std::distance(current, shard_end);
   // if reached the end, rewind
-  if (dist==0) {
+  if (dist == 0) {
     Reset();
     dist = shard_size;
   }
   // full batch
-  if (dist>=batch_size) {
+  if (dist >= batch_size) {
     auto batch_ids = std::vector(current, current+batch_size);
     current += batch_size;
     batch_ldr->prefetch_batch(batch_ids);
@@ -68,7 +67,7 @@ void Cassandra::prefetch_one() {
   // pad partial batch
   auto batch_ids = std::vector(current, shard_end);
   current = shard_end;
-  for (int i=dist; i!=batch_size; ++i)
+  for (int i=dist; i != batch_size; ++i)
     batch_ids.push_back(*(shard_end-1));
   batch_ldr->prefetch_batch(batch_ids);
 }

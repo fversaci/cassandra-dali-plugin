@@ -4,16 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-#ifndef CRS4_BATCH_LOADER_H
-#define CRS4_BATCH_LOADER_H
+#ifndef CRS4_CPP_BATCH_LOADER_H_
+#define CRS4_CPP_BATCH_LOADER_H_
 
 #include <cassandra.h>
 #include <string>
+#include <queue>
 #include <vector>
 #include <future>
 #include <utility>
 #include <mutex>
-#include <dali/pipeline/operator/operator.h>
+#include "dali/pipeline/operator/operator.h"
 #include "ThreadPool.h"
 
 namespace crs4 {
@@ -24,7 +25,7 @@ using BatchLabel = ::dali::TensorList<::dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 
 class BatchLoader {
-private:
+ private:
   // dali types
   dali::DALIDataType DALI_LABEL_TYPE = ::dali::DALI_INT32;
   dali::DALIDataType DALI_FEAT_TYPE = ::dali::DALI_UINT8;
@@ -50,10 +51,10 @@ private:
   ThreadPool* copy_pool;
   ThreadPool* wait_pool;
   int io_threads;
-  int copy_threads; // copy parallelism
+  int copy_threads;  // copy parallelism
   int wait_threads;
-  int comm_threads; // number of communication threads
-  int prefetch_buffers; // multi-buffering
+  int comm_threads;  // number of communication threads
+  int prefetch_buffers;  // multi-buffering
   std::vector<std::mutex> alloc_mtx;
   std::vector<std::condition_variable> alloc_cv;
   std::vector<std::future<void>> comm_jobs;
@@ -71,19 +72,21 @@ private:
   void check_connection();
   void copy_data(const CassResult* result, const cass_byte_t* data,
                   size_t sz, cass_int32_t lab, int off, int wb);
-  std::future<BatchImgLab> start_transfers(const std::vector<std::string>& keys, int wb);
+  std::future<BatchImgLab> start_transfers(const std::vector<std::string>& keys,
+                                           int wb);
   BatchImgLab wait4images(int wb);
   void keys2transfers(const std::vector<std::string>& keys, int wb);
   void transfer2copy(CassFuture* query_future, int wb, int i);
   static void wrap_t2c(CassFuture* query_future, void* v_fd);
   void allocTens(int wb);
-public:
+
+ public:
   BatchLoader(std::string table, std::string label_col, std::string data_col,
                std::string id_col, std::string username, std::string password,
-	       std::vector<std::string> cassandra_ips, int port, bool use_ssl,
-	       std::string ssl_certificate, int io_threads,
-	       int prefetch_buffers, int copy_threads, int wait_threads,
-	       int comm_threads);
+               std::vector<std::string> cassandra_ips, int port, bool use_ssl,
+               std::string ssl_certificate, int io_threads,
+               int prefetch_buffers, int copy_threads, int wait_threads,
+               int comm_threads);
   ~BatchLoader();
   void prefetch_batch(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();
@@ -98,4 +101,4 @@ struct futdata {
 
 }  // namespace crs4
 
-#endif  // CRS4_BATCH_LOADER_H
+#endif  // CRS4_CPP_BATCH_LOADER_H_
