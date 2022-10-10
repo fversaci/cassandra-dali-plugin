@@ -29,6 +29,9 @@ def get_cassandra_reader(
     keyspace,
     table_suffix,
     id_col="patch_id",
+    label_type="int",
+    label_col="label",
+    data_col="data",
     shard_id=0,
     num_shards=1,
     io_threads=2,
@@ -39,7 +42,7 @@ def get_cassandra_reader(
     copy_threads=2,
     wait_threads=2,
     use_ssl=False, #True,
-    ssl_certificate="" #"node0.cer.pem",
+    ssl_certificate="" #"node0.cer.pem",    
 ):
     # Read Cassandra parameters
     try:
@@ -85,8 +88,8 @@ def get_cassandra_reader(
         shuffle_after_epoch=shuffle_after_epoch,
         cassandra_ips=cassandra_ips,
         table=table,
-        label_col="label",
-        data_col="data",
+        label_col=label_col,
+        data_col=data_col,
         id_col=id_col,
         username=username,
         password=password,
@@ -99,5 +102,6 @@ def get_cassandra_reader(
         wait_threads=wait_threads,
         use_ssl=use_ssl,
         ssl_certificate=ssl_certificate,
+        label_type=label_type,
     )
     return cassandra_reader

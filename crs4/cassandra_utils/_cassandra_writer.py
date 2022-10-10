@@ -24,9 +24,11 @@ class CassandraWriter:
         data_col,
         cols,
         get_data,
+        masks=False,
     ):
             
         self.get_data = get_data
+        self.masks = masks
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
             row_factory=cassandra.query.dict_factory,
@@ -41,9 +43,15 @@ class CassandraWriter:
         self.sess = self.cluster.connect()
         query1 = f"INSERT INTO {table_data} ("
         query1 += f"{id_col}, {label_col}, {data_col}) VALUES (?,?,?)"
-        query2 = f"INSERT INTO {table_metadata} ("
-        query2 += f"{id_col}, {label_col}, {', '.join(cols)}) "
-        query2 += f"VALUES ({', '.join(['?']*(len(cols)+2))})"
+        if self.masks:
+            query2 = f"INSERT INTO {table_metadata} ("
+            query2 += f"{id_col}, {', '.join(cols)}) "
+            query2 += f"VALUES ({', '.join(['?']*(len(cols)+1))})"
+        else:
+            query2 = f"INSERT INTO {table_metadata} ("
+            query2 += f"{id_col}, {label_col}, {', '.join(cols)}) "
+            query2 += f"VALUES ({', '.join(['?']*(len(cols)+2))})"
+        
         self.prep1 = self.sess.prepare(query1)
         self.prep2 = self.sess.prepare(query2)
 
@@ -65,9 +73,33 @@ class CassandraWriter:
             execution_profile="default", timeout=30,
         )
         
+    def save_item_mask(self, item):
+        image_id, data_mask, data_img, partition_items = item
+        # insert metadata 
+        self.sess.execute(
+            self.prep2,
+            (image_id, *partition_items),
+            execution_profile="default",
+            timeout=30,
+        )
+        # insert heavy data 
+        self.sess.execute(
+            self.prep1, (image_id, data_mask, data_img),
+            execution_profile="default", timeout=30,
+        )
+        
     def save_image(self, path, label, partition_items):
         # read file into memory
         data = self.get_data(path)
         image_id = uuid.uuid4()
         item = (image_id, label, data, partition_items)
         self.save_item(item)
+
+    def save_image_mask(self, path_img, path_mask):
+        # read file into memory
+        data_img = self.get_data(path_img)
+        data_mask = self.get_data(path_mask)
+        image_id = uuid.uuid4()
+        item = (image_id, data_mask, data_img, (path_img,) )
+        self.save_item_mask(item)
+        
