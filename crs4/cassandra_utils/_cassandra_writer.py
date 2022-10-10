@@ -17,7 +17,6 @@ class CassandraWriter:
         self,
         auth_prov,
         cassandra_ips,
-        table_ids,
         table_data,
         table_metadata,
         id_col,

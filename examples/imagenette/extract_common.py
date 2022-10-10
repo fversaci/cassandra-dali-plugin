@@ -83,7 +83,6 @@ def send_images_to_db(
         cw = CassandraWriter(
             auth_prov,
             cassandra_ips,
-            table_ids=f"{keyspace}.ids_{table_suffix}",
             table_data=f"{keyspace}.data_{table_suffix}",
             table_metadata=f"{keyspace}.metadata_{table_suffix}",
             id_col="patch_id",
