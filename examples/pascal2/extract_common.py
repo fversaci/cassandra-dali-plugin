@@ -86,7 +86,7 @@ def send_images_to_db(
             masks=True,
         )
         for path_img, path_mask in tqdm(jobs):
-            cw.save_image_mask(path_img, path_mask)
+            cw.save_image(path_img, path_mask, (path_img,))
 
     return ret
 

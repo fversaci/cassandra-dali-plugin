@@ -60,10 +60,14 @@ class CassandraWriter:
 
     def save_item(self, item):
         image_id, label, data, partition_items = item
+        if self.masks:
+            stuff = (image_id, *partition_items)
+        else:
+            stuff = (image_id, label, *partition_items)
         # insert metadata 
         self.sess.execute(
             self.prep2,
-            (image_id, label, *partition_items),
+            stuff,
             execution_profile="default",
             timeout=30,
         )
@@ -73,33 +77,12 @@ class CassandraWriter:
             execution_profile="default", timeout=30,
         )
         
-    def save_item_mask(self, item):
-        image_id, data_mask, data_img, partition_items = item
-        # insert metadata 
-        self.sess.execute(
-            self.prep2,
-            (image_id, *partition_items),
-            execution_profile="default",
-            timeout=30,
-        )
-        # insert heavy data 
-        self.sess.execute(
-            self.prep1, (image_id, data_mask, data_img),
-            execution_profile="default", timeout=30,
-        )
         
     def save_image(self, path, label, partition_items):
         # read file into memory
         data = self.get_data(path)
+        if self.masks:
+            label = self.get_data(label)
         image_id = uuid.uuid4()
         item = (image_id, label, data, partition_items)
         self.save_item(item)
-
-    def save_image_mask(self, path_img, path_mask):
-        # read file into memory
-        data_img = self.get_data(path_img)
-        data_mask = self.get_data(path_mask)
-        image_id = uuid.uuid4()
-        item = (image_id, data_mask, data_img, (path_img,) )
-        self.save_item_mask(item)
-        
