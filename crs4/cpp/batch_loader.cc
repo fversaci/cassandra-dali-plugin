@@ -66,9 +66,23 @@ void set_ssl(CassCluster* cluster, std::string ssl_certificate) {
 }
 
 void BatchLoader::connect() {
-  cass_cluster_set_contact_points(cluster, s_cassandra_ips.c_str());
+  if (cloud_config.empty()) {
+    // direct connection
+    cass_cluster_set_contact_points(cluster, s_cassandra_ips.c_str());
+    cass_cluster_set_port(cluster, port);
+  }
+  else {
+    // cloud configuration (e.g., AstraDB)
+    if (cass_cluster_set_cloud_secure_connection_bundle(cluster,
+                                                        cloud_config.c_str())
+        != CASS_OK) {
+      throw std::runtime_error(
+           "Unable to configure cloud using the secure connection bundle: "
+           + cloud_config);
+    }
+    cass_cluster_set_connect_timeout(cluster, 10000);
+  }
   cass_cluster_set_credentials(cluster, username.c_str(), password.c_str());
-  cass_cluster_set_port(cluster, port);
   cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4);
   cass_cluster_set_num_threads_io(cluster, io_threads);
   cass_cluster_set_application_name(cluster,
@@ -108,16 +122,17 @@ BatchLoader::BatchLoader(std::string table, std::string label_col,
                          std::string data_col, std::string id_col,
                          std::string username, std::string password,
                          std::vector<std::string> cassandra_ips, int port,
-                         bool use_ssl, std::string ssl_certificate,
-                         int io_threads, int prefetch_buffers,
-                         int copy_threads, int wait_threads, int comm_threads) :
+                         std::string cloud_config, bool use_ssl,
+                         std::string ssl_certificate, int io_threads,
+                         int prefetch_buffers, int copy_threads,
+                         int wait_threads, int comm_threads) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   // label_map(label_map),
   username(username), password(password), cassandra_ips(cassandra_ips),
-  port(port), use_ssl(use_ssl), ssl_certificate(ssl_certificate),
-  io_threads(io_threads), prefetch_buffers(prefetch_buffers),
-  copy_threads(copy_threads), wait_threads(wait_threads),
-  comm_threads(comm_threads) {
+  cloud_config(cloud_config), port(port), use_ssl(use_ssl),
+  ssl_certificate(ssl_certificate), io_threads(io_threads),
+  prefetch_buffers(prefetch_buffers), copy_threads(copy_threads),
+  wait_threads(wait_threads), comm_threads(comm_threads) {
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
   batch.resize(prefetch_buffers);

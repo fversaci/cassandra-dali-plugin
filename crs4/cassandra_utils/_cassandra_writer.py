@@ -16,7 +16,6 @@ class CassandraWriter:
     def __init__(
         self,
         auth_prov,
-        cassandra_ips,
         table_data,
         table_metadata,
         id_col,
@@ -24,6 +23,9 @@ class CassandraWriter:
         data_col,
         cols,
         get_data,
+        cloud_config=None,
+        cassandra_ips=None,
+        cassandra_port=None,
     ):
             
         self.get_data = get_data
@@ -32,12 +34,21 @@ class CassandraWriter:
             row_factory=cassandra.query.dict_factory,
         )
         profs = {"default": prof}
-        self.cluster = Cluster(
-            cassandra_ips,
-            execution_profiles=profs,
-            protocol_version=4,
-            auth_provider=auth_prov,
-        )
+        if cloud_config:
+            self.cluster = Cluster(
+                cloud=cloud_config,
+                execution_profiles=profs,
+                protocol_version=4,
+                auth_provider=auth_prov,
+            )
+        else:
+            self.cluster = Cluster(
+                contact_points=cassandra_ips,
+                port=cassandra_port,
+                execution_profiles=profs,
+                protocol_version=4,
+                auth_provider=auth_prov,
+            )
         self.sess = self.cluster.connect()
         query1 = f"INSERT INTO {table_data} ("
         query1 += f"{id_col}, {label_col}, {data_col}) VALUES (?,?,?)"

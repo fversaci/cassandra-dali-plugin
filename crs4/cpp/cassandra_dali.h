@@ -75,6 +75,7 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
   void prefetch_one();
   // variables
   std::vector<std::string> uuids;
+  std::string cloud_config;
   std::vector<std::string> cassandra_ips;
   int cassandra_port;
   std::string table;

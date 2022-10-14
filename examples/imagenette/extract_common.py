@@ -74,15 +74,17 @@ def get_jobs(src_dir, splits=["train", "val"]):
     return jobs
 
 
-def send_images_to_db(
-    cassandra_ips, username, password, img_format, keyspace, table_suffix
-):
+def send_images_to_db( username, password, img_format, keyspace,
+                       table_suffix, cloud_config=None,
+                       cassandra_ips=None, cassandra_port=None, ):
     auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
         cw = CassandraWriter(
-            auth_prov,
-            cassandra_ips,
+            cloud_config=cloud_config,
+            auth_prov=auth_prov,
+            cassandra_ips=cassandra_ips,
+            cassandra_port=cassandra_port,
             table_data=f"{keyspace}.data_{table_suffix}",
             table_metadata=f"{keyspace}.metadata_{table_suffix}",
             id_col="patch_id",

@@ -37,6 +37,7 @@ class BatchLoader {
   std::string id_col;
   std::string username;
   std::string password;
+  std::string cloud_config;
   std::vector<std::string> cassandra_ips;
   std::string s_cassandra_ips;
   int port = 9042;
@@ -82,11 +83,12 @@ class BatchLoader {
 
  public:
   BatchLoader(std::string table, std::string label_col, std::string data_col,
-               std::string id_col, std::string username, std::string password,
-               std::vector<std::string> cassandra_ips, int port, bool use_ssl,
-               std::string ssl_certificate, int io_threads,
-               int prefetch_buffers, int copy_threads, int wait_threads,
-               int comm_threads);
+              std::string id_col, std::string username, std::string password,
+              std::vector<std::string> cassandra_ips, int port,
+              std::string cloud_config, bool use_ssl,
+              std::string ssl_certificate, int io_threads,
+              int prefetch_buffers, int copy_threads,
+              int wait_threads, int comm_threads);
   ~BatchLoader();
   void prefetch_batch(const std::vector<std::string>& keys);
   BatchImgLab blocking_get_batch();

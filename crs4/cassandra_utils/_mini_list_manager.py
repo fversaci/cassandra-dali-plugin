@@ -18,13 +18,15 @@ class MiniListManager(ListManager):
     def __init__(
         self,
         auth_prov,
-        cassandra_ips,
-        port=9042,
+        cassandra_ips= None,
+        cloud_config=None,
+        port=None,
     ):
         """Loads the list of images from Cassandra DB
 
         :param auth_prov: Authenticator for Cassandra
         :param cassandra_ips: List of Cassandra ip's
+        :param cloud_config: Cloud configuration for Cassandra (e.g., AstraDB)
         :param port: Cassandra server port (default: 9042)
         :returns:
         :rtype:
@@ -41,13 +43,21 @@ class MiniListManager(ListManager):
             row_factory=cassandra.query.tuple_factory,
         )
         profs = {"dict": prof_dict, "tuple": prof_tuple}
-        self.cluster = Cluster(
-            cassandra_ips,
-            execution_profiles=profs,
-            protocol_version=4,
-            auth_provider=auth_prov,
-            port=port,
-        )
+        if cloud_config:
+            self.cluster = Cluster(
+                cloud=cloud_config,
+                execution_profiles=profs,
+                protocol_version=4,
+                auth_provider=auth_prov,
+            )
+        else:
+            self.cluster = Cluster(
+                contact_points=cassandra_ips,
+                execution_profiles=profs,
+                protocol_version=4,
+                auth_provider=auth_prov,
+                port=port,
+            )
         self.cluster.connect_timeout = 10  # seconds
         self.sess = self.cluster.connect()
         self.table = None

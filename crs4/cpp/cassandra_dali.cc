@@ -15,6 +15,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   ::dali::Operator<dali::CPUBackend>(spec),
   batch_size(spec.GetArgument<int>("max_batch_size")),
   uuids(spec.GetArgument<std::vector<std::string>>("uuids")),
+  cloud_config(spec.GetArgument<std::string>("cloud_config")),
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
   cassandra_port(spec.GetArgument<int>("cassandra_port")),
   table(spec.GetArgument<std::string>("table")),
@@ -40,7 +41,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   set_shard_sizes();
   batch_ldr = new BatchLoader(table, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
-                        use_ssl, ssl_certificate,
+                        cloud_config, use_ssl, ssl_certificate,
                         io_threads, prefetch_buffers, copy_threads,
                         wait_threads, comm_threads);
   Reset();
@@ -93,8 +94,10 @@ DALI_SCHEMA(crs4__cassandra)
 .NumOutput(2)
 .AddOptionalArg<std::vector<std::string>>("uuids",
    R"(A list of uuids)", nullptr)
-.AddOptionalArg<std::vector<std::string>>("cassandra_ips",
-   R"(List of Cassandra IPs)", nullptr)
+.AddOptionalArg<std::string>("cloud_config",
+   R"(Cloud configuration for Cassandra (e.g., AstraDB))", "")
+.AddOptionalArg("cassandra_ips",
+   R"(List of Cassandra IPs)", std::vector<std::string>())
 .AddOptionalArg("cassandra_port",
    R"(Port to connect to in the Cassandra server)", 9042)
 .AddOptionalArg<std::string>("table", R"()", nullptr)

@@ -39,7 +39,7 @@ def save_images(
     if not target_dir:
         try:
             # Read Cassandra parameters
-            from private_data import cassandra_ips, username, password
+            from private_data import CassConf as CC
         except ImportError:
             cassandra_ip = getpass("Insert Cassandra's IP address: ")
             cassandra_ips = [cassandra_ip]
@@ -47,12 +47,14 @@ def save_images(
             password = getpass("Insert Cassandra password: ")
 
         extract_common.send_images_to_db(
-            cassandra_ips,
-            username,
-            password,
-            img_format,
-            keyspace,
-            table_suffix,
+            cloud_config=CC.cloud_config,
+            cassandra_ips=CC.cassandra_ips,
+            cassandra_port=CC.cassandra_port,
+            username=CC.username,
+            password=CC.password,
+            img_format=img_format,
+            keyspace=keyspace,
+            table_suffix=table_suffix,
         )(jobs)
     else:
         extract_common.save_images_to_dir(target_dir, img_format)(jobs)
