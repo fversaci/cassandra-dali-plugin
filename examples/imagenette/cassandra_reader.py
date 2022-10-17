@@ -43,7 +43,7 @@ def get_cassandra_reader(
 ):
     # Read Cassandra parameters
     try:
-        from private_data import cassandra_ips, username, password
+        from private_data import CassConf as CC
     except ImportError:
         cassandra_ip = getpass("Insert Cassandra's IP address: ")
         cassandra_ips = [cassandra_ip]
@@ -55,9 +55,13 @@ def get_cassandra_reader(
     rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
 
     # Load list of uuids from Cassandra DB...
-    ap = PlainTextAuthProvider(username=username, password=password)
+    ap = PlainTextAuthProvider(username=CC.username, password=CC.password)
     if not os.path.exists(rows_fn):
-        lm = MiniListManager(ap, cassandra_ips)
+        lm = MiniListManager(auth_prov=ap,
+                             cassandra_ips=CC.cassandra_ips,
+                             cloud_config=CC.cloud_config,
+                             port=CC.cassandra_port,
+                             )
         conf = {
             "table": f"{keyspace}.metadata_{table_suffix}",
             "id_col": id_col,
@@ -79,17 +83,23 @@ def get_cassandra_reader(
     uuids = list(map(str, uuids))  # convert uuids to strings
     print(f" {len(uuids)} images")
     table = f"{keyspace}.data_{table_suffix}"
+    if CC.cloud_config:
+        connect_bundle = CC.cloud_config["secure_connect_bundle"]
+    else:
+        connect_bundle = None
     cassandra_reader = fn.crs4.cassandra(
         name=name,
         uuids=uuids,
         shuffle_after_epoch=shuffle_after_epoch,
-        cassandra_ips=cassandra_ips,
+        cloud_config=connect_bundle,
+        cassandra_ips=CC.cassandra_ips,
+        cassandra_port=CC.cassandra_port,
+        username=CC.username,
+        password=CC.password,
         table=table,
         label_col="label",
         data_col="data",
         id_col=id_col,
-        username=username,
-        password=password,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
         num_shards=num_shards,
