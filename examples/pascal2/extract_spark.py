@@ -4,12 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-### To insert in DB, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split-subdir=train --table-suffix=train_224_jpg
-
-### To save files in a directory, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/224_jpg
-
 from getpass import getpass
 import extract_common
 from pyspark.conf import SparkConf
@@ -32,7 +26,7 @@ def save_images(
     :param mask_dir: Input directory of masks
     :param keyspace: Name of dataset (for the Cassandra table)
     :param table_suffix: Suffix for table names
-    :param target_dir: Output directory (when saving to filesystem)
+    :param img_format: Format of output images
     """
     jobs = extract_common.get_jobs(src_dir, mask_dir)
     # run spark
@@ -44,7 +38,7 @@ def save_images(
 
     try:
         # Read Cassandra parameters
-        from private_data import cassandra_ips, username, password
+        from private_data import CassConf as CC
     except ImportError:
         cassandra_ip = getpass("Insert Cassandra's IP address: ")
         cassandra_ips = [cassandra_ip]
@@ -53,7 +47,14 @@ def save_images(
 
     par_jobs.foreachPartition(
         extract_common.send_images_to_db(
-            cassandra_ips, username, password, img_format, keyspace, table_suffix
+            cloud_config=CC.cloud_config,
+            cassandra_ips=CC.cassandra_ips,
+            cassandra_port=CC.cassandra_port,
+            username=CC.username,
+            password=CC.password,
+            img_format=img_format,
+            keyspace=keyspace,
+            table_suffix=table_suffix,
         )
     )
 

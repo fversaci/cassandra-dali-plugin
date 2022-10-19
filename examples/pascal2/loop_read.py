@@ -33,23 +33,49 @@ def read_data(
     keyspace="pascal2",
     table_suffix="orig",
     device_id=types.CPU_ONLY_DEVICE_ID,
+    reader="cassandra",
+    image_root=None,
+    mask_root=None,
 ):
     """Read images from DB or filesystem, in a tight loop
 
     :param keyspace: Cassandra keyspace (i.e., name of the dataset)
     :param table_suffix: Suffix for table names
     :param device_id: DALI device id (>=0 for GPUs)
+    :param image_root: File root for images (only when reading from the filesystem)
+    :param mask_root: File root for masks (only when reading from the filesystem)
     """
-    chosen_reader = get_cassandra_reader(
-        keyspace,
-        table_suffix,
-        prefetch_buffers=16,
-        io_threads=8,
-        label_type="image",
-        # comm_threads=4,
-        # copy_threads=4,
-        name="Reader",
-    )
+    if reader == "cassandra":
+        db_reader = get_cassandra_reader(
+            keyspace,
+            table_suffix,
+            prefetch_buffers=16,
+            io_threads=8,
+            label_type="image",
+            # comm_threads=4,
+            # copy_threads=4,
+            name="Reader",
+        )
+    elif reader == "file":
+        # alternatively: use fn.readers.file
+        print(image_root, " ", mask_root)
+        file_reader = fn.readers.file(
+            file_root=image_root,
+            name="Reader",
+            # speed up reading
+            prefetch_queue_depth=2,
+            dont_use_mmap=True,
+            read_ahead=True,
+        )
+        mask_reader = fn.readers.file(
+            file_root=mask_root,
+            # speed up reading
+            prefetch_queue_depth=2,
+            dont_use_mmap=True,
+            read_ahead=True,
+        )
+    else:
+        raise ('--reader: expecting either "cassandra" or "file"')
 
     # create dali pipeline
     @pipeline_def(
@@ -60,7 +86,11 @@ def read_data(
         # enable_memory_stats=True,
     )
     def get_dali_pipeline():
-        images, labels = chosen_reader
+        if reader == "cassandra":
+            images, labels = db_reader
+        else:
+            images, _ = file_reader
+            labels, _ = mask_reader
         ####################################################################
         # images = fn_decode(images)
         # images = fn_resize(images)
@@ -80,7 +110,7 @@ def read_data(
     ########################################################################
     bs = pl.max_batch_size
     steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
-    for _ in range(10):
+    for _ in range(1000):
         for _ in trange(steps):
             x, y = pl.run()
     return
