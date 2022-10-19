@@ -26,9 +26,11 @@ class CassandraWriter:
         cloud_config=None,
         cassandra_ips=None,
         cassandra_port=None,
+        masks=False,
     ):
             
         self.get_data = get_data
+        self.masks = masks
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
             row_factory=cassandra.query.dict_factory,
@@ -52,9 +54,15 @@ class CassandraWriter:
         self.sess = self.cluster.connect()
         query1 = f"INSERT INTO {table_data} ("
         query1 += f"{id_col}, {label_col}, {data_col}) VALUES (?,?,?)"
-        query2 = f"INSERT INTO {table_metadata} ("
-        query2 += f"{id_col}, {label_col}, {', '.join(cols)}) "
-        query2 += f"VALUES ({', '.join(['?']*(len(cols)+2))})"
+        if self.masks:
+            query2 = f"INSERT INTO {table_metadata} ("
+            query2 += f"{id_col}, {', '.join(cols)}) "
+            query2 += f"VALUES ({', '.join(['?']*(len(cols)+1))})"
+        else:
+            query2 = f"INSERT INTO {table_metadata} ("
+            query2 += f"{id_col}, {label_col}, {', '.join(cols)}) "
+            query2 += f"VALUES ({', '.join(['?']*(len(cols)+2))})"
+        
         self.prep1 = self.sess.prepare(query1)
         self.prep2 = self.sess.prepare(query2)
 
@@ -63,10 +71,14 @@ class CassandraWriter:
 
     def save_item(self, item):
         image_id, label, data, partition_items = item
+        if self.masks:
+            stuff = (image_id, *partition_items)
+        else:
+            stuff = (image_id, label, *partition_items)
         # insert metadata 
         self.sess.execute(
             self.prep2,
-            (image_id, label, *partition_items),
+            stuff,
             execution_profile="default",
             timeout=30,
         )
@@ -76,9 +88,12 @@ class CassandraWriter:
             execution_profile="default", timeout=30,
         )
         
+        
     def save_image(self, path, label, partition_items):
         # read file into memory
         data = self.get_data(path)
+        if self.masks:
+            label = self.get_data(label)
         image_id = uuid.uuid4()
         item = (image_id, label, data, partition_items)
         self.save_item(item)
