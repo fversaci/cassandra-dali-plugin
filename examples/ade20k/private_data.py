@@ -11,4 +11,4 @@ CassConf.username = "guest"
 CassConf.password = "test"
 CassConf.cassandra_ips = ["127.0.0.1"]
 #CassConf.cassandra_port = 9042
-#CassConf.cloud_config = {'secure_connect_bundle': 'tmp/secure-connect-pascal2.zip'}
+#CassConf.cloud_config = {'secure_connect_bundle': 'tmp/secure-connect-ade20k.zip'}

@@ -1,12 +1,12 @@
 //////////////////////////////////////////////////////////////////////
-// Pascal2 dataset: http://host.robots.ox.ac.uk/pascal/VOC/voc2012/#devkit
+// ADE20K Outdoors dataset: https://www.kaggle.com/datasets/residentmario/ade20k-outdoors
 
-CREATE KEYSPACE pascal2 WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+CREATE KEYSPACE ade20k WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
 
 // Tables with original files
 
 // Mapping patch uuid to data and label
-CREATE TABLE pascal2.data_orig(
+CREATE TABLE ade20k.data_orig(
   patch_id uuid,
   label blob,
   data blob,
@@ -14,7 +14,7 @@ CREATE TABLE pascal2.data_orig(
 );
 
 // Mapping patch uuid to metadata
-CREATE TABLE pascal2.metadata_orig(
+CREATE TABLE ade20k.metadata_orig(
   filename text,
   patch_id uuid,
   PRIMARY KEY ((patch_id))

@@ -30,7 +30,7 @@ from tqdm import trange, tqdm
 
 def read_data(
     *,
-    keyspace="pascal2",
+    keyspace="ade20k",
     table_suffix="orig",
     device_id=types.CPU_ONLY_DEVICE_ID,
     reader="cassandra",
@@ -110,7 +110,7 @@ def read_data(
     ########################################################################
     bs = pl.max_batch_size
     steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
-    for _ in range(1000):
+    for _ in range(10):
         for _ in trange(steps):
             x, y = pl.run()
     return
