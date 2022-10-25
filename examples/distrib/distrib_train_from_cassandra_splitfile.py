@@ -51,14 +51,12 @@ def parse():
         "--train-table-suffix",
         metavar="SUFF",
         default="train_orig",
-        choices=["train_orig", "train_224_jpg", "train_small"],
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(
         "--val-table-suffix",
         metavar="SUFF",
         default="val_orig",
-        choices=["val_orig", "val_224_jpg", "val_small"],
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(
@@ -263,7 +261,7 @@ def main():
 
     # create model
     num_classes = args.num_classes
-    freeze_params = True
+    freeze_params = False
     new_top=True
     pretrained_weights = True
     weights_fn = None
@@ -355,7 +353,7 @@ def main():
         # crop_size = 299
         # val_size = 320 # I chose this value arbitrarily, we can adjust.
     else:
-        crop_size = 256
+        crop_size = 224
         val_size = 256
 
     print ("Creating DALI Training Pipeline")
