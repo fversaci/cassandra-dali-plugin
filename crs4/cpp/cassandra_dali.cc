@@ -19,6 +19,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
   cassandra_port(spec.GetArgument<int>("cassandra_port")),
   table(spec.GetArgument<std::string>("table")),
+  label_type(spec.GetArgument<std::string>("label_type")),
   label_col(spec.GetArgument<std::string>("label_col")),
   data_col(spec.GetArgument<std::string>("data_col")),
   id_col(spec.GetArgument<std::string>("id_col")),
@@ -38,8 +39,10 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
                "num_shards needs to be greater than shard_id");
   DALI_ENFORCE(uuids.size() > 0,
                "dataset cannot be empty");
+  DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
+               "label_type can only be int, image or none.");
   set_shard_sizes();
-  batch_ldr = new BatchLoader(table, label_col, data_col, id_col,
+  batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
                         io_threads, prefetch_buffers, copy_threads,
@@ -101,6 +104,8 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("cassandra_port",
    R"(Port to connect to in the Cassandra server)", 9042)
 .AddOptionalArg<std::string>("table", R"()", nullptr)
+// label type: int (classification), image (segmentation mask), none
+.AddOptionalArg<std::string>("label_type", R"()", "int")
 .AddOptionalArg<std::string>("label_col", R"()", nullptr)
 .AddOptionalArg<std::string>("data_col", R"()", nullptr)
 .AddOptionalArg<std::string>("id_col", R"()", nullptr)
