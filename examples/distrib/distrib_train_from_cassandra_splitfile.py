@@ -14,33 +14,21 @@ import shutil
 import time
 import math
 
+
 import torch
 import torch.nn as nn
-import torch.nn.parallel
 import torch.backends.cudnn as cudnn
-import torch.distributed as dist
 import torch.optim
-import torch.utils.data
-import torch.utils.data.distributed
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
 import torchvision.models as models
 
+from tqdm import trange, tqdm
 import numpy as np
-from tqdm import tqdm 
 
 import model_initialization as mi
+import model_functions as mf
+import cassandra_dali_pipeline as cdp
 
-try:
-    from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
-    from nvidia.dali.pipeline import pipeline_def
-    import nvidia.dali.types as types
-    import nvidia.dali.fn as fn
-except ImportError:
-    raise ImportError(
-        "Please install DALI from https://www.github.com/NVIDIA/DALI to run this example."
-    )
-
+from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
 
 def parse():
     model_names = sorted(
@@ -98,6 +86,14 @@ def parse():
         default="resnet18",
         choices=model_names,
         help="model architecture: " + " | ".join(model_names) + " (default: resnet18)",
+    )
+    parser.add_argument(
+        "-n",
+        "--num-classes",
+        default=2,
+        type=int,
+        metavar="N",
+        help="number of output classes (default: 2)",
     )
     parser.add_argument(
         "-j",
@@ -203,111 +199,6 @@ def parse():
     return args
 
 
-# item() is a recent addition, so this helps with backward compatibility.
-def to_python_float(t):
-    if hasattr(t, "item"):
-        return t.item()
-    else:
-        return t[0]
-
-
-@pipeline_def
-def create_dali_pipeline(
-    keyspace,
-    table_suffix,
-    crop,
-    size,
-    shard_id,
-    num_shards,
-    split_fn=None, 
-    split_index=0,
-    dali_cpu=False,
-    is_training=True,
-    prefetch_buffers=2,
-    io_threads=2,
-    comm_threads=2,
-    copy_threads=2,
-    wait_threads=2,
-):
-    if split_fn:
-        images, labels = get_cassandra_reader_from_splitfile(
-            split_fn,
-            split_index,
-            shard_id=shard_id,
-            num_shards=num_shards,
-            prefetch_buffers=prefetch_buffers,
-            io_threads=io_threads,
-            comm_threads=comm_threads,
-            copy_threads=copy_threads,
-            wait_threads=wait_threads,
-            name="Reader",
-        )
-    else:
-        images, labels = get_cassandra_reader(
-            keyspace=keyspace,
-            table_suffix=table_suffix,
-            shard_id=shard_id,
-            num_shards=num_shards,
-            prefetch_buffers=prefetch_buffers,
-            io_threads=io_threads,
-            comm_threads=comm_threads,
-            copy_threads=copy_threads,
-            wait_threads=wait_threads,
-            name="Reader",
-        )
-    dali_device = "cpu" if dali_cpu else "gpu"
-    decoder_device = "cpu" if dali_cpu else "mixed"
-    # ask nvJPEG to preallocate memory for the biggest sample in ImageNet for CPU and GPU to avoid reallocations in runtime
-    device_memory_padding = 211025920 if decoder_device == "mixed" else 0
-    host_memory_padding = 140544512 if decoder_device == "mixed" else 0
-    # ask HW NVJPEG to allocate memory ahead for the biggest image in the data set to avoid reallocations in runtime
-    preallocate_width_hint = 5980 if decoder_device == "mixed" else 0
-    preallocate_height_hint = 6430 if decoder_device == "mixed" else 0
-    if is_training:
-        images = fn.decoders.image_random_crop(
-            images,
-            device=decoder_device,
-            output_type=types.RGB,
-            device_memory_padding=device_memory_padding,
-            host_memory_padding=host_memory_padding,
-            preallocate_width_hint=preallocate_width_hint,
-            preallocate_height_hint=preallocate_height_hint,
-            random_aspect_ratio=[0.8, 1.25],
-            random_area=[0.1, 1.0],
-            num_attempts=100,
-        )
-        images = fn.resize(
-            images,
-            device=dali_device,
-            resize_x=crop,
-            resize_y=crop,
-            interp_type=types.INTERP_TRIANGULAR,
-        )
-        mirror = fn.random.coin_flip(probability=0.5)
-    else:
-        images = fn.decoders.image(images, device=decoder_device, output_type=types.RGB)
-        images = fn.resize(
-            images,
-            device=dali_device,
-            size=size,
-            mode="not_smaller",
-            interp_type=types.INTERP_TRIANGULAR,
-        )
-        mirror = False
-
-    images = fn.crop_mirror_normalize(
-        images.gpu(),
-        dtype=types.FLOAT,
-        output_layout="CHW",
-        crop=(crop, crop),
-        mean=[0.485 * 255, 0.456 * 255, 0.406 * 255],
-        std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
-        mirror=mirror,
-    )
-    labels = labels.gpu()
-    return images, labels
-
-
 def main():
     global best_prec1, args, local_rank
     best_prec1 = 0
@@ -371,10 +262,10 @@ def main():
     assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # create model
-    num_classes = 2
+    num_classes = args.num_classes
     freeze_params = True
     new_top=True
-    pretrained_weights = None
+    pretrained_weights = True
     weights_fn = None
     get_features=False
     model_name = args.arch
@@ -383,13 +274,6 @@ def main():
     model = mi.initialize_model(model_name, num_classes, freeze_params=freeze_params, \
             pretrained_weights=pretrained_weights, new_top=new_top, weights_fn=weights_fn,\
             get_features=get_features)
-
-    #if args.pretrained:
-    #    print("=> using pre-trained model '{}'".format(args.arch))
-    #    model = models.__dict__[args.arch](pretrained=True)
-    #else:
-    #    print("=> creating model '{}'".format(args.arch))
-    #    model = models.__dict__[args.arch]()
 
     if args.sync_bn:
         print("using apex synced BN")
@@ -471,11 +355,12 @@ def main():
         # crop_size = 299
         # val_size = 320 # I chose this value arbitrarily, we can adjust.
     else:
-        crop_size = 224
+        crop_size = 256
         val_size = 256
 
+    print ("Creating DALI Training Pipeline")
     # train pipe
-    pipe = create_dali_pipeline(
+    pipe = cdp.create_dali_pipeline(
         keyspace=args.keyspace,
         table_suffix=args.train_table_suffix,
         batch_size=args.batch_size,
@@ -496,8 +381,9 @@ def main():
         pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
+    print ("Creating DALI Validation Pipeline")
     # val pipe
-    pipe = create_dali_pipeline(
+    pipe = cdp.create_dali_pipeline(
         keyspace=args.keyspace,
         table_suffix=args.val_table_suffix,
         batch_size=args.batch_size,
@@ -522,22 +408,25 @@ def main():
         validate(val_loader, model, criterion)
         return
 
-    total_time = AverageMeter()
+    total_time = mf.AverageMeter()
+
+    ### Training and validation of the model
+    ### Looping across epochs
     for epoch in range(args.start_epoch, args.epochs):
         # train for one epoch
-        avg_train_time = train(train_loader, model, num_classes, criterion, optimizer, epoch)
+        avg_train_time = mf.train(train_loader, model, num_classes, criterion, optimizer, epoch, args.epochs, local_rank=local_rank, args=args)
         total_time.update(avg_train_time)
         if args.test:
             break
 
         # evaluate on validation set
-        [prec1, preck] = validate(val_loader, model, num_classes, criterion)
+        [prec1, preck] = mf.validate(val_loader, model, num_classes, criterion, local_rank=local_rank, args=args)
 
         # remember best prec@1 and save checkpoint
         if local_rank == 0:
             is_best = prec1 > best_prec1
             best_prec1 = max(prec1, best_prec1)
-            save_checkpoint(
+            mf.save_checkpoint(
                 {
                     "epoch": epoch + 1,
                     "arch": args.arch,
@@ -558,252 +447,6 @@ def main():
 
         train_loader.reset()
         val_loader.reset()
-
-
-def train(train_loader, model, num_classes, criterion, optimizer, epoch):
-    batch_time = AverageMeter()
-    losses = AverageMeter()
-    top1 = AverageMeter()
-    topk = AverageMeter()
-    
-
-    # switch to train mode
-    model.train()
-    end = time.time()
-
-    for i, data in enumerate(train_loader):
-        input = data[0]["data"]
-        target = data[0]["label"].squeeze(-1).long()
-        train_loader_len = int(math.ceil(train_loader._size / args.batch_size))
-
-        if args.prof >= 0 and i == args.prof:
-            print("Profiling begun at iteration {}".format(i))
-            torch.cuda.cudart().cudaProfilerStart()
-
-        if args.prof >= 0:
-            torch.cuda.nvtx.range_push("Body of iteration {}".format(i))
-
-        adjust_learning_rate(optimizer, epoch, i, train_loader_len)
-        if args.test:
-            if i > 10:
-                break
-
-        # compute output
-        if args.prof >= 0:
-            torch.cuda.nvtx.range_push("forward")
-        output = model(input)
-
-        if args.prof >= 0:
-            torch.cuda.nvtx.range_pop()
-        loss = criterion(output, target)
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-
-        if args.prof >= 0:
-            torch.cuda.nvtx.range_push("backward")
-        if args.opt_level is not None:
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
-        else:
-            loss.backward()
-        if args.prof >= 0:
-            torch.cuda.nvtx.range_pop()
-
-        if args.prof >= 0:
-            torch.cuda.nvtx.range_push("optimizer.step()")
-        optimizer.step()
-        if args.prof >= 0:
-            torch.cuda.nvtx.range_pop()
-
-        if i % args.print_freq == 0:
-            # Every print_freq iterations, check the loss, accuracy,
-            # and speed.  For best performance, it doesn't make sense
-            # to print these metrics every iteration, since they incur
-            # an allreduce and some host<->device syncs.
-
-            # Measure accuracy
-            prec1, preck = accuracy(output.data, target, topk=(1, min(5, num_classes)))
-
-            # Average loss and accuracy across processes for logging
-            if args.distributed:
-                reduced_loss = reduce_tensor(loss.data)
-                prec1 = reduce_tensor(prec1)
-                preck = reduce_tensor(preck)
-            else:
-                reduced_loss = loss.data
-
-            # to_python_float incurs a host<->device sync
-            losses.update(to_python_float(reduced_loss), input.size(0))
-            top1.update(to_python_float(prec1), input.size(0))
-            topk.update(to_python_float(preck), input.size(0))
-
-            torch.cuda.synchronize()
-            batch_time.update((time.time() - end) / args.print_freq)
-            end = time.time()
-
-            if local_rank == 0:
-                print(
-                    "Epoch: [{0}][{1}/{2}]\t"
-                    "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
-                    "Speed {3:.3f} ({4:.3f})\t"
-                    "Loss {loss.val:.10f} ({loss.avg:.4f})\t"
-                    "Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t"
-                    "Prec@{k} {topk.val:.3f} ({topk.avg:.3f})".format(
-                        epoch,
-                        i,
-                        train_loader_len,
-                        args.world_size * args.batch_size / batch_time.val,
-                        args.world_size * args.batch_size / batch_time.avg,
-                        batch_time=batch_time,
-                        loss=losses,
-                        k=min(5,num_classes),
-                        top1=top1,
-                        topk=topk,
-                    )
-                )
-
-        # Pop range "Body of iteration {}".format(i)
-        if args.prof >= 0:
-            torch.cuda.nvtx.range_pop()
-
-        if args.prof >= 0 and i == args.prof + 10:
-            print("Profiling ended at iteration {}".format(i))
-            torch.cuda.cudart().cudaProfilerStop()
-            quit()
-
-    return batch_time.avg
-
-
-def validate(val_loader, model, num_classes, criterion):
-    batch_time = AverageMeter()
-    losses = AverageMeter()
-    top1 = AverageMeter()
-    topk = AverageMeter()
-
-    # switch to evaluate mode
-    model.eval()
-
-    end = time.time()
-
-    for i, data in enumerate(val_loader):
-        input = data[0]["data"]
-        target = data[0]["label"].squeeze(-1).long()
-        val_loader_len = int(val_loader._size / args.batch_size)
-
-        # compute output
-        with torch.no_grad():
-            output = model(input)
-            loss = criterion(output, target)
-
-        # measure accuracy and record loss
-        prec1, preck = accuracy(output.data, target, topk=(1, min(5,num_classes)))
-
-        if args.distributed:
-            reduced_loss = reduce_tensor(loss.data)
-            prec1 = reduce_tensor(prec1)
-            preck = reduce_tensor(preck)
-        else:
-            reduced_loss = loss.data
-
-        losses.update(to_python_float(reduced_loss), input.size(0))
-        top1.update(to_python_float(prec1), input.size(0))
-        topk.update(to_python_float(preck), input.size(0))
-
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        # TODO:  Change timings to mirror train().
-        if local_rank == 0 and i % args.print_freq == 0:
-            print(
-                "Test: [{0}/{1}]\t"
-                "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
-                "Speed {2:.3f} ({3:.3f})\t"
-                "Loss {loss.val:.4f} ({loss.avg:.4f})\t"
-                "Prec@1 {top1.val:.3f} ({top1.avg:.3f})\t"
-                "Prec@{k} {topk.val:.3f} ({topk.avg:.3f})".format(
-                    i,
-                    val_loader_len,
-                    args.world_size * args.batch_size / batch_time.val,
-                    args.world_size * args.batch_size / batch_time.avg,
-                    batch_time=batch_time,
-                    loss=losses,
-                    k=min(5,num_classes),
-                    top1=top1,
-                    topk=topk,
-                )
-            )
-
-    print(" * Prec@1 {top1.avg:.3f} Prec@k {topk.avg:.3f}".format(top1=top1, topk=topk))
-
-    return [top1.avg, topk.avg]
-
-
-def save_checkpoint(state, is_best, filename="checkpoint.pth.tar"):
-    torch.save(state, filename)
-    if is_best:
-        shutil.copyfile(filename, "model_best.pth.tar")
-
-
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
-
-def adjust_learning_rate(optimizer, epoch, step, len_epoch):
-    """LR schedule that should yield 76% converged accuracy with batch size 256"""
-    factor = epoch // 30
-
-    if epoch >= 80:
-        factor = factor + 1
-
-    lr = args.lr * (0.1 ** factor)
-
-    """Warmup"""
-    if epoch < 5:
-        lr = lr * float(1 + step + epoch * len_epoch) / (5.0 * len_epoch)
-
-    for param_group in optimizer.param_groups:
-        param_group["lr"] = lr
-
-
-def accuracy(output, target, topk=(1,)):
-    """Computes the precision@k for the specified values of k"""
-    maxk = max(topk)
-    batch_size = target.size(0)
-
-    _, pred = output.topk(maxk, 1, True, True)
-    pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-    res = []
-    for k in topk:
-        correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-        res.append(correct_k.mul_(100.0 / batch_size))
-    return res
-
-
-def reduce_tensor(tensor):
-    rt = tensor.clone()
-    dist.all_reduce(rt, op=dist.reduce_op.SUM)
-    rt /= args.world_size
-    return rt
-
 
 if __name__ == "__main__":
     main()
