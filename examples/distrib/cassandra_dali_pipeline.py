@@ -69,7 +69,6 @@ def create_dali_pipeline(
     # ask HW NVJPEG to allocate memory ahead for the biggest image in the data set to avoid reallocations in runtime
     #preallocate_width_hint = 5980 if decoder_device == "mixed" else 0
     #preallocate_height_hint = 6430 if decoder_device == "mixed" else 0
-    """
     if is_training:
         images = fn.decoders.image_random_crop(
             images,
@@ -93,8 +92,6 @@ def create_dali_pipeline(
             resize_y=crop,
             interp_type=types.INTERP_TRIANGULAR,
         )
-        
-
         mirror = fn.random.coin_flip(probability=0.5)
     else:
         images = fn.decoders.image(images, device=decoder_device, output_type=types.RGB)
@@ -108,14 +105,12 @@ def create_dali_pipeline(
             interp_type=types.INTERP_TRIANGULAR,
         )
         mirror = False
-    """
-    mirror = False
-    images = fn.decoders.image(images, device=decoder_device, output_type=types.RGB)
+    
     images = fn.crop_mirror_normalize(
         images.gpu(),
         dtype=types.FLOAT,
         output_layout="CHW",
-        #crop=(crop, crop),
+        crop=(crop, crop),
         mean=[0.485 * 255, 0.456 * 255, 0.406 * 255],
         std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
         mirror=mirror,
