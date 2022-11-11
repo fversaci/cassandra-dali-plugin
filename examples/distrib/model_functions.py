@@ -209,6 +209,55 @@ def validate(val_loader, model, num_classes, criterion, local_rank, args):
     return [top1.avg, topk.avg]
 
 
+def write_features_to_table(data_loader, cw, in_meta, model, local_rank, args, output_mode='debug'):
+    # switch to evaluate mode
+    model.eval()
+    bs = args.batch_size
+    if local_rank == 0:
+        pbar = tqdm(data_loader)
+        print ()
+        print ("-"*10)
+        print ("Inference" )
+        print ("-"*10)
+
+    else:
+        pbar = data_loader
+
+    data_loader_len = int(data_loader._size / bs)
+
+    # Loop across batches
+    for i, data in enumerate(pbar):
+        in_ = data[0]["data"]
+
+        # compute output
+        with torch.no_grad():
+            output = model(in_)
+
+        # Wite output
+        if output_mode == 'debug':
+            for il, l in enumerate(in_):
+                out = output[il].cpu().detach().numpy()
+                print (f"{l} -> {out}")
+        elif output_mode == "db":
+            for il, l in enumerate(in_):
+                out = output[il]
+                patch_id = in_meta[i*bs+il][0]
+                feature_lab = in_meta[i*bs+il][1]
+                cw.save_features(patch_id, feature_lab, out)
+        else:
+            # Do nothing
+            pass
+
+        if local_rank == 0:
+            msg = ""
+            pbar.set_postfix_str(msg)
+
+    if local_rank == 0:
+        pbar.close()
+
+    return
+
+
 def save_checkpoint(state, is_best, filename="checkpoint.pth.tar"):
     torch.save(state, filename)
     if is_best:
