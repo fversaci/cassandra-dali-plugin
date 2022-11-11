@@ -7,6 +7,7 @@
 # cassandra
 from cassandra.auth import PlainTextAuthProvider
 from crs4.cassandra_utils import MiniListManager
+from isup_list_manager import ISUP_ListManager
 
 # load cassandra-dali-plugin
 import crs4.cassandra_utils
@@ -181,3 +182,34 @@ def get_cassandra_reader_from_splitfile(
         # ssl_certificate="node0.cer.pem",
     )
     return cassandra_reader
+
+
+def get_cassandra_row_data(
+    keyspace,
+    table_suffix,
+    id_col='patch_id',
+    cols = ['label'],
+):
+# Read Cassandra parameters
+    try:
+        from private_data import CassConf as CC
+    except ImportError:
+        cassandra_ip = getpass("Insert Cassandra's IP address: ")
+        cassandra_ips = [cassandra_ip]
+        username = getpass("Insert Cassandra user: ")
+        password = getpass("Insert Cassandra password: ")
+
+    # Load list of uuids and cols from Cassandra DB...
+    ap = PlainTextAuthProvider(username=CC.username, password=CC.password)
+    lm = ISUP_ListManager(auth_prov=ap,
+                         cassandra_ips=CC.cassandra_ips,
+                         cloud_config=CC.cloud_config,
+                         port=CC.cassandra_port,
+                         )
+    conf = {
+        "table": f"{keyspace}.metadata_{table_suffix}",
+        "id_col": id_col,
+    }
+    lm.set_config(conf)
+    lm.read_rows_from_db_id_labs(cols=cols)
+    return lm.row_keys_labs
