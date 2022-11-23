@@ -1,4 +1,4 @@
-from cassandra_reader import get_cassandra_reader, get_cassandra_reader_from_splitfile
+from cassandra_reader import get_cassandra_reader, get_cassandra_reader_from_splitfile, get_cassandra_reader_from_row_keys
 
 import torch
 import torch.nn as nn
@@ -25,6 +25,7 @@ def create_dali_pipeline(
     num_shards,
     split_fn=None, 
     split_index=0,
+    row_keys=None,
     dali_cpu=False,
     is_training=True,
     prefetch_buffers=2,
@@ -32,6 +33,8 @@ def create_dali_pipeline(
     comm_threads=2,
     copy_threads=2,
     wait_threads=2,
+    data_col='data',
+    label_col='label'
 ):
 
     if split_fn:
@@ -47,6 +50,22 @@ def create_dali_pipeline(
             wait_threads=wait_threads,
             name="Reader",
         )
+    elif row_keys:
+        images, labels = get_cassandra_reader_from_row_keys(
+            keyspace=keyspace,
+            table_suffix=table_suffix,
+            row_keys=row_keys,
+            shard_id=shard_id,
+            num_shards=num_shards,
+            prefetch_buffers=prefetch_buffers,
+            io_threads=io_threads,
+            comm_threads=comm_threads,
+            copy_threads=copy_threads,
+            wait_threads=wait_threads,
+            name="Reader",
+            data_col=data_col,
+            label_col=label_col,
+        )
     else:
         images, labels = get_cassandra_reader(
             keyspace=keyspace,
@@ -59,6 +78,8 @@ def create_dali_pipeline(
             copy_threads=copy_threads,
             wait_threads=wait_threads,
             name="Reader",
+            data_col=data_col,
+            label_col=label_col,
         )
     
     dali_device = "cpu" if dali_cpu else "gpu"

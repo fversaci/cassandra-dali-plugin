@@ -3,9 +3,8 @@
 # (Apache License, Version 2.0)
 #
 # Run with:
-# python3 -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
+# torchrun --nproc_per_node=1 compute_features.py -a resnet18 --b 64 --workers 4 --keyspace=imagenette --input-table-suffix=train_orig --output-table-suffix=feature
 
-# cassandra reader
 from cassandra_reader import get_cassandra_reader, get_cassandra_reader_from_splitfile, get_cassandra_row_data
 
 import argparse
@@ -58,6 +57,18 @@ def parse():
         help="Suffix for output table names",
     )
     parser.add_argument(
+        "--data-col",
+        metavar="DATACOL",
+        default="data",
+        help="name of the table column containing data." 
+    )
+    parser.add_argument(
+        "--label-col",
+        metavar="LABELCOL",
+        default="label",
+        help="name of the table column containing label info.",
+    )
+    parser.add_argument(
         "--arch",
         "-a",
         metavar="ARCH",
@@ -66,11 +77,11 @@ def parse():
         help="model architecture: " + " | ".join(model_names) + " (default: resnet18)",
     )
     parser.add_argument(
-        "--weight-fn",
-        "-w",
-        metavar="WFN",
+        "--checkpoint-fn",
+        "-c",
+        metavar="CFN",
         default=None,
-        help="filename of the parameter to be load to the network",
+        help="filename of a checkpoint file with the parameters to be used",
     )
     parser.add_argument(
         "-n",
@@ -138,13 +149,13 @@ def main():
     freeze_params = True
     new_top=True
     pretrained_weights = True
-    weight_fn = args.weight_fn
+    checkpoint_fn = args.checkpoint_fn
     get_features=True
     model_name = args.arch
     
     print (f"Creating model... {model_name}")
     model = mi.initialize_model(model_name, num_classes, freeze_params=freeze_params, \
-            pretrained_weights=pretrained_weights, new_top=new_top, weights_fn=weight_fn,\
+            pretrained_weights=pretrained_weights, new_top=new_top, checkpoint_fn=checkpoint_fn,\
             get_features=get_features)
 
     if hasattr(torch, "channels_last") and hasattr(torch, "contiguous_format"):
@@ -161,12 +172,21 @@ def main():
 
     crop_size = 256
     val_size = 256
+    
+
+    ## Get input db metadata
+    print ("Reading input metadata")
+    in_meta = get_cassandra_row_data(args.keyspace, args.input_table_suffix, cols=[args.label_col, 'sample_name', 'sample_rep'])
+    row_keys = [i[0] for i in in_meta]
+    print (len(in_meta))
+    print (in_meta[0:10])
 
     print ("Creating DALI Data Pipeline")
     # val pipe
     pipe = cdp.create_dali_pipeline(
         keyspace=args.keyspace,
         table_suffix=args.input_table_suffix,
+        row_keys=row_keys,
         batch_size=args.batch_size,
         num_threads=args.workers,
         device_id=local_rank,
@@ -178,17 +198,15 @@ def main():
         num_shards=args.world_size,
         is_training=False,
         split_fn=None,
-        split_index=0
+        split_index=0,
+        data_col=args.data_col,
+        label_col=args.label_col
     )
     pipe.build()
     data_loader = DALIClassificationIterator(
         pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
     )
     
-    ## Get input db metadata
-    print ("Reading input metadata")
-    in_meta = get_cassandra_row_data(args.keyspace, args.input_table_suffix)
-
     ## Cassandra writer    
     if args.output_table_suffix:
         cw = cfw.get_cassandra_feature_writer(args.keyspace, args.output_table_suffix)
