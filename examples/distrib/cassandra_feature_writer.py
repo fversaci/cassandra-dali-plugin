@@ -1,4 +1,4 @@
-import io
+import io,sys
 import cassandra
 from cassandra.auth import PlainTextAuthProvider
 from cassandra_writer import CassandraWriter
@@ -31,6 +31,12 @@ class CassandraFeatureWriter(CassandraWriter):
         cassandra_port=None,
         masks=False,
    ):
+        self.table_data = table_data
+        self.table_metadata = table_metadata
+        self.id_col = id_col
+        self.label_col = label_col
+        self.data_col = data_col
+
         super().__init__(
                 auth_prov,
                 table_data,
@@ -45,27 +51,41 @@ class CassandraFeatureWriter(CassandraWriter):
                 cassandra_port,
                 masks
                 )
-            
-        query1 = f"INSERT INTO {table_data} ("
-        query1 += f"{id_col}, {label_col}, {data_col}) VALUES (?,?,?)"
+
+    def set_query(self):
+        query_data = f"INSERT INTO {self.table_data} ("
+        query_data += f"{self.id_col},{self.label_col},{self.data_col},sample_name,sample_rep) VALUES (?,?,?,?,?)"
         
-        query2 = f"INSERT INTO {table_metadata} ("
-        query2 += f"{id_col}, {label_col}) " 
-        query2 += f"VALUES (?, ?)"
+        query_meta = f"INSERT INTO {self.table_metadata} ("
+        query_meta += f"{self.id_col},{self.label_col},sample_name,sample_rep) " 
+        query_meta += f"VALUES (?,?,?,?)"
 
-        self.prep1 = self.sess.prepare(query1)
-        self.prep2 = self.sess.prepare(query2)
+        self.prep_data = self.sess.prepare(query_data)
+        self.prep_meta = self.sess.prepare(query_meta)
 
-    
-    def save_features(self, patch_id, label, features):
-        partition_items = []
+    def save_item(self, item):
+        image_id, label, data, partition_items = item
+        stuff = (image_id,label,*partition_items)
+        # insert metadata 
+        self.sess.execute(
+            self.prep_meta,
+            stuff,
+            execution_profile="default",
+            timeout=30,
+        )
+        # insert heavy data 
+        self.sess.execute(
+            self.prep_data, (image_id, label, data, *partition_items),
+            execution_profile="default", timeout=30,
+        )
+        
+    def save_features(self, patch_id, label, features, partition_items=[]):
         features = self.get_data(features)
         item = (patch_id, label, features, partition_items)
-        #print (f"Saving item: {patch_id, label}")
         self.save_item(item)
 
 
-def get_cassandra_feature_writer(keyspace, table_suffix):
+def get_cassandra_feature_writer(keyspace, table_suffix, id_col='patch_id', data_col='data', label_col='label', cols=[]):
     # Read Cassandra parameters
     try:
         from private_data import CassConf as CC
@@ -88,10 +108,10 @@ def get_cassandra_feature_writer(keyspace, table_suffix):
             cassandra_port=cassandra_port,
             table_data=f"{keyspace}.data_{table_suffix}",
             table_metadata=f"{keyspace}.metadata_{table_suffix}",
-            id_col="patch_id",
-            label_col="label",
-            data_col="data",
-            cols=[],
+            id_col=id_col,
+            label_col=label_col,
+            data_col=data_col,
+            cols=cols,
             get_data=get_data(),
         )
 
