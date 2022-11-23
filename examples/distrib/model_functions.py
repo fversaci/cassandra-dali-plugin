@@ -48,7 +48,7 @@ def train(train_loader, model, num_classes, criterion, optimizer, epoch, tot_epo
     for i, data in enumerate(pbar):
         input = data[0]["data"]
         target = data[0]["label"].squeeze(-1).long()
-
+       
         if args.prof >= 0 and i == args.prof:
             print("Profiling begun at iteration {}".format(i))
             torch.cuda.cudart().cudaProfilerStart()
@@ -224,6 +224,7 @@ def write_features_to_table(data_loader, cw, in_meta, model, local_rank, args, o
         pbar = data_loader
 
     data_loader_len = int(data_loader._size / bs)
+    print (data_loader_len)
 
     # Loop across batches
     for i, data in enumerate(pbar):
@@ -241,9 +242,8 @@ def write_features_to_table(data_loader, cw, in_meta, model, local_rank, args, o
         elif output_mode == "db":
             for il, l in enumerate(in_):
                 out = output[il]
-                patch_id = in_meta[i*bs+il][0]
-                feature_lab = in_meta[i*bs+il][1]
-                cw.save_features(patch_id, feature_lab, out)
+                patch_id, feature_lab, sample_name, sample_rep = in_meta[i*bs+il]
+                cw.save_features(patch_id, feature_lab, out, [sample_name, sample_rep])
         else:
             # Do nothing
             pass
