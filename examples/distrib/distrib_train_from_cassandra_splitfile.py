@@ -3,7 +3,10 @@
 # (Apache License, Version 2.0)
 #
 # Run with:
-# python3 -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
+
+# torchrun --nproc_per_node=1 distrib_train_from_cassandra_splitfile.py -a resnet18 --b 256 --loss-scale 128.0 --workers 4 --lr=1e-4  --split-fn splitfile_pickle_format  --train-split-index 0 --val-split-index 1 --num-classes 2
+
+# torchrun --nproc_per_node=1 distrib_train_from_cassandra_splitfile.py -a resnet18 --b 256 --loss-scale 128.0 --workers 4 --lr=1e-4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig 
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, get_cassandra_reader_from_splitfile
@@ -60,6 +63,18 @@ def parse():
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(
+        "--data-col",
+        metavar="DATACOL",
+        default="data",
+        help="name of the table column containing data. Used only if no splitfile is loaded",
+    )
+    parser.add_argument(
+        "--label-col",
+        metavar="LABELCOL",
+        default="label",
+        help="name of the table column containing label info. Used only if no splitfile is loaded",
+    )
+    parser.add_argument(
         "--split-fn",
         metavar="SPF",
         default=None,
@@ -92,6 +107,20 @@ def parse():
         type=int,
         metavar="N",
         help="number of output classes (default: 2)",
+    )
+    parser.add_argument(
+        "--crop-size",
+        default=224,
+        type=int,
+        metavar="CSIZE",
+        help="size of the crop during training step (default: 224px)",
+    )
+    parser.add_argument(
+        "--val-size",
+        default=256,
+        type=int,
+        metavar="VSIZE",
+        help="size of the crop during validation step (default: 224px)",
     )
     parser.add_argument(
         "-j",
@@ -264,13 +293,13 @@ def main():
     freeze_params = False
     new_top=True
     pretrained_weights = True
-    weights_fn = None
+    checkpoint_fn = None
     get_features=False
     model_name = args.arch
     
     print (f"Creating model... {model_name}")
     model = mi.initialize_model(model_name, num_classes, freeze_params=freeze_params, \
-            pretrained_weights=pretrained_weights, new_top=new_top, weights_fn=weights_fn,\
+            pretrained_weights=pretrained_weights, new_top=new_top, checkpoint_fn=checkpoint_fn,\
             get_features=get_features)
 
     if args.sync_bn:
@@ -353,8 +382,8 @@ def main():
         # crop_size = 299
         # val_size = 320 # I chose this value arbitrarily, we can adjust.
     else:
-        crop_size = 224
-        val_size = 256
+        crop_size = args.crop_size
+        val_size = args.val_size
 
     print ("Creating DALI Training Pipeline")
     # train pipe
@@ -372,7 +401,9 @@ def main():
         num_shards=args.world_size,
         is_training=True,
         split_fn=args.split_fn,
-        split_index=args.train_split_index
+        split_index=args.train_split_index,
+        data_col=args.data_col,
+        label_col=args.label_col
     )
     pipe.build()
     train_loader = DALIClassificationIterator(
@@ -395,7 +426,9 @@ def main():
         num_shards=args.world_size,
         is_training=False,
         split_fn=args.split_fn,
-        split_index=args.val_split_index
+        split_index=args.val_split_index,
+        data_col=args.data_col,
+        label_col=args.label_col
     )
     pipe.build()
     val_loader = DALIClassificationIterator(
