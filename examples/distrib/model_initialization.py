@@ -1,5 +1,7 @@
 import torchvision.models as models
 import torch.nn as nn
+import torch
+
 """
 This class is used to remove the classifier layer(s) from models
 """
@@ -26,7 +28,7 @@ def set_parameter_requires_grad(model, freeze_params):
             param.requires_grad = False
             
 
-def initialize_model(model_name, num_classes, freeze_params=False, pretrained_weights=None, new_top=True, weights_fn=None, get_features=False):
+def initialize_model(model_name, num_classes, freeze_params=False, pretrained_weights=None, new_top=True, checkpoint_fn=None, get_features=False):
     """
     A model from pretrained torchvision models is instatiated. It is possibile to 
     freeze all parameters but the classifiers one as well as load a specific set of weights.
@@ -194,15 +196,17 @@ def initialize_model(model_name, num_classes, freeze_params=False, pretrained_we
     else:
         print("Invalid model name, exiting...")
         return None
-
+    
     ## Load new weights for the whole model
-    if weights_fn:
+    if checkpoint_fn:
         try:
-            model.load_state_dict(torch.load(weights_fn))
+            model_ft.load_state_dict(torch.load(checkpoint_fn)['state_dict'])
         except:
             print ("Something went wrong loading weight model")
             model_ft = None
-            
+           
+    #print (model_ft)
+
     ## If get_features is True remove the classifier layers from the model.
     ## new_top is, of course, dismissed
     if get_features:
