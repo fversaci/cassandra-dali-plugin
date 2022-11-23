@@ -4,10 +4,10 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-### To insert in DB, run with, e.g.,
+# To insert in DB, run with, e.g.,
 # /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split-subdir=train --table-suffix=train_224_jpg
 
-### To save files in a directory, run with, e.g.,
+# To save files in a directory, run with, e.g.,
 # /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/224_jpg
 
 from getpass import getpass
@@ -26,6 +26,7 @@ def save_images(
     table_suffix="224_jpg",
     split_subdir="train",
     target_dir=None,
+    img_size=224,
 ):
     """Save center-cropped images to Cassandra DB or directory
 
@@ -35,6 +36,7 @@ def save_images(
     :param table_suffix: Suffix for table names
     :param target_dir: Output directory (when saving to filesystem)
     :param split_subdir: Subdir to be processed
+    :param img_size: Target image size
     """
     splits = [split_subdir]
     jobs = extract_common.get_jobs(src_dir, splits)
@@ -54,19 +56,26 @@ def save_images(
             username = getpass("Insert Cassandra user: ")
             password = getpass("Insert Cassandra password: ")
 
-        par_jobs.foreachPartition( extract_common.send_images_to_db(
-            cloud_config=CC.cloud_config,
-            cassandra_ips=CC.cassandra_ips,
-            cassandra_port=CC.cassandra_port,
-            username=CC.username,
-            password=CC.password,
-            img_format=img_format,
-            keyspace=keyspace,
-            table_suffix=table_suffix,
-        ) )
+        par_jobs.foreachPartition(
+            extract_common.send_images_to_db(
+                cloud_config=CC.cloud_config,
+                cassandra_ips=CC.cassandra_ips,
+                cassandra_port=CC.cassandra_port,
+                username=CC.username,
+                password=CC.password,
+                img_format=img_format,
+                keyspace=keyspace,
+                table_suffix=table_suffix,
+                img_size=img_size,
+            )
+        )
     else:
         par_jobs.foreachPartition(
-            extract_common.save_images_to_dir(target_dir, img_format)
+            extract_common.save_images_to_dir(
+                target_dir,
+                img_format,
+                img_size=img_size,
+            )
         )
 
 

@@ -4,11 +4,13 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT.
 
-### To insert in DB, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split-subdir=train --table-suffix=train_224_jpg
+# To insert in DB, run with, e.g.,
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG
+# --keyspace=imagenette --split-subdir=train --table-suffix=train_224_jpg
 
-### To save files in a directory, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_224_jpg
+# To save files in a directory, run with, e.g.,
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG
+# --split-subdir=train --target-dir=/data/imagenette/train_224_jpg
 
 
 from getpass import getpass
@@ -24,6 +26,7 @@ def save_images(
     table_suffix="train_224_jpg",
     split_subdir="train",
     target_dir=None,
+    img_size=224,
 ):
     """Save center-cropped images to Cassandra DB or directory
 
@@ -33,6 +36,7 @@ def save_images(
     :param table_suffix: Suffix for table names
     :param target_dir: Output directory (when saving to filesystem)
     :param split_subdir: Subdir to be processed
+    :param img_size: Target image size
     """
     splits = [split_subdir]
     jobs = extract_common.get_jobs(src_dir, splits)
@@ -55,9 +59,14 @@ def save_images(
             img_format=img_format,
             keyspace=keyspace,
             table_suffix=table_suffix,
+            img_size=img_size,
         )(jobs)
     else:
-        extract_common.save_images_to_dir(target_dir, img_format)(jobs)
+        extract_common.save_images_to_dir(
+            target_dir,
+            img_format,
+            img_size=img_size,
+        )(jobs)
 
 
 # parse arguments

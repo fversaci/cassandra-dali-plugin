@@ -49,7 +49,7 @@ def read_data(
             keyspace,
             table_suffix,
             prefetch_buffers=16,
-            io_threads=1,
+            io_threads=8,
             # comm_threads=4,
             # copy_threads=4,
             name="Reader",
