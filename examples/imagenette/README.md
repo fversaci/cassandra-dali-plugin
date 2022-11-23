@@ -86,8 +86,8 @@ parallel, using Apache Spark (pre-installed in the Docker container).
 
 ```bash
 # - Start Spark master+worker
-$ /spark/sbin/start-master.sh
-$ /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
+$ sudo /spark/sbin/start-master.sh
+$ sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
 
 # - Create the tables in the Cassandra DB
 $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql

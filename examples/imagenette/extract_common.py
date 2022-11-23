@@ -14,8 +14,10 @@ import os
 import os
 import uuid
 
+def_size = 224
 
-def get_data(img_format="JPEG"):
+
+def get_data(img_format="JPEG", img_size=def_size):
     # img_format:
     # - UNCHANGED: unchanged input files (no resizing and cropping)
     # - JPEG: compressed JPEG
@@ -26,19 +28,18 @@ def get_data(img_format="JPEG"):
             # just return the unchanged raw file
             with open(path, "rb") as fh:
                 out_stream = io.BytesIO(fh.read())
-        else:  # resize and crop to 224x224
+        else:  # resize and crop
             img = Image.open(path).convert("RGB")
-            tg = 224
             sz = np.array(img.size)
             min_d = sz.min()
-            sc = float(tg) / min_d
+            sc = float(img_size) / min_d
             new_sz = (sc * sz).astype(int)
             img = img.resize(new_sz)
-            off = (new_sz.max() - tg) // 2
+            off = (new_sz.max() - img_size) // 2
             if new_sz[0] > new_sz[1]:
-                box = [off, 0, off + tg, tg]
+                box = [off, 0, off + img_size, img_size]
             else:
-                box = [0, off, tg, off + tg]
+                box = [0, off, img_size, off + img_size]
             img = img.crop(box)
             # save to stream
             out_stream = io.BytesIO()
@@ -74,9 +75,17 @@ def get_jobs(src_dir, splits=["train", "val"]):
     return jobs
 
 
-def send_images_to_db( username, password, img_format, keyspace,
-                       table_suffix, cloud_config=None,
-                       cassandra_ips=None, cassandra_port=None, ):
+def send_images_to_db(
+    username,
+    password,
+    img_format,
+    keyspace,
+    table_suffix,
+    cloud_config=None,
+    cassandra_ips=None,
+    cassandra_port=None,
+    img_size=def_size,
+):
     auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
@@ -91,7 +100,7 @@ def send_images_to_db( username, password, img_format, keyspace,
             label_col="label",
             data_col="data",
             cols=["or_split", "or_label"],
-            get_data=get_data(img_format),
+            get_data=get_data(img_format, img_size=img_size),
         )
         for path, label, partition_items in tqdm(jobs):
             cw.save_image(path, label, partition_items)
@@ -108,7 +117,7 @@ def save_image_to_dir(target_dir, path, label, raw_data, table_suffix):
         fd.write(raw_data)
 
 
-def save_images_to_dir(target_dir, img_format):
+def save_images_to_dir(target_dir, img_format, img_size=def_size):
     if img_format == "JPEG":
         table_suffix = ".jpg"
     elif img_format == "PNG":
@@ -122,7 +131,7 @@ def save_images_to_dir(target_dir, img_format):
 
     def ret(jobs):
         for path, label, _ in tqdm(jobs):
-            raw_data = get_data(img_format)(path)
+            raw_data = get_data(img_format, img_size=img_size)(path)
             save_image_to_dir(target_dir, path, label, raw_data, table_suffix)
 
     return ret

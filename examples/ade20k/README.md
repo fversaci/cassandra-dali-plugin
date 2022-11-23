@@ -8,7 +8,7 @@ As a first step, the raw files are to be downloaded from:
 - https://www.kaggle.com/datasets/residentmario/ade20k-outdoors
 
 or, if you have installed [Kaggle API](https://www.kaggle.com/docs/api), you
-can just issue this command:
+can just run this command:
 
 ```bash
 $ kaggle datasets download -d residentmario/ade20k-outdoors
@@ -31,7 +31,7 @@ Note that the shell prompt is immediately returned.  Wait until `state
 jump to NORMAL` is shown (about 1 minute).
 
 ## Storing the (unchanged) images in the DB
-The following commands will inseter the original dataset in Cassandra
+The following commands will insert the original dataset in Cassandra
 and use the plugin to read the images in NVIDIA DALI.
 
 ```bash
