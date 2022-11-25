@@ -31,6 +31,13 @@ class CassandraWriter:
         print ("DD: %r" % get_data) 
         self.get_data = get_data
         self.masks = masks
+        self.table_data = table_data
+        self.table_metadata = table_metadata
+        self.id_col = id_col
+        self.label_col = label_col
+        self.data_col = data_col
+        self.cols = cols
+
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
             row_factory=cassandra.query.dict_factory,

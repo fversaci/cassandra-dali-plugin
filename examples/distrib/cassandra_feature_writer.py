@@ -31,12 +31,6 @@ class CassandraFeatureWriter(CassandraWriter):
         cassandra_port=None,
         masks=False,
    ):
-        self.table_data = table_data
-        self.table_metadata = table_metadata
-        self.id_col = id_col
-        self.label_col = label_col
-        self.data_col = data_col
-
         super().__init__(
                 auth_prov,
                 table_data,
