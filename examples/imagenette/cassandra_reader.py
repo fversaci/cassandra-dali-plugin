@@ -25,7 +25,7 @@ plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 
 
-def get_cassandra_reader(
+def get_uuids(
     keyspace,
     table_suffix,
     id_col="patch_id",
@@ -33,25 +33,9 @@ def get_cassandra_reader(
     label_col="label",
     data_col="data",
     shard_id=0,
-    num_shards=1,
-    io_threads=2,
-    prefetch_buffers=2,
-    name="Reader",
-    shuffle_after_epoch=True,
-    comm_threads=2,
-    copy_threads=2,
-    wait_threads=2,
-    use_ssl=False, #True,
-    ssl_certificate="" #"node0.cer.pem",    
 ):
     # Read Cassandra parameters
-    try:
-        from private_data import CassConf as CC
-    except ImportError:
-        cassandra_ip = getpass("Insert Cassandra's IP address: ")
-        cassandra_ips = [cassandra_ip]
-        username = getpass("Insert Cassandra user: ")
-        password = getpass("Insert Cassandra password: ")
+    from private_data import CassConf as CC
 
     # set uuids cache directory
     ids_cache = "ids_cache"
@@ -60,11 +44,12 @@ def get_cassandra_reader(
     # Load list of uuids from Cassandra DB...
     ap = PlainTextAuthProvider(username=CC.username, password=CC.password)
     if not os.path.exists(rows_fn):
-        lm = MiniListManager(auth_prov=ap,
-                             cassandra_ips=CC.cassandra_ips,
-                             cloud_config=CC.cloud_config,
-                             port=CC.cassandra_port,
-                             )
+        lm = MiniListManager(
+            auth_prov=ap,
+            cassandra_ips=CC.cassandra_ips,
+            cloud_config=CC.cloud_config,
+            port=CC.cassandra_port,
+        )
         conf = {
             "table": f"{keyspace}.metadata_{table_suffix}",
             "id_col": id_col,
@@ -85,6 +70,40 @@ def get_cassandra_reader(
     uuids = stuff["row_keys"]
     uuids = list(map(str, uuids))  # convert uuids to strings
     print(f" {len(uuids)} images")
+    return uuids
+
+
+def get_cassandra_reader(
+    keyspace,
+    table_suffix,
+    id_col="patch_id",
+    label_type="int",
+    label_col="label",
+    data_col="data",
+    shard_id=0,
+    num_shards=1,
+    io_threads=2,
+    prefetch_buffers=2,
+    name="Reader",
+    shuffle_after_epoch=True,
+    comm_threads=2,
+    copy_threads=2,
+    wait_threads=2,
+    use_ssl=False,  # True,
+    ssl_certificate="",  # "node0.cer.pem",
+):
+    # Read Cassandra parameters
+    from private_data import CassConf as CC
+
+    uuids = get_uuids(
+        keyspace=keyspace,
+        table_suffix=table_suffix,
+        id_col=id_col,
+        label_type=label_type,
+        label_col=label_col,
+        data_col=data_col,
+        shard_id=shard_id,
+    )
     table = f"{keyspace}.data_{table_suffix}"
     if CC.cloud_config:
         connect_bundle = CC.cloud_config["secure_connect_bundle"]
