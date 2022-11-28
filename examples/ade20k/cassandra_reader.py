@@ -41,8 +41,8 @@ def get_cassandra_reader(
     comm_threads=2,
     copy_threads=2,
     wait_threads=2,
-    use_ssl=False, #True,
-    ssl_certificate="" #"node0.cer.pem",    
+    use_ssl=False,  # True,
+    ssl_certificate="",  # "node0.cer.pem",
 ):
     # Read Cassandra parameters
     try:
@@ -60,11 +60,12 @@ def get_cassandra_reader(
     # Load list of uuids from Cassandra DB...
     ap = PlainTextAuthProvider(username=CC.username, password=CC.password)
     if not os.path.exists(rows_fn):
-        lm = MiniListManager(auth_prov=ap,
-                             cassandra_ips=CC.cassandra_ips,
-                             cloud_config=CC.cloud_config,
-                             port=CC.cassandra_port,
-                             )
+        lm = MiniListManager(
+            auth_prov=ap,
+            cassandra_ips=CC.cassandra_ips,
+            cloud_config=CC.cloud_config,
+            port=CC.cassandra_port,
+        )
         conf = {
             "table": f"{keyspace}.metadata_{table_suffix}",
             "id_col": id_col,
