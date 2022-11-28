@@ -6,7 +6,7 @@
 
 from PIL import Image
 from cassandra.auth import PlainTextAuthProvider
-from crs4.cassandra_utils import CassandraWriter
+from crs4.cassandra_utils import CassandraClassificationWriter
 from tqdm import tqdm
 import io
 import numpy as np
@@ -89,7 +89,7 @@ def send_images_to_db(
     auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
-        cw = CassandraWriter(
+        cw = CassandraClassificationWriter(
             cloud_config=cloud_config,
             auth_prov=auth_prov,
             cassandra_ips=cassandra_ips,
