@@ -42,6 +42,7 @@ def read_data(
     :param keyspace: Cassandra keyspace (i.e., name of the dataset)
     :param table_suffix: Suffix for table names
     :param device_id: DALI device id (>=0 for GPUs)
+    :param reader: cassandra or file to read from db or filesystem respectively (default: cassandra)
     :param image_root: File root for images (only when reading from the filesystem)
     :param mask_root: File root for masks (only when reading from the filesystem)
     """

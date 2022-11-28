@@ -45,8 +45,6 @@ class CassandraSegmentationWriter(CassandraWriter):
                 masks
                 )
 
-        self.set_query()
-
     def set_query(self):
         query_data = f"INSERT INTO {self.table_data} ("
         query_data += f"{self.id_col}, {self.label_col}, {self.data_col}) VALUES (?,?,?)"

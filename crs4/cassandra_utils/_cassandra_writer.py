@@ -28,7 +28,6 @@ class CassandraWriter:
         cassandra_port=None,
         masks=False,
     ):
-        print ("DD: %r" % get_data) 
         self.get_data = get_data
         self.masks = masks
         self.table_data = table_data
@@ -45,7 +44,6 @@ class CassandraWriter:
         profs = {"default": prof}
         
         if cloud_config:
-            print (type(cloud_config))
             self.cluster = Cluster(
                 cloud=cloud_config,
                 execution_profiles=profs,
