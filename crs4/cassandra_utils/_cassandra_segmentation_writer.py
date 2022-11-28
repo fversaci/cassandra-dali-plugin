@@ -13,6 +13,7 @@ import uuid
 
 from crs4.cassandra_utils._cassandra_writer import CassandraWriter
 
+
 class CassandraSegmentationWriter(CassandraWriter):
     def __init__(
         self,
@@ -31,27 +32,29 @@ class CassandraSegmentationWriter(CassandraWriter):
     ):
 
         super().__init__(
-                auth_prov,
-                table_data,
-                table_metadata,
-                id_col,
-                label_col,
-                data_col,
-                cols,
-                get_data,
-                cloud_config,
-                cassandra_ips,
-                cassandra_port,
-                masks
-                )
+            auth_prov,
+            table_data,
+            table_metadata,
+            id_col,
+            label_col,
+            data_col,
+            cols,
+            get_data,
+            cloud_config,
+            cassandra_ips,
+            cassandra_port,
+            masks,
+        )
 
     def set_query(self):
         query_data = f"INSERT INTO {self.table_data} ("
-        query_data += f"{self.id_col}, {self.label_col}, {self.data_col}) VALUES (?,?,?)"
+        query_data += (
+            f"{self.id_col}, {self.label_col}, {self.data_col}) VALUES (?,?,?)"
+        )
         query_meta = f"INSERT INTO {self.table_metadata} ("
         query_meta += f"{self.id_col}, {', '.join(self.cols)}) "
         query_meta += f"VALUES ({', '.join(['?']*(len(self.cols)+1))})"
-        
+
         self.prep_data = self.sess.prepare(query_data)
         self.prep_meta = self.sess.prepare(query_meta)
 
@@ -61,19 +64,21 @@ class CassandraSegmentationWriter(CassandraWriter):
     def save_item(self, item):
         image_id, label, data, partition_items = item
         stuff = (image_id, *partition_items)
-        # insert metadata 
+        # insert metadata
         self.sess.execute(
             self.prep_meta,
             stuff,
             execution_profile="default",
             timeout=30,
         )
-        # insert heavy data 
+        # insert heavy data
         self.sess.execute(
-            self.prep_data, (image_id, label, data),
-            execution_profile="default", timeout=30,
+            self.prep_data,
+            (image_id, label, data),
+            execution_profile="default",
+            timeout=30,
         )
-        
+
     def save_image(self, path, label, partition_items):
         # read file into memory
         data = self.get_data(path)

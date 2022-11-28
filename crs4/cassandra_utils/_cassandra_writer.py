@@ -9,7 +9,6 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.cluster import ExecutionProfile
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
-import uuid
 
 
 class CassandraWriter:
@@ -42,7 +41,7 @@ class CassandraWriter:
             row_factory=cassandra.query.dict_factory,
         )
         profs = {"default": prof}
-        
+
         if cloud_config:
             self.cluster = Cluster(
                 cloud=cloud_config,
@@ -59,21 +58,19 @@ class CassandraWriter:
                 auth_provider=auth_prov,
             )
         self.sess = self.cluster.connect()
-       
-        # Query and session prepare have to be implemented 
-        # in subclasses set_query() method as well as 
+
+        # Query and session prepare have to be implemented
+        # in subclasses set_query() method as well as
         # session execute in subclass save_item method
         self.set_query()
-    
+
     def __del__(self):
         self.cluster.shutdown()
 
     def set_query(self):
-        # set query and prepare 
+        # set query and prepare
         pass
 
     def save_item(self, item):
-        # insert metadata 
+        # insert metadata and heavy data
         pass
-        # insert heavy data 
-        pass 
