@@ -1,4 +1,4 @@
-# Pascal VOC2012 dataset
+# ADE20K Outdoors dataset
 
 In this segmentation example we will import the [ADE20K Outdoors
 dataset](https://www.kaggle.com/datasets/residentmario/ade20k-outdoors)
