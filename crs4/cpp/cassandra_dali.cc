@@ -48,13 +48,26 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
                         io_threads, prefetch_buffers, copy_threads,
                         wait_threads, comm_threads);
   Reset();
+  /*
   // start prefetching
   for (int i=0; i < prefetch_buffers; ++i) {
     prefetch_one();
   }
+  */
 }
 
-void Cassandra::prefetch_one() {
+void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
+  assert(batch_size == input.num_samples());
+  auto cass_uuids = std::vector<CassUuid>(batch_size);
+  for(auto i=0; i!=batch_size; ++i){
+    auto d_ptr = input[i].data<dali::uint64>();
+    auto c_uuid = &cass_uuids[i];
+    c_uuid->time_and_version = *(d_ptr++);
+    c_uuid->clock_seq_and_node = *d_ptr;
+  }
+  batch_ldr->prefetch_batch(cass_uuids);
+  CassUuid cuid;
+  
   auto dist = std::distance(current, shard_end);
   // if reached the end, rewind
   if (dist == 0) {
@@ -65,7 +78,7 @@ void Cassandra::prefetch_one() {
   if (dist >= batch_size) {
     auto batch_ids = std::vector(current, current+batch_size);
     current += batch_size;
-    batch_ldr->prefetch_batch(batch_ids);
+    // batch_ldr->prefetch_batch(batch_ids);
     return;
   }
   // pad partial batch
@@ -73,12 +86,13 @@ void Cassandra::prefetch_one() {
   current = shard_end;
   for (int i=dist; i != batch_size; ++i)
     batch_ids.push_back(*(shard_end-1));
-  batch_ldr->prefetch_batch(batch_ids);
+  // batch_ldr->prefetch_batch(batch_ids);
 }
 
 void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
+  const auto &input = ws.Input<dali::CPUBackend>(0);
+  prefetch_one(input);
   BatchImgLab batch = batch_ldr->blocking_get_batch();
-  prefetch_one();
   // share features with output
   auto &features = ws.Output<::dali::CPUBackend>(0);
   features.ShareData(batch.first);
@@ -92,8 +106,8 @@ void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
 DALI_REGISTER_OPERATOR(crs4__cassandra, ::crs4::Cassandra, ::dali::CPU);
 
 DALI_SCHEMA(crs4__cassandra)
-.DocStr("Takes nothing returns something")
-.NumInput(0)
+.DocStr("Takes a list of UUIDs returns images and labels/masks")
+.NumInput(1)
 .NumOutput(2)
 .AddOptionalArg<std::vector<std::string>>("uuids",
    R"(A list of uuids)", nullptr)

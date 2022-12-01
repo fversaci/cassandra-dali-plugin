@@ -81,10 +81,10 @@ class BatchLoader {
                      size_t sz, cass_int32_t lab, int off, int wb);
   void copy_data_img(const CassResult* result, const cass_byte_t* data,
                      size_t sz, const cass_byte_t* lab, size_t l_sz, int off, int wb);
-  std::future<BatchImgLab> start_transfers(const std::vector<std::string>& keys,
+  std::future<BatchImgLab> start_transfers(const std::vector<CassUuid>& keys,
                                            int wb);
   BatchImgLab wait4images(int wb);
-  void keys2transfers(const std::vector<std::string>& keys, int wb);
+  void keys2transfers(const std::vector<CassUuid>& keys, int wb);
   void transfer2copy(CassFuture* query_future, int wb, int i);
   static void wrap_t2c(CassFuture* query_future, void* v_fd);
   void allocTens(int wb);
@@ -98,7 +98,7 @@ class BatchLoader {
               int prefetch_buffers, int copy_threads,
               int wait_threads, int comm_threads);
   ~BatchLoader();
-  void prefetch_batch(const std::vector<std::string>& keys);
+  void prefetch_batch(const std::vector<CassUuid>& keys);
   BatchImgLab blocking_get_batch();
   void ignore_batch();
 };

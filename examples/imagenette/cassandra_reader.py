@@ -12,12 +12,14 @@ from crs4.cassandra_utils import MiniListManager
 import crs4.cassandra_utils
 import nvidia.dali.plugin_manager as plugin_manager
 import nvidia.dali.fn as fn
+import nvidia.dali.types as types
 import pathlib
 
 # varia
 import getpass
 import os
 import pickle
+import numpy as np
 
 plugin_path = pathlib.Path(crs4.cassandra_utils.__path__[0])
 plugin_path = plugin_path.parent.parent.joinpath("libcrs4cassandra.so")
@@ -68,9 +70,31 @@ def get_uuids(
             stuff = pickle.load(f)
     # init and return Cassandra reader
     uuids = stuff["row_keys"]
-    uuids = list(map(str, uuids))  # convert uuids to strings
     print(f" {len(uuids)} images")
     return uuids
+
+
+def uuid2ints(uuid):
+    # convert to CassUuid format
+    i1 = int.from_bytes(uuid.bytes_le[:8], byteorder="little")
+    i2 = int.from_bytes(uuid.bytes[8:], byteorder="big")
+    return (i1, i2)
+
+
+class ten_uuids:
+    def __init__(self, uuids, bs):
+        self.cow = 0
+        self.bs = bs
+        uuids = list(map(uuid2ints, uuids))  # convert uuids to ints
+        uuids = np.array(uuids, dtype=np.uint64)
+        uuids = np.pad(uuids, ((0, bs - len(uuids) % bs), (0, 0)), "edge")
+        uuids = uuids.reshape([-1, bs, 2])
+        self.uuids = uuids
+        self.num_batches = self.uuids.shape[0]
+
+    def __call__(self, offset):
+        r = self.uuids[offset % self.num_batches]
+        return [r]
 
 
 def get_cassandra_reader(
@@ -109,7 +133,16 @@ def get_cassandra_reader(
         connect_bundle = CC.cloud_config["secure_connect_bundle"]
     else:
         connect_bundle = None
+    fn_uuids = fn.external_source(
+        source=ten_uuids(uuids, 128),
+        num_outputs=1,
+        dtype=types.UINT64,
+        # parallel=True,
+        # prefetch_queue_depth=4,
+    )
+    uuids = list(map(str, uuids))  # convert uuids to strings
     cassandra_reader = fn.crs4.cassandra(
+        fn_uuids,
         name=name,
         uuids=uuids,
         shuffle_after_epoch=shuffle_after_epoch,

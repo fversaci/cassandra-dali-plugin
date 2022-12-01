@@ -72,7 +72,7 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
   }
 
  private:
-  void prefetch_one();
+  void prefetch_one(const dali::TensorList<dali::CPUBackend>&);
   // variables
   std::vector<std::string> uuids;
   std::string cloud_config;

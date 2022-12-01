@@ -318,14 +318,12 @@ void BatchLoader::wrap_t2c(CassFuture* query_future, void* v_fd) {
   batch_ldr->transfer2copy(query_future, wb, i);
 }
 
-void BatchLoader::keys2transfers(const std::vector<std::string>& keys, int wb) {
+void BatchLoader::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
   // start all transfers in parallel (send requests to driver)
   for (size_t i=0; i != keys.size(); ++i) {
-    std::string id = keys[i];
+    CassUuid cuid = keys[i];
     // prepare query
     CassStatement* statement = cass_prepared_bind(prepared);
-    CassUuid cuid;
-    cass_uuid_from_string(id.c_str(), &cuid);
     cass_statement_bind_uuid_by_name(statement, id_col.c_str(), cuid);
     CassFuture* query_future = cass_session_execute(session, statement);
     cass_statement_free(statement);
@@ -339,7 +337,7 @@ void BatchLoader::keys2transfers(const std::vector<std::string>& keys, int wb) {
 }
 
 std::future<BatchImgLab> BatchLoader::start_transfers(
-                             const std::vector<std::string>& keys, int wb) {
+                             const std::vector<CassUuid>& keys, int wb) {
   bs[wb] = keys.size();
   copy_jobs[wb].reserve(bs[wb]);
   allocTens(wb);  // allocate space for tensors
@@ -381,7 +379,7 @@ void BatchLoader::check_connection() {
   }
 }
 
-void BatchLoader::prefetch_batch(const std::vector<std::string>& ks) {
+void BatchLoader::prefetch_batch(const std::vector<CassUuid>& ks) {
   int wb = write_buf.front();
   write_buf.pop();
   check_connection();
