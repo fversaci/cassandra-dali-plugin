@@ -26,18 +26,6 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
   Cassandra(Cassandra&&) = delete;
   Cassandra& operator=(Cassandra&&) = delete;
 
-  ::dali::ReaderMeta GetReaderMeta() const override {
-    ::dali::ReaderMeta ret;
-    ret.epoch_size = uuids.size();
-    ret.epoch_size_padded = num_shards
-      * std::ceil(uuids.size() / static_cast<double>(num_shards));
-    ret.number_of_shards = num_shards;
-    ret.shard_id = shard_id;
-    ret.pad_last_batch = true;
-    ret.stick_to_shard = true;
-    return ret;
-  }
-
   ~Cassandra() override {
     if (batch_ldr != nullptr) {
       delete batch_ldr;
@@ -50,31 +38,11 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
     return false;
   }
 
-  inline void Reset() {
-    current = shard_begin;
-    current_epoch++;
-
-    if (shuffle_after_epoch) {
-      std::mt19937 g(kDaliDataloaderSeed + current_epoch);
-      std::shuffle(uuids.begin(), uuids.end(), g);
-    }
-  }
-
   void RunImpl(::dali::workspace_t<dali::CPUBackend> &ws) override;
-
-  void set_shard_sizes() {
-    int dataset_size = uuids.size();
-    shard_size = std::ceil(uuids.size() / static_cast<double>(num_shards));
-    int pos_begin = std::floor(shard_id * dataset_size
-                               / static_cast<double>(num_shards));
-    shard_begin = uuids.begin() + pos_begin;
-    shard_end = shard_begin + shard_size;
-  }
 
  private:
   void prefetch_one(const dali::TensorList<dali::CPUBackend>&);
   // variables
-  std::vector<std::string> uuids;
   std::string cloud_config;
   std::vector<std::string> cassandra_ips;
   int cassandra_port;
@@ -95,13 +63,6 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
   bool use_ssl;
   std::string ssl_certificate;
   std::vector<std::string>::iterator current;
-  bool shuffle_after_epoch;
-  int current_epoch = -1;
-  const int shard_id;
-  const int num_shards;
-  std::vector<std::string>::iterator shard_begin;
-  std::vector<std::string>::iterator shard_end;
-  int shard_size;
 };
 
 }  // namespace crs4

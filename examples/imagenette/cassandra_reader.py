@@ -93,7 +93,9 @@ class ten_uuids:
         self.num_batches = self.uuids.shape[0]
 
     def __call__(self, offset):
-        r = self.uuids[offset % self.num_batches]
+        if offset >= self.num_batches:
+            raise StopIteration()
+        r = self.uuids[offset]
         return [r]
 
 
@@ -144,8 +146,6 @@ def get_cassandra_reader(
     cassandra_reader = fn.crs4.cassandra(
         fn_uuids,
         name=name,
-        uuids=uuids,
-        shuffle_after_epoch=shuffle_after_epoch,
         cloud_config=connect_bundle,
         cassandra_ips=CC.cassandra_ips,
         cassandra_port=CC.cassandra_port,
@@ -155,10 +155,7 @@ def get_cassandra_reader(
         label_col=label_col,
         data_col=data_col,
         id_col=id_col,
-        prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
-        num_shards=num_shards,
-        shard_id=shard_id,
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,

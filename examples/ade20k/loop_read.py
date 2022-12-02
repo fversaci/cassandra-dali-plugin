@@ -105,16 +105,24 @@ def read_data(
 
     pl = get_dali_pipeline()
     pl.build()
-
+    for _ in range(10):
+        with tqdm(total=40) as pbar:
+            while True:
+                try:
+                    pl.run()
+                    pbar.update(1)
+                except StopIteration:
+                    pl.reset()
+                    break
+    
     ########################################################################
     # DALI iterator
     ########################################################################
-    bs = pl.max_batch_size
-    steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
-    for _ in range(10):
-        for _ in trange(steps):
-            x, y = pl.run()
-    return
+    # bs = pl.max_batch_size
+    # for _ in range(10):
+    #     for _ in trange(steps):
+    #         x, y = pl.run()
+    # return
 
     ########################################################################
     # alternatively: use pytorch iterator

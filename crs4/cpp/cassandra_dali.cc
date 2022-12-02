@@ -14,7 +14,6 @@ namespace crs4 {
 Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   ::dali::Operator<dali::CPUBackend>(spec),
   batch_size(spec.GetArgument<int>("max_batch_size")),
-  uuids(spec.GetArgument<std::vector<std::string>>("uuids")),
   cloud_config(spec.GetArgument<std::string>("cloud_config")),
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
   cassandra_port(spec.GetArgument<int>("cassandra_port")),
@@ -27,33 +26,17 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   password(spec.GetArgument<std::string>("password")),
   use_ssl(spec.GetArgument<bool>("use_ssl")),
   ssl_certificate(spec.GetArgument<std::string>("ssl_certificate")),
-  shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")),
-  prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   io_threads(spec.GetArgument<int>("io_threads")),
   copy_threads(spec.GetArgument<int>("copy_threads")),
   wait_threads(spec.GetArgument<int>("wait_threads")),
-  comm_threads(spec.GetArgument<int>("comm_threads")),
-  shard_id(spec.GetArgument<int>("shard_id")),
-  num_shards(spec.GetArgument<int>("num_shards")) {
-  DALI_ENFORCE(num_shards > shard_id,
-               "num_shards needs to be greater than shard_id");
-  DALI_ENFORCE(uuids.size() > 0,
-               "dataset cannot be empty");
+  comm_threads(spec.GetArgument<int>("comm_threads")) {
   DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
                "label_type can only be int, image or none.");
-  set_shard_sizes();
   batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
-                        io_threads, prefetch_buffers, copy_threads,
+                        io_threads, 1, copy_threads,
                         wait_threads, comm_threads);
-  Reset();
-  /*
-  // start prefetching
-  for (int i=0; i < prefetch_buffers; ++i) {
-    prefetch_one();
-  }
-  */
 }
 
 void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
@@ -66,27 +49,6 @@ void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
     c_uuid->clock_seq_and_node = *d_ptr;
   }
   batch_ldr->prefetch_batch(cass_uuids);
-  CassUuid cuid;
-  
-  auto dist = std::distance(current, shard_end);
-  // if reached the end, rewind
-  if (dist == 0) {
-    Reset();
-    dist = shard_size;
-  }
-  // full batch
-  if (dist >= batch_size) {
-    auto batch_ids = std::vector(current, current+batch_size);
-    current += batch_size;
-    // batch_ldr->prefetch_batch(batch_ids);
-    return;
-  }
-  // pad partial batch
-  auto batch_ids = std::vector(current, shard_end);
-  current = shard_end;
-  for (int i=dist; i != batch_size; ++i)
-    batch_ids.push_back(*(shard_end-1));
-  // batch_ldr->prefetch_batch(batch_ids);
 }
 
 void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
@@ -109,8 +71,6 @@ DALI_SCHEMA(crs4__cassandra)
 .DocStr("Takes a list of UUIDs returns images and labels/masks")
 .NumInput(1)
 .NumOutput(2)
-.AddOptionalArg<std::vector<std::string>>("uuids",
-   R"(A list of uuids)", nullptr)
 .AddOptionalArg<std::string>("cloud_config",
    R"(Cloud configuration for Cassandra (e.g., AstraDB))", "")
 .AddOptionalArg("cassandra_ips",
@@ -128,17 +88,9 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
 .AddOptionalArg<std::string>("ssl_certificate",
    R"(Optional SSL certificate)", "")
-.AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
-   false)
-.AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
 .AddOptionalArg("io_threads",
    R"(Number of io threads used by the Cassandra driver)", 2)
 .AddOptionalArg("copy_threads",
    R"(Number of threads copying data in parallel)", 2)
 .AddOptionalArg("wait_threads", R"(Parallelism for waiting threads)", 2)
-.AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2)
-.AddOptionalArg("num_shards",
-   R"code(Partitions the data into the specified number of parts (shards).
-This is typically used for multi-GPU or multi-node training.)code", 1)
-.AddOptionalArg("shard_id",
-   R"code(Index of the shard to read.)code", 0);
+.AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2);
