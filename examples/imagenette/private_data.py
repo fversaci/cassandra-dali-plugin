@@ -10,5 +10,5 @@ CassConf = CassandraConf()
 CassConf.username = "guest"
 CassConf.password = "test"
 CassConf.cassandra_ips = ["127.0.0.1"]
-#CassConf.cassandra_port = 9042
-#CassConf.cloud_config = {'secure_connect_bundle': 'secure-connect-blabla.zip'}
+# CassConf.cassandra_port = 9042
+# CassConf.cloud_config = {'secure_connect_bundle': 'secure-connect-blabla.zip'}

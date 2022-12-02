@@ -6,14 +6,13 @@
 
 from PIL import Image
 from cassandra.auth import PlainTextAuthProvider
-from crs4.cassandra_utils import CassandraWriter
+from crs4.cassandra_utils import CassandraSegmentationWriter
 from tqdm import tqdm
 import io
 import numpy as np
 import os
 import os
 from pathlib import Path
-import uuid
 
 
 def get_data(img_format="JPEG"):
@@ -67,13 +66,20 @@ def get_jobs(src_dir, mask_dir, new_suffix=".jpg"):
     return jobs
 
 
-def send_images_to_db(username, password, img_format, keyspace,
-                      table_suffix, cloud_config=None,
-                      cassandra_ips=None, cassandra_port=None, ):
+def send_images_to_db(
+    username,
+    password,
+    img_format,
+    keyspace,
+    table_suffix,
+    cloud_config=None,
+    cassandra_ips=None,
+    cassandra_port=None,
+):
     auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
-        cw = CassandraWriter(
+        cw = CassandraSegmentationWriter(
             cloud_config=cloud_config,
             auth_prov=auth_prov,
             cassandra_ips=cassandra_ips,
@@ -85,10 +91,8 @@ def send_images_to_db(username, password, img_format, keyspace,
             data_col="data",
             cols=["filename"],
             get_data=get_data(img_format),
-            masks=True,
         )
         for path_img, path_mask in tqdm(jobs):
             cw.save_image(path_img, path_mask, (path_img,))
 
     return ret
-

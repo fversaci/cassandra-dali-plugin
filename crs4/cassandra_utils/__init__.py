@@ -7,3 +7,5 @@
 from crs4.cassandra_utils._list_manager import ListManager
 from crs4.cassandra_utils._mini_list_manager import MiniListManager
 from crs4.cassandra_utils._cassandra_writer import CassandraWriter
+from crs4.cassandra_utils._cassandra_classification_writer import CassandraClassificationWriter
+from crs4.cassandra_utils._cassandra_segmentation_writer import CassandraSegmentationWriter
