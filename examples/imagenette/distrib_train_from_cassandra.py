@@ -191,7 +191,9 @@ def to_python_float(t):
         return t[0]
 
 
-@pipeline_def
+@pipeline_def(
+    py_start_method="spawn",
+)
 def create_dali_pipeline(
     keyspace,
     table_suffix,
@@ -439,7 +441,7 @@ def main():
     )
     pipe.build()
     train_loader = DALIClassificationIterator(
-        pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=9469, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     # val pipe
@@ -459,7 +461,7 @@ def main():
     )
     pipe.build()
     val_loader = DALIClassificationIterator(
-        pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=3925, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     if args.evaluate:

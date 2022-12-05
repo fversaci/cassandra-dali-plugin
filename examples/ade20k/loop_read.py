@@ -55,7 +55,6 @@ def read_data(
             label_type="image",
             # comm_threads=4,
             # copy_threads=4,
-            name="Reader",
         )
     elif reader == "file":
         # alternatively: use fn.readers.file
@@ -105,24 +104,26 @@ def read_data(
 
     pl = get_dali_pipeline()
     pl.build()
-    for _ in range(10):
-        with tqdm(total=40) as pbar:
-            while True:
-                try:
-                    pl.run()
-                    pbar.update(1)
-                except StopIteration:
-                    pl.reset()
-                    break
-    
+
     ########################################################################
     # DALI iterator
     ########################################################################
-    # bs = pl.max_batch_size
-    # for _ in range(10):
-    #     for _ in trange(steps):
-    #         x, y = pl.run()
-    # return
+    if reader == "cassandra":
+        for _ in range(10):
+            with tqdm(total=40) as pbar:
+                while True:
+                    try:
+                        pl.run()
+                        pbar.update(1)
+                    except StopIteration:
+                        pl.reset()
+                        break
+    else:
+        bs = pl.max_batch_size
+        steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
+        for _ in range(10):
+            for _ in trange(steps):
+                x, y = pl.run()
 
     ########################################################################
     # alternatively: use pytorch iterator
@@ -130,7 +131,9 @@ def read_data(
     # ddl = DALIGenericIterator(
     #     [pl],
     #     ["data", "label"],
-    #     reader_name="Reader",
+    #     # reader_name="Reader", # works only with file reader
+    #     size=5000,
+    #     last_batch_padded=True,
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )
     # for _ in range(10):

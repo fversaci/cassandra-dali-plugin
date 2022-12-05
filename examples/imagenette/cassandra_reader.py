@@ -110,7 +110,6 @@ def get_cassandra_reader(
     num_shards=1,
     io_threads=2,
     prefetch_buffers=2,
-    name="Reader",
     shuffle_after_epoch=True,
     comm_threads=2,
     copy_threads=2,
@@ -142,10 +141,8 @@ def get_cassandra_reader(
         # parallel=True,
         # prefetch_queue_depth=4,
     )
-    uuids = list(map(str, uuids))  # convert uuids to strings
     cassandra_reader = fn.crs4.cassandra(
         fn_uuids,
-        name=name,
         cloud_config=connect_bundle,
         cassandra_ips=CC.cassandra_ips,
         cassandra_port=CC.cassandra_port,
