@@ -9,14 +9,11 @@
 # torchrun --nproc_per_node=1 distrib_train_from_cassandra_splitfile.py -a resnet18 --b 256 --loss-scale 128.0 --workers 4 --lr=1e-4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig 
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, get_cassandra_reader_from_splitfile
-
 import argparse
 import os
 import shutil
 import time
 import math
-
 
 import torch
 import torch.nn as nn

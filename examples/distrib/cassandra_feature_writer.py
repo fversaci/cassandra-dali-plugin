@@ -1,7 +1,7 @@
 import io,sys
 import cassandra
 from cassandra.auth import PlainTextAuthProvider
-from cassandra_writer import CassandraWriter
+from crs4.cassandra_utils import CassandraWriter
 
 import getpass
 from tqdm import tqdm
