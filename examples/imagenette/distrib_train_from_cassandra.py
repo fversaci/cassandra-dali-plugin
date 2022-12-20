@@ -219,7 +219,6 @@ def create_dali_pipeline(
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
-        name="Reader",
     )
     dali_device = "cpu" if dali_cpu else "gpu"
     decoder_device = "cpu" if dali_cpu else "mixed"

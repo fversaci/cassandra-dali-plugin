@@ -81,7 +81,7 @@ def uuid2ints(uuid):
     return (i1, i2)
 
 
-class ten_uuids:
+class uuids_as_tensors:
     def __init__(self, uuids, bs):
         self.cow = 0
         self.bs = bs
@@ -135,7 +135,7 @@ def get_cassandra_reader(
     else:
         connect_bundle = None
     fn_uuids = fn.external_source(
-        source=ten_uuids(uuids, 128),
+        source=uuids_as_tensors(uuids, 128),
         num_outputs=1,
         dtype=types.UINT64,
         # parallel=True,
