@@ -76,7 +76,7 @@ void Cassandra::prefetch_one() {
   batch_ldr->prefetch_batch(batch_ids);
 }
 
-void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
+void Cassandra::RunImpl(::dali::Workspace &ws) {
   BatchImgLab batch = batch_ldr->blocking_get_batch();
   prefetch_one();
   // share features with output
