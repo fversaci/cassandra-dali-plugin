@@ -51,7 +51,7 @@ void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
   batch_ldr->prefetch_batch(cass_uuids);
 }
 
-void Cassandra::RunImpl(::dali::HostWorkspace &ws) {
+void Cassandra::RunImpl(::dali::Workspace &ws) {
   const auto &input = ws.Input<dali::CPUBackend>(0);
   prefetch_one(input);
   BatchImgLab batch = batch_ldr->blocking_get_batch();
