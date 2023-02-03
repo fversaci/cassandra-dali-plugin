@@ -9,7 +9,6 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.cluster import ExecutionProfile
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
-import uuid
 
 
 class CassandraWriter:
@@ -28,14 +27,21 @@ class CassandraWriter:
         cassandra_port=None,
         masks=False,
     ):
-            
         self.get_data = get_data
         self.masks = masks
+        self.table_data = table_data
+        self.table_metadata = table_metadata
+        self.id_col = id_col
+        self.label_col = label_col
+        self.data_col = data_col
+        self.cols = cols
+
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
             row_factory=cassandra.query.dict_factory,
         )
         profs = {"default": prof}
+
         if cloud_config:
             self.cluster = Cluster(
                 cloud=cloud_config,
@@ -52,48 +58,19 @@ class CassandraWriter:
                 auth_provider=auth_prov,
             )
         self.sess = self.cluster.connect()
-        query1 = f"INSERT INTO {table_data} ("
-        query1 += f"{id_col}, {label_col}, {data_col}) VALUES (?,?,?)"
-        if self.masks:
-            query2 = f"INSERT INTO {table_metadata} ("
-            query2 += f"{id_col}, {', '.join(cols)}) "
-            query2 += f"VALUES ({', '.join(['?']*(len(cols)+1))})"
-        else:
-            query2 = f"INSERT INTO {table_metadata} ("
-            query2 += f"{id_col}, {label_col}, {', '.join(cols)}) "
-            query2 += f"VALUES ({', '.join(['?']*(len(cols)+2))})"
-        
-        self.prep1 = self.sess.prepare(query1)
-        self.prep2 = self.sess.prepare(query2)
+
+        # Query and session prepare have to be implemented
+        # in subclasses set_query() method as well as
+        # session execute in subclass save_item method
+        self.set_query()
 
     def __del__(self):
         self.cluster.shutdown()
 
+    def set_query(self):
+        # set query and prepare
+        pass
+
     def save_item(self, item):
-        image_id, label, data, partition_items = item
-        if self.masks:
-            stuff = (image_id, *partition_items)
-        else:
-            stuff = (image_id, label, *partition_items)
-        # insert metadata 
-        self.sess.execute(
-            self.prep2,
-            stuff,
-            execution_profile="default",
-            timeout=30,
-        )
-        # insert heavy data 
-        self.sess.execute(
-            self.prep1, (image_id, label, data),
-            execution_profile="default", timeout=30,
-        )
-        
-        
-    def save_image(self, path, label, partition_items):
-        # read file into memory
-        data = self.get_data(path)
-        if self.masks:
-            label = self.get_data(label)
-        image_id = uuid.uuid4()
-        item = (image_id, label, data, partition_items)
-        self.save_item(item)
+        # insert metadata and heavy data
+        pass

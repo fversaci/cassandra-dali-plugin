@@ -45,7 +45,7 @@ def save_images(
         keyspace=keyspace,
         table_suffix=table_suffix,
     )(jobs)
-    
+
 
 # parse arguments
 if __name__ == "__main__":

@@ -33,9 +33,16 @@ $ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
 
 ## Dataset example
 
+### Classification
+
 See the following annotated example for details on how to use and
 optimize this plugin:
 - [Imagenette](examples/imagenette/)
+
+### Segmentation
+
+A (less) annotated example for segmentation can be found in:
+- [ADE20k](examples/ade20k/)
 
 ## Installation on a bare machine
 
