@@ -46,7 +46,7 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
 
  protected:
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
-                 const ::dali::workspace_t<::dali::CPUBackend> &ws) override {
+                 const ::dali::Workspace &ws) override {
     return false;
   }
 
@@ -60,7 +60,7 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
     }
   }
 
-  void RunImpl(::dali::workspace_t<dali::CPUBackend> &ws) override;
+  void RunImpl(::dali::Workspace &ws) override;
 
   void set_shard_sizes() {
     int dataset_size = uuids.size();
