@@ -12,7 +12,7 @@
 namespace crs4 {
 
 Cassandra::Cassandra(const ::dali::OpSpec &spec) :
-  ::dali::Operator<dali::CPUBackend>(spec),
+  ::dali::InputOperator<dali::CPUBackend>(spec),
   batch_size(spec.GetArgument<int>("max_batch_size")),
   cloud_config(spec.GetArgument<std::string>("cloud_config")),
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
@@ -26,6 +26,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   password(spec.GetArgument<std::string>("password")),
   use_ssl(spec.GetArgument<bool>("use_ssl")),
   ssl_certificate(spec.GetArgument<std::string>("ssl_certificate")),
+  prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   io_threads(spec.GetArgument<int>("io_threads")),
   copy_threads(spec.GetArgument<int>("copy_threads")),
   wait_threads(spec.GetArgument<int>("wait_threads")),
@@ -35,7 +36,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
-                        io_threads, 1, copy_threads,
+                        io_threads, prefetch_buffers, copy_threads,
                         wait_threads, comm_threads);
 }
 
@@ -51,10 +52,34 @@ void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
   batch_ldr->prefetch_batch(cass_uuids);
 }
 
+bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
+                          const ::dali::Workspace &ws) {
+  // link input data to uuids tensorlist
+  InputOperator<::dali::CPUBackend>::HandleDataAvailability();
+  uuids.Reset();
+  auto &thread_pool = ws.GetThreadPool();
+  ForwardCurrentData(uuids, thread_pool);
+
+  return false;
+}
+
+void Cassandra::fill_buffers(::dali::Workspace &ws) {
+  // start prefetching
+  for (int i=0; i < prefetch_buffers; ++i) {
+    prefetch_one(uuids);
+    auto &thread_pool = ws.GetThreadPool();
+    ForwardCurrentData(uuids, thread_pool);
+  }
+  buffers_empty = false;
+}
+  
 void Cassandra::RunImpl(::dali::Workspace &ws) {
-  const auto &input = ws.Input<dali::CPUBackend>(0);
-  prefetch_one(input);
+  if (buffers_empty) {
+    fill_buffers(ws);
+  }
   BatchImgLab batch = batch_ldr->blocking_get_batch();
+  // std::cout << (int) *(batch.second[0].data<dali::int32>()) << std::endl;
+  prefetch_one(uuids);
   // share features with output
   auto &features = ws.Output<::dali::CPUBackend>(0);
   features.ShareData(batch.first);
@@ -68,8 +93,8 @@ void Cassandra::RunImpl(::dali::Workspace &ws) {
 DALI_REGISTER_OPERATOR(crs4__cassandra, ::crs4::Cassandra, ::dali::CPU);
 
 DALI_SCHEMA(crs4__cassandra)
-.DocStr("Takes a list of UUIDs returns images and labels/masks")
-.NumInput(1)
+.DocStr("Reads UUIDs via feed_pipeline and returns images and labels/masks")
+.NumInput(0)
 .NumOutput(2)
 .AddOptionalArg<std::string>("cloud_config",
    R"(Cloud configuration for Cassandra (e.g., AstraDB))", "")
@@ -88,9 +113,13 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
 .AddOptionalArg<std::string>("ssl_certificate",
    R"(Optional SSL certificate)", "")
+.AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
 .AddOptionalArg("io_threads",
    R"(Number of io threads used by the Cassandra driver)", 2)
 .AddOptionalArg("copy_threads",
    R"(Number of threads copying data in parallel)", 2)
 .AddOptionalArg("wait_threads", R"(Parallelism for waiting threads)", 2)
-.AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2);
+.AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2)
+.AddOptionalArg("blocking", R"(block until the data is available)", true)
+.AddOptionalArg("no_copy", R"(should DALI copy the buffer when ``feed_input`` is called?)", false)
+.AddParent("InputOperatorBase");

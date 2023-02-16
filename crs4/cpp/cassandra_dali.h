@@ -11,13 +11,13 @@
 #include <map>
 #include <string>
 #include <cmath>
-#include "dali/pipeline/operator/operator.h"
+#include "dali/pipeline/operator/builtin/input_operator.h"
 #include "dali/operators/reader/reader_op.h"
 #include "./batch_loader.h"
 
 namespace crs4 {
 
-class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
+class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
  public:
   explicit Cassandra(const ::dali::OpSpec &spec);
 
@@ -31,18 +31,18 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
       delete batch_ldr;
     }
   }
-
+  
  protected:
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
-                 const ::dali::Workspace &ws) override {
-    return false;
-  }
+                 const ::dali::Workspace &ws) override;
 
   void RunImpl(::dali::Workspace &ws) override;
 
  private:
   void prefetch_one(const dali::TensorList<dali::CPUBackend>&);
+  void fill_buffers(::dali::Workspace &ws);
   // variables
+  dali::TensorList<dali::CPUBackend> uuids;
   std::string cloud_config;
   std::vector<std::string> cassandra_ips;
   int cassandra_port;
@@ -62,7 +62,7 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
   int comm_threads;
   bool use_ssl;
   std::string ssl_certificate;
-  std::vector<std::string>::iterator current;
+  bool buffers_empty = true;
 };
 
 }  // namespace crs4

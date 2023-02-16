@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader
+from cassandra_reader import get_cassandra_reader, get_uuids
 
 # dali
 from nvidia.dali.pipeline import pipeline_def
@@ -40,16 +40,24 @@ def read_data(
 
     :param keyspace: Cassandra keyspace (i.e., name of the dataset)
     :param table_suffix: Suffix for table names
-    :param reader: "cassandra" or "file"
+    :param reader: "cassandra" or "file" (default: cassandra)
     :param device_id: DALI device id (>=0 for GPUs)
     :param file_root: File root to be used (only when reading from the filesystem)
     """
+    bs = 128
     if reader == "cassandra":
+        uuids = get_uuids(
+            keyspace,
+            table_suffix,
+            batch_size=bs,
+        )
         chosen_reader = get_cassandra_reader(
             keyspace,
             table_suffix,
+            batch_size=bs,
             prefetch_buffers=16,
             io_threads=8,
+            name="Reader",
             # comm_threads=4,
             # copy_threads=4,
         )
@@ -69,11 +77,11 @@ def read_data(
 
     # create dali pipeline
     @pipeline_def(
-        batch_size=128,
+        batch_size=bs,
         num_threads=4,
         device_id=device_id,
         prefetch_queue_depth=2,
-        py_start_method="spawn",
+        # py_start_method="spawn",
         # enable_memory_stats=True,
     )
     def get_dali_pipeline():
@@ -100,17 +108,19 @@ def read_data(
     # DALI iterator
     ########################################################################
     if reader == "cassandra":
+        # feed uuids to the pipeline
+        for _ in range(11):
+            for u in uuids:
+                pl.feed_input("Reader[0]", u)
+
+    # produce images
+    if reader == "cassandra":
+        # consume uuids to get images from DB
         for _ in range(10):
-            with tqdm(total=74) as pbar:
-                while True:
-                    try:
-                        pl.run()
-                        pbar.update(1)
-                    except StopIteration:
-                        pl.reset()
-                        break
+            for _ in trange(len(uuids)):
+                pl.run()
+            pl.reset()
     else:
-        bs = pl.max_batch_size
         steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
         for _ in range(10):
             for _ in trange(steps):
@@ -123,7 +133,7 @@ def read_data(
     # ddl = DALIGenericIterator(
     #     [pl],
     #     ["data", "label"],
-    #     # reader_name="Reader", # works only with file reader
+    #     # reader_name="Reader", # thid option works only with file reader
     #     size=9469,
     #     last_batch_padded=True,
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP

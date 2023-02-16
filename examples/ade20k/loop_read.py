@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader
+from cassandra_reader import get_cassandra_reader, get_uuids
 
 # dali
 from nvidia.dali.pipeline import pipeline_def
@@ -41,18 +41,26 @@ def read_data(
 
     :param keyspace: Cassandra keyspace (i.e., name of the dataset)
     :param table_suffix: Suffix for table names
+    :param reader: "cassandra" or "file" (default: cassandra)
     :param device_id: DALI device id (>=0 for GPUs)
-    :param reader: cassandra or file to read from db or filesystem respectively (default: cassandra)
     :param image_root: File root for images (only when reading from the filesystem)
     :param mask_root: File root for masks (only when reading from the filesystem)
     """
+    bs = 128
     if reader == "cassandra":
+        uuids = get_uuids(
+            keyspace,
+            table_suffix,
+            batch_size=bs,
+        )
         db_reader = get_cassandra_reader(
             keyspace,
             table_suffix,
+            batch_size=bs,
             prefetch_buffers=16,
             io_threads=8,
             label_type="image",
+            name="Reader",
             # comm_threads=4,
             # copy_threads=4,
         )
@@ -79,10 +87,11 @@ def read_data(
 
     # create dali pipeline
     @pipeline_def(
-        batch_size=128,
+        batch_size=bs,
         num_threads=4,
         device_id=device_id,
-        # prefetch_queue_depth=2,
+        prefetch_queue_depth=2,
+        # py_start_method="spawn",
         # enable_memory_stats=True,
     )
     def get_dali_pipeline():
@@ -109,24 +118,27 @@ def read_data(
     # DALI iterator
     ########################################################################
     if reader == "cassandra":
-        for _ in range(10):
-            with tqdm(total=40) as pbar:
-                while True:
-                    try:
-                        pl.run()
-                        pbar.update(1)
-                    except StopIteration:
-                        pl.reset()
-                        break
-    else:
-        bs = pl.max_batch_size
-        steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
-        for _ in range(10):
-            for _ in trange(steps):
-                x, y = pl.run()
+        # feed uuids to the pipeline
+        for _ in range(11):
+            for u in uuids:
+                pl.feed_input("Reader[0]", u)
+
+    # produce images
+    # if reader == "cassandra":
+    #     # consume uuids to get images from DB
+    #     for _ in range(10):
+    #         for _ in trange(len(uuids)):
+    #             pl.run()
+    #         pl.reset()
+    # else:
+    #     steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
+    #     for _ in range(10):
+    #         for _ in trange(steps):
+    #             x, y = pl.run()
 
     ########################################################################
     # alternatively: use pytorch iterator
+    # (note: decode of images must be enabled)
     ########################################################################
     # ddl = DALIGenericIterator(
     #     [pl],

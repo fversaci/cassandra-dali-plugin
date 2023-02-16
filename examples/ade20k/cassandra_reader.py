@@ -16,7 +16,6 @@ import nvidia.dali.types as types
 import pathlib
 
 # varia
-import getpass
 import os
 import pickle
 import numpy as np
@@ -30,6 +29,7 @@ plugin_manager.load_library(plugin_path)
 def get_uuids(
     keyspace,
     table_suffix,
+    batch_size,
     id_col="patch_id",
     label_type="int",
     label_col="label",
@@ -71,7 +71,7 @@ def get_uuids(
     # init and return Cassandra reader
     uuids = stuff["row_keys"]
     print(f" {len(uuids)} images")
-    return uuids
+    return uuids_as_tensors(uuids, batch_size)
 
 
 def uuid2ints(uuid):
@@ -81,27 +81,18 @@ def uuid2ints(uuid):
     return (i1, i2)
 
 
-class ten_uuids:
-    def __init__(self, uuids, bs):
-        self.cow = 0
-        self.bs = bs
-        uuids = list(map(uuid2ints, uuids))  # convert uuids to ints
-        uuids = np.array(uuids, dtype=np.uint64)
-        uuids = np.pad(uuids, ((0, bs - len(uuids) % bs), (0, 0)), "edge")
-        uuids = uuids.reshape([-1, bs, 2])
-        self.uuids = uuids
-        self.num_batches = self.uuids.shape[0]
-
-    def __call__(self, offset):
-        if offset >= self.num_batches:
-            raise StopIteration()
-        r = self.uuids[offset]
-        return [r]
+def uuids_as_tensors(uuids, bs):
+    uuids = list(map(uuid2ints, uuids))  # convert uuids to ints
+    uuids = np.array(uuids, dtype=np.uint64)
+    uuids = np.pad(uuids, ((0, bs - len(uuids) % bs), (0, 0)), "edge")
+    uuids = uuids.reshape([-1, bs, 2])
+    return uuids
 
 
 def get_cassandra_reader(
     keyspace,
     table_suffix,
+    batch_size,
     id_col="patch_id",
     label_type="int",
     label_col="label",
@@ -110,6 +101,7 @@ def get_cassandra_reader(
     num_shards=1,
     io_threads=2,
     prefetch_buffers=2,
+    name="Reader",
     shuffle_after_epoch=True,
     comm_threads=2,
     copy_threads=2,
@@ -120,29 +112,14 @@ def get_cassandra_reader(
     # Read Cassandra parameters
     from private_data import CassConf as CC
 
-    uuids = get_uuids(
-        keyspace=keyspace,
-        table_suffix=table_suffix,
-        id_col=id_col,
-        label_type=label_type,
-        label_col=label_col,
-        data_col=data_col,
-        shard_id=shard_id,
-    )
     table = f"{keyspace}.data_{table_suffix}"
     if CC.cloud_config:
         connect_bundle = CC.cloud_config["secure_connect_bundle"]
     else:
         connect_bundle = None
-    fn_uuids = fn.external_source(
-        source=ten_uuids(uuids, 128),
-        num_outputs=1,
-        dtype=types.UINT64,
-        # parallel=True,
-        # prefetch_queue_depth=4,
-    )
+
     cassandra_reader = fn.crs4.cassandra(
-        fn_uuids,
+        name=name,
         cloud_config=connect_bundle,
         cassandra_ips=CC.cassandra_ips,
         cassandra_port=CC.cassandra_port,
@@ -152,6 +129,7 @@ def get_cassandra_reader(
         label_col=label_col,
         data_col=data_col,
         id_col=id_col,
+        prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
         comm_threads=comm_threads,
         copy_threads=copy_threads,

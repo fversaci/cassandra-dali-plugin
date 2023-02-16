@@ -6,7 +6,7 @@
 # python3 -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader
+from cassandra_reader import get_cassandra_reader, get_uuids
 
 import argparse
 import os
@@ -191,12 +191,11 @@ def to_python_float(t):
         return t[0]
 
 
-@pipeline_def(
-    py_start_method="spawn",
-)
+@pipeline_def
 def create_dali_pipeline(
     keyspace,
     table_suffix,
+    bs,
     crop,
     size,
     shard_id,
@@ -209,9 +208,10 @@ def create_dali_pipeline(
     copy_threads=2,
     wait_threads=2,
 ):
-    images, labels = get_cassandra_reader(
+    cass_reader = get_cassandra_reader(
         keyspace=keyspace,
         table_suffix=table_suffix,
+        batch_size=bs,
         shard_id=shard_id,
         num_shards=num_shards,
         prefetch_buffers=prefetch_buffers,
@@ -220,6 +220,7 @@ def create_dali_pipeline(
         copy_threads=copy_threads,
         wait_threads=wait_threads,
     )
+    images, labels = cass_reader
     dali_device = "cpu" if dali_cpu else "gpu"
     decoder_device = "cpu" if dali_cpu else "mixed"
     # ask nvJPEG to preallocate memory for the biggest sample in ImageNet for CPU and GPU to avoid reallocations in runtime
@@ -270,7 +271,7 @@ def create_dali_pipeline(
         mirror=mirror,
     )
     labels = labels.gpu()
-    return images, labels
+    return (images, labels)
 
 
 def main():
@@ -424,10 +425,16 @@ def main():
         val_size = 256
 
     # train pipe
+    uuids = get_uuids(
+        keyspace=args.keyspace,
+        table_suffix=args.train_table_suffix,
+        batch_size=args.batch_size,
+    )
     pipe = create_dali_pipeline(
         keyspace=args.keyspace,
         table_suffix=args.train_table_suffix,
         batch_size=args.batch_size,
+        bs=args.batch_size,
         num_threads=args.workers,
         device_id=args.local_rank,
         seed=12 + args.local_rank,
@@ -439,15 +446,24 @@ def main():
         is_training=True,
     )
     pipe.build()
+    for _ in range(1 + args.epochs):
+        for u in uuids:
+            pipe.feed_input("Reader[0]", u)
     train_loader = DALIClassificationIterator(
         pipe, size=9469, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     # val pipe
+    uuids = get_uuids(
+        keyspace=args.keyspace,
+        table_suffix=args.val_table_suffix,
+        batch_size=args.batch_size,
+    )
     pipe = create_dali_pipeline(
         keyspace=args.keyspace,
         table_suffix=args.val_table_suffix,
         batch_size=args.batch_size,
+        bs=args.batch_size,
         num_threads=args.workers,
         device_id=args.local_rank,
         seed=12 + args.local_rank,
@@ -459,6 +475,9 @@ def main():
         is_training=False,
     )
     pipe.build()
+    for _ in range(1 + args.epochs):
+        for u in uuids:
+            pipe.feed_input("Reader[0]", u)
     val_loader = DALIClassificationIterator(
         pipe, size=3925, last_batch_policy=LastBatchPolicy.PARTIAL
     )
