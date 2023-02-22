@@ -57,6 +57,7 @@ bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
   // link input data to uuids tensorlist
   InputOperator<::dali::CPUBackend>::HandleDataAvailability();
   uuids.Reset();
+  uuids.set_pinned(false);
   auto &thread_pool = ws.GetThreadPool();
   ForwardCurrentData(uuids, thread_pool);
 

@@ -31,6 +31,13 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
       delete batch_ldr;
     }
   }
+
+  int NextBatchSize() override {
+    return batch_size;
+  }
+
+  void Advance() override {
+  }
   
  protected:
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
