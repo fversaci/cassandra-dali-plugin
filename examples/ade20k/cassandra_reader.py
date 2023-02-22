@@ -70,8 +70,9 @@ def get_uuids(
             stuff = pickle.load(f)
     # init and return Cassandra reader
     uuids = stuff["row_keys"]
-    print(f" {len(uuids)} images")
-    return uuids_as_tensors(uuids, batch_size)
+    real_sz = len(uuids)
+    print(f" {real_sz} images")
+    return uuids_as_tensors(uuids, batch_size), real_sz
 
 
 def uuid2ints(uuid):

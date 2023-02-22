@@ -425,7 +425,7 @@ def main():
         val_size = 256
 
     # train pipe
-    uuids = get_uuids(
+    uuids, real_sz = get_uuids(
         keyspace=args.keyspace,
         table_suffix=args.train_table_suffix,
         batch_size=args.batch_size,
@@ -450,11 +450,11 @@ def main():
         for u in uuids:
             pipe.feed_input("Reader[0]", u)
     train_loader = DALIClassificationIterator(
-        pipe, size=9469, last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     # val pipe
-    uuids = get_uuids(
+    uuids, real_sz = get_uuids(
         keyspace=args.keyspace,
         table_suffix=args.val_table_suffix,
         batch_size=args.batch_size,
@@ -479,7 +479,7 @@ def main():
         for u in uuids:
             pipe.feed_input("Reader[0]", u)
     val_loader = DALIClassificationIterator(
-        pipe, size=3925, last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     if args.evaluate:

@@ -48,7 +48,7 @@ def read_data(
     """
     bs = 128
     if reader == "cassandra":
-        uuids = get_uuids(
+        uuids, real_sz = get_uuids(
             keyspace,
             table_suffix,
             batch_size=bs,
@@ -124,17 +124,17 @@ def read_data(
                 pl.feed_input("Reader[0]", u)
 
     # produce images
-    # if reader == "cassandra":
-    #     # consume uuids to get images from DB
-    #     for _ in range(10):
-    #         for _ in trange(len(uuids)):
-    #             pl.run()
-    #         pl.reset()
-    # else:
-    #     steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
-    #     for _ in range(10):
-    #         for _ in trange(steps):
-    #             x, y = pl.run()
+    if reader == "cassandra":
+        # consume uuids to get images from DB
+        for _ in range(10):
+            for _ in trange(len(uuids)):
+                pl.run()
+            pl.reset()
+    else:
+        steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
+        for _ in range(10):
+            for _ in trange(steps):
+                x, y = pl.run()
 
     ########################################################################
     # alternatively: use pytorch iterator
@@ -144,7 +144,7 @@ def read_data(
     #     [pl],
     #     ["data", "label"],
     #     # reader_name="Reader", # works only with file reader
-    #     size=5000,
+    #     size=real_sz,
     #     last_batch_padded=True,
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )

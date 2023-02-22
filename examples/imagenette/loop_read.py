@@ -46,7 +46,7 @@ def read_data(
     """
     bs = 128
     if reader == "cassandra":
-        uuids = get_uuids(
+        uuids, real_sz = get_uuids(
             keyspace,
             table_suffix,
             batch_size=bs,
@@ -134,7 +134,7 @@ def read_data(
     #     [pl],
     #     ["data", "label"],
     #     # reader_name="Reader", # thid option works only with file reader
-    #     size=9469,
+    #     size=real_sz,
     #     last_batch_padded=True,
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )
