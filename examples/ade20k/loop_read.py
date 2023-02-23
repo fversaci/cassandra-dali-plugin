@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, get_uuids
+from cassandra_reader import get_cassandra_reader, get_uuids, get_shard
 
 # dali
 from nvidia.dali.pipeline import pipeline_def
@@ -48,11 +48,11 @@ def read_data(
     """
     bs = 128
     if reader == "cassandra":
-        uuids, real_sz = get_uuids(
+        uuids = get_uuids(
             keyspace,
             table_suffix,
-            batch_size=bs,
         )
+        uuids, real_sz = get_shard(uuids, batch_size=bs)
         db_reader = get_cassandra_reader(
             keyspace,
             table_suffix,

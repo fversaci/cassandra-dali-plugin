@@ -19,6 +19,8 @@ import pathlib
 import os
 import pickle
 import numpy as np
+import random
+import math
 
 plugin_path = pathlib.Path(crs4.cassandra_utils.__path__[0])
 plugin_path = plugin_path.parent.parent.joinpath("libcrs4cassandra.so")
@@ -29,7 +31,6 @@ plugin_manager.load_library(plugin_path)
 def get_uuids(
     keyspace,
     table_suffix,
-    batch_size,
     id_col="patch_id",
     label_type="int",
     label_col="label",
@@ -72,7 +73,35 @@ def get_uuids(
     uuids = stuff["row_keys"]
     real_sz = len(uuids)
     print(f" {real_sz} images")
-    return uuids_as_tensors(uuids, batch_size), real_sz
+    return uuids
+
+
+def get_shard(
+    uuids,
+    batch_size,
+    epoch=0,
+    shard_id=0,
+    num_shards=1,
+    seed=0,
+):
+    random.seed(seed)
+    for _ in range(epoch):
+        random.seed(random.getrandbits(32))
+    random.shuffle(uuids)
+    real_sz = len(uuids)
+    uuids = uuids_as_tensors(uuids, batch_size)
+    pad_sz = uuids.size / 2  # padded size
+    del_sz = pad_sz - real_sz
+    num_batches = uuids.shape[0]
+    shard_size = math.ceil(num_batches / num_shards)
+    shard_begin = math.floor(shard_id * num_batches / num_shards)
+    shard_end = shard_begin + shard_size
+    shard_uuids = uuids[shard_begin:shard_end]
+    shard_sz = shard_uuids.size / 2
+    if shard_id == num_shards - 1:
+        shard_sz -= del_sz
+
+    return shard_uuids, shard_sz
 
 
 def uuid2ints(uuid):
@@ -98,8 +127,6 @@ def get_cassandra_reader(
     label_type="int",
     label_col="label",
     data_col="data",
-    shard_id=0,
-    num_shards=1,
     io_threads=2,
     prefetch_buffers=2,
     name="Reader",

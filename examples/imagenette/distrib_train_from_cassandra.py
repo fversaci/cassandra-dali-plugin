@@ -6,7 +6,7 @@
 # python3 -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, get_uuids
+from cassandra_reader import get_cassandra_reader, get_uuids, get_shard
 
 import argparse
 import os
@@ -198,8 +198,6 @@ def create_dali_pipeline(
     bs,
     crop,
     size,
-    shard_id,
-    num_shards,
     dali_cpu=False,
     is_training=True,
     prefetch_buffers=8,
@@ -212,8 +210,6 @@ def create_dali_pipeline(
         keyspace=keyspace,
         table_suffix=table_suffix,
         batch_size=bs,
-        shard_id=shard_id,
-        num_shards=num_shards,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
         comm_threads=comm_threads,
@@ -425,10 +421,10 @@ def main():
         val_size = 256
 
     # train pipe
-    uuids, real_sz = get_uuids(
+    all_uuids = get_uuids(
         keyspace=args.keyspace,
         table_suffix=args.train_table_suffix,
-        batch_size=args.batch_size,
+        shard_id=args.local_rank,
     )
     pipe = create_dali_pipeline(
         keyspace=args.keyspace,
@@ -441,12 +437,18 @@ def main():
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
-        shard_id=args.local_rank,
-        num_shards=args.world_size,
         is_training=True,
     )
     pipe.build()
-    for _ in range(1 + args.epochs):
+    print("Feeding pipeline...")
+    for ep in range(1 + args.epochs):
+        uuids, real_sz = get_shard(
+            all_uuids,
+            batch_size=args.batch_size,
+            epoch=ep,
+            shard_id=args.local_rank,
+            num_shards=args.world_size,
+        )
         for u in uuids:
             pipe.feed_input("Reader[0]", u)
     train_loader = DALIClassificationIterator(
@@ -454,10 +456,10 @@ def main():
     )
 
     # val pipe
-    uuids, real_sz = get_uuids(
+    all_uuids = get_uuids(
         keyspace=args.keyspace,
         table_suffix=args.val_table_suffix,
-        batch_size=args.batch_size,
+        shard_id=args.local_rank,
     )
     pipe = create_dali_pipeline(
         keyspace=args.keyspace,
@@ -470,12 +472,18 @@ def main():
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
-        shard_id=args.local_rank,
-        num_shards=args.world_size,
         is_training=False,
     )
     pipe.build()
-    for _ in range(1 + args.epochs):
+    print("Feeding pipeline...")
+    for ep in range(1 + args.epochs):
+        uuids, real_sz = get_shard(
+            all_uuids,
+            batch_size=args.batch_size,
+            epoch=ep,
+            shard_id=args.local_rank,
+            num_shards=args.world_size,
+        )
         for u in uuids:
             pipe.feed_input("Reader[0]", u)
     val_loader = DALIClassificationIterator(
