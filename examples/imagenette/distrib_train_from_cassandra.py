@@ -421,7 +421,7 @@ def main():
         val_size = 256
 
     # train pipe
-    all_uuids = get_uuids(
+    train_uuids = get_uuids(
         keyspace=args.keyspace,
         table_suffix=args.train_table_suffix,
         shard_id=args.local_rank,
@@ -440,23 +440,23 @@ def main():
         is_training=True,
     )
     pipe.build()
-    print("Feeding pipeline...")
-    for ep in range(1 + args.epochs):
-        uuids, real_sz = get_shard(
-            all_uuids,
-            batch_size=args.batch_size,
-            epoch=ep,
-            shard_id=args.local_rank,
-            num_shards=args.world_size,
-        )
-        for u in uuids:
-            pipe.feed_input("Reader[0]", u)
+
+    # pre-feeding pipeline
+    uuids, real_sz = get_shard(
+        train_uuids,
+        batch_size=args.batch_size,
+        epoch=0,
+        shard_id=args.local_rank,
+        num_shards=args.world_size,
+    )
+    for u in uuids:
+        pipe.feed_input("Reader[0]", u)
     train_loader = DALIClassificationIterator(
         pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     # val pipe
-    all_uuids = get_uuids(
+    val_uuids = get_uuids(
         keyspace=args.keyspace,
         table_suffix=args.val_table_suffix,
         shard_id=args.local_rank,
@@ -475,17 +475,17 @@ def main():
         is_training=False,
     )
     pipe.build()
-    print("Feeding pipeline...")
-    for ep in range(1 + args.epochs):
-        uuids, real_sz = get_shard(
-            all_uuids,
-            batch_size=args.batch_size,
-            epoch=ep,
-            shard_id=args.local_rank,
-            num_shards=args.world_size,
-        )
-        for u in uuids:
-            pipe.feed_input("Reader[0]", u)
+
+    # pre-feeding pipeline
+    uuids, real_sz = get_shard(
+        val_uuids,
+        batch_size=args.batch_size,
+        epoch=0,
+        shard_id=args.local_rank,
+        num_shards=args.world_size,
+    )
+    for u in uuids:
+        pipe.feed_input("Reader[0]", u)
     val_loader = DALIClassificationIterator(
         pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
@@ -496,6 +496,27 @@ def main():
 
     total_time = AverageMeter()
     for epoch in range(args.start_epoch, args.epochs):
+        # pre-feeding train pipeline
+        uuids, real_sz = get_shard(
+            train_uuids,
+            batch_size=args.batch_size,
+            epoch=1 + epoch,
+            shard_id=args.local_rank,
+            num_shards=args.world_size,
+        )
+        for u in uuids:
+            train_loader._pipes[0].feed_input("Reader[0]", u)
+        # pre-feeding val  pipeline
+        uuids, real_sz = get_shard(
+            val_uuids,
+            batch_size=args.batch_size,
+            epoch=1 + epoch,
+            shard_id=args.local_rank,
+            num_shards=args.world_size,
+        )
+        for u in uuids:
+            val_loader._pipes[0].feed_input("Reader[0]", u)
+
         # train for one epoch
         avg_train_time = train(train_loader, model, criterion, optimizer, epoch)
         total_time.update(avg_train_time)
