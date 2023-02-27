@@ -87,7 +87,7 @@ def read_data(
     def get_dali_pipeline():
         images, labels = chosen_reader
         ####################################################################
-        # - do not resize (images have already been already resized)
+        # - do not resize (images have already been resized)
         # images = fn_decode(images)
         # images = fn_normalize(images)
         ####################################################################
