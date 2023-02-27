@@ -59,7 +59,7 @@ bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
   uuids.Reset();
   uuids.set_pinned(false);
   auto &thread_pool = ws.GetThreadPool();
-  ForwardCurrentData(uuids, thread_pool);
+  ForwardCurrentData(uuids, null_data_id, thread_pool);
 
   return false;
 }
@@ -69,7 +69,7 @@ void Cassandra::fill_buffers(::dali::Workspace &ws) {
   for (int i=0; i < prefetch_buffers; ++i) {
     prefetch_one(uuids);
     auto &thread_pool = ws.GetThreadPool();
-    ForwardCurrentData(uuids, thread_pool);
+    ForwardCurrentData(uuids, null_data_id, thread_pool);
   }
   buffers_empty = false;
 }

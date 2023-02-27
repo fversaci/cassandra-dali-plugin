@@ -128,7 +128,7 @@ RUN chown -R user.user '/home/user/cassandra-dali-plugin'
 RUN mkdir /data
 RUN chown user.user '/data'
 # upgrade DALI
-RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110
+RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110==1.23
 # install plugin
 WORKDIR /home/user/cassandra-dali-plugin
 RUN pip3 install .

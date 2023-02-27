@@ -38,6 +38,21 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
 
   void Advance() override {
   }
+
+
+  const ::dali::TensorLayout& in_layout() const override {
+    return in_layout_;
+  }
+
+
+  int in_ndim() const override {
+    return 2;
+  }
+
+
+  ::dali::DALIDataType in_dtype() const override {
+    return ::dali::DALIDataType::DALI_UINT64;
+  }
   
  protected:
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
@@ -70,6 +85,8 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   bool use_ssl;
   std::string ssl_certificate;
   bool buffers_empty = true;
+  std::optional<std::string> null_data_id = std::nullopt;
+  ::dali::TensorLayout in_layout_ = "B";  // Byte stream
 };
 
 }  // namespace crs4
