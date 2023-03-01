@@ -5,12 +5,10 @@
 # https://opensource.org/licenses/MIT.
 
 # To insert in DB, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG
-# --keyspace=imagenette --split-subdir=train --table-suffix=train_256_jpg
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split-subdir=train --table-suffix=train_256_jpg
 
 # To save files in a directory, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG
-# --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
 
 
 from getpass import getpass
