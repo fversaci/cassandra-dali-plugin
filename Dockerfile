@@ -124,6 +124,7 @@ RUN \
 
 COPY . /home/user/cassandra-dali-plugin
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'
+RUN chown -R user.user "/spark/"
 # create data dir
 RUN mkdir /data
 RUN chown user.user '/data'

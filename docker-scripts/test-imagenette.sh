@@ -5,7 +5,7 @@ pgrep -f cassandra || /cassandra/bin/cassandra 2>&1 | grep "state jump to NORMAL
     (/cassandra/bin/cqlsh -e "SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name='imagenette';" && \
          /cassandra/bin/cqlsh -e "DROP KEYSPACE imagenette;") || true && \
     /cassandra/bin/cqlsh -f create_tables.cql && \
-    pgrep -f spark || (sudo /spark/sbin/start-master.sh  && sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077) && \
+    pgrep -f spark || (/spark/sbin/start-master.sh  && /spark/sbin/start-worker.sh spark://$HOSTNAME:7077) && \
     /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
                             --py-files extract_common.py extract_spark.py /tmp/imagenette2-320/ \
                             --split-subdir=train --table-suffix=train_256_jpg && \
