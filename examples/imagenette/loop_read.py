@@ -31,7 +31,7 @@ from tqdm import trange, tqdm
 def read_data(
     *,
     keyspace="imagenette",
-    table_suffix="train_224_jpg",
+    table_suffix="train_256_jpg",
     reader="cassandra",
     device_id=types.CPU_ONLY_DEVICE_ID,
     file_root=None,
@@ -87,11 +87,7 @@ def read_data(
     def get_dali_pipeline():
         images, labels = chosen_reader
         ####################################################################
-        # - do not resize (images have already been resized)
-        # images = fn_decode(images)
-        # images = fn_normalize(images)
-        ####################################################################
-        # - alternatively: resize images (if using originals)
+        # - decode, resize and crop, must use GPU (e.g., --device-id=0)
         # images = fn_image_random_crop(images)
         # images = fn_resize(images)
         # images = fn_crop_normalize(images)

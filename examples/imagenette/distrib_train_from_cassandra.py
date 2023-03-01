@@ -60,14 +60,14 @@ def parse():
         "--train-table-suffix",
         metavar="SUFF",
         default="train_orig",
-        choices=["train_orig", "train_224_jpg"],
+        choices=["train_orig", "train_256_jpg", "train_512_jpg"],
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(
         "--val-table-suffix",
         metavar="SUFF",
         default="val_orig",
-        choices=["val_orig", "val_224_jpg"],
+        choices=["val_orig", "val_256_jpg", "val_512_jpg"],
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(

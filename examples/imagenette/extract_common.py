@@ -14,10 +14,9 @@ import os
 import os
 import uuid
 
-def_size = 224
+def_size = 256
 
-
-def get_data(img_format="JPEG", img_size=def_size):
+def get_data(img_format="JPEG", img_size=def_size, crop=False):
     # img_format:
     # - UNCHANGED: unchanged input files (no resizing and cropping)
     # - JPEG: compressed JPEG
@@ -28,19 +27,20 @@ def get_data(img_format="JPEG", img_size=def_size):
             # just return the unchanged raw file
             with open(path, "rb") as fh:
                 out_stream = io.BytesIO(fh.read())
-        else:  # resize and crop
+        else:  # resize and, optionally, center crop
             img = Image.open(path).convert("RGB")
             sz = np.array(img.size)
             min_d = sz.min()
             sc = float(img_size) / min_d
             new_sz = (sc * sz).astype(int)
             img = img.resize(new_sz)
-            off = (new_sz.max() - img_size) // 2
-            if new_sz[0] > new_sz[1]:
-                box = [off, 0, off + img_size, img_size]
-            else:
-                box = [0, off, img_size, off + img_size]
-            img = img.crop(box)
+            if crop:
+                off = (new_sz.max() - img_size) // 2
+                if new_sz[0] > new_sz[1]:
+                    box = [off, 0, off + img_size, img_size]
+                else:
+                    box = [0, off, img_size, off + img_size]
+                img = img.crop(box)
             # save to stream
             out_stream = io.BytesIO()
             img.save(out_stream, format=img_format)

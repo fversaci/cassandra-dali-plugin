@@ -42,7 +42,7 @@ CREATE TABLE imagenette.metadata_val_orig(
 // Tables with center-cropped JPEGs
 
 // Mapping patch uuid to data and label
-CREATE TABLE imagenette.data_train_224_jpg(
+CREATE TABLE imagenette.data_train_256_jpg(
   patch_id uuid,
   label int,
   data blob,
@@ -50,7 +50,7 @@ CREATE TABLE imagenette.data_train_224_jpg(
 );
 
 // Mapping patch uuid to metadata
-CREATE TABLE imagenette.metadata_train_224_jpg(
+CREATE TABLE imagenette.metadata_train_256_jpg(
   label int,
   or_label text,
   or_split text,
@@ -59,7 +59,7 @@ CREATE TABLE imagenette.metadata_train_224_jpg(
 );
 
 // Mapping patch uuid to data and label
-CREATE TABLE imagenette.data_val_224_jpg(
+CREATE TABLE imagenette.data_val_256_jpg(
   patch_id uuid,
   label int,
   data blob,
@@ -67,7 +67,7 @@ CREATE TABLE imagenette.data_val_224_jpg(
 );
 
 // Mapping patch uuid to metadata
-CREATE TABLE imagenette.metadata_val_224_jpg(
+CREATE TABLE imagenette.metadata_val_256_jpg(
   label int,
   or_label text,
   or_split text,
