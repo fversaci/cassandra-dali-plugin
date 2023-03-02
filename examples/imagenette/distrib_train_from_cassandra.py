@@ -441,7 +441,7 @@ def main():
     )
     pipe.build()
 
-    # pre-feeding pipeline
+    # pre-feeding train pipeline
     uuids, real_sz = get_shard(
         train_uuids,
         batch_size=args.batch_size,
@@ -476,7 +476,7 @@ def main():
     )
     pipe.build()
 
-    # pre-feeding pipeline
+    # pre-feeding val pipeline
     uuids, real_sz = get_shard(
         val_uuids,
         batch_size=args.batch_size,
