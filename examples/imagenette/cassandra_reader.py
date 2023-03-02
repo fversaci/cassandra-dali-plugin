@@ -84,9 +84,7 @@ def get_shard(
     num_shards=1,
     seed=0,
 ):
-    random.seed(seed)
-    for _ in range(epoch):
-        random.seed(random.getrandbits(32))
+    random.seed(seed + epoch)
     random.shuffle(uuids)
     real_sz = len(uuids)
     uuids = uuids_as_tensors(uuids, batch_size)
