@@ -5,7 +5,8 @@
 # https://opensource.org/licenses/MIT.
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, get_uuids, get_shard
+from cassandra_reader import get_cassandra_reader, get_uuids
+from crs4.cassandra_utils import get_shard
 
 # dali
 from nvidia.dali.pipeline import pipeline_def

@@ -16,6 +16,7 @@ import uuid
 
 def_size = 256
 
+
 def get_data(img_format="JPEG", img_size=def_size, crop=False):
     # img_format:
     # - UNCHANGED: unchanged input files (no resizing and cropping)
