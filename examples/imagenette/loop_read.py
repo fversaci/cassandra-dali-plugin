@@ -36,6 +36,7 @@ def read_data(
     reader="cassandra",
     device_id=types.CPU_ONLY_DEVICE_ID,
     file_root=None,
+    epochs=10,
 ):
     """Read images from DB or filesystem, in a tight loop
 
@@ -101,25 +102,28 @@ def read_data(
     pl = get_dali_pipeline()
     pl.build()
 
+    if reader == "cassandra":
+        # feed epoch 0 uuid to the pipeline
+        for u in uuids:
+            pl.feed_input("Reader[0]", u)
+
     ########################################################################
     # DALI iterator
     ########################################################################
-    if reader == "cassandra":
-        # feed uuids to the pipeline
-        for _ in range(11):
-            for u in uuids:
-                pl.feed_input("Reader[0]", u)
-
     # produce images
     if reader == "cassandra":
         # consume uuids to get images from DB
-        for _ in range(10):
+        for _ in range(epochs):
+            # feed next epoch to the pipeline
+            for u in uuids:
+                pl.feed_input("Reader[0]", u)
+            # read data for current epoch
             for _ in trange(len(uuids)):
                 pl.run()
             pl.reset()
     else:
         steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
-        for _ in range(10):
+        for _ in range(epochs):
             for _ in trange(steps):
                 x, y = pl.run()
 
@@ -135,7 +139,12 @@ def read_data(
     #     last_batch_padded=True,
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )
-    # for _ in range(10):
+    # for _ in range(epochs):
+    #     # feed next epoch to the pipeline
+    #     if reader == "cassandra":
+    #         for u in uuids:
+    #             pl.feed_input("Reader[0]", u)
+    #     # consume data
     #     for data in tqdm(ddl):
     #         x, y = data[0]["data"], data[0]["label"]
     #     ddl.reset()  # rewind data loader
