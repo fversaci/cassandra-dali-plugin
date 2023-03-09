@@ -39,7 +39,7 @@ $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --table-suff
 $ python3 loop_read.py --table-suffix=train_256_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --table-suffix=train_256_jpg --device-id=0
+$ python3 loop_read.py --table-suffix=train_256_jpg --use-gpu
 ```
 
 ## Compare with DALI fn.readers.file
@@ -55,7 +55,7 @@ $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --target-dir
 $ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg --device-id=0
+$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg --use-gpu
 ```
 
 ## Storing the unchanged images in the DB (no resize)
@@ -70,7 +70,7 @@ $ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-
 $ python3 loop_read.py --table-suffix=train_orig
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --table-suffix=train_orig --device-id=0
+$ python3 loop_read.py --table-suffix=train_orig --use-gpu
 ```
 
 ## Insert Imagenet dataset in parallel (with Apache Spark)

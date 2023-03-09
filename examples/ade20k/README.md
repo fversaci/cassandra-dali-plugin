@@ -46,7 +46,7 @@ $ python3 extract_serial.py /data/ade20k/images/training/ /data/ade20k/annotatio
 $ python3 loop_read.py --table-suffix=orig
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --table-suffix=orig --device-id=0
+$ python3 loop_read.py --table-suffix=orig --use-gpu
 ```
 
 ## Compare with DALI fn.readers.file
@@ -58,5 +58,5 @@ using the standard DALI file reader.
 $ python3 loop_read.py --reader=file --image-root=/data/ade20k/images/ --mask-root=/data/ade20k/annotations/
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --reader=file --image-root=/data/ade20k/images/ --mask-root=/data/ade20k/annotations/ --device-id=0
+$ python3 loop_read.py --reader=file --image-root=/data/ade20k/images/ --mask-root=/data/ade20k/annotations/ --use-gpu
 ```
