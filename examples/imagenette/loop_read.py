@@ -28,13 +28,20 @@ from fn_shortcuts import (
 from clize import run
 from tqdm import trange, tqdm
 
+# supporting torchrun
+import os
+
+global_rank = int(os.getenv("RANK", default=0))
+local_rank = int(os.getenv("LOCAL_RANK", default=0))
+world_size = int(os.getenv("WORLD_SIZE", default=1))
+
 
 def read_data(
     *,
     keyspace="imagenette",
     table_suffix="train_256_jpg",
     reader="cassandra",
-    device_id=types.CPU_ONLY_DEVICE_ID,
+    use_gpu=False,
     file_root=None,
     epochs=10,
 ):
@@ -43,16 +50,27 @@ def read_data(
     :param keyspace: Cassandra keyspace (i.e., name of the dataset)
     :param table_suffix: Suffix for table names
     :param reader: "cassandra" or "file" (default: cassandra)
-    :param device_id: DALI device id (>=0 for GPUs)
+    :param use_gpu: enable output to GPU (default: False)
     :param file_root: File root to be used (only when reading from the filesystem)
     """
+    if use_gpu:
+        device_id = local_rank
+    else:
+        device_id = types.CPU_ONLY_DEVICE_ID
+
     bs = 128
     if reader == "cassandra":
         uuids = get_uuids(
             keyspace,
             table_suffix,
+            shard_id=local_rank,
         )
-        uuids, real_sz = get_shard(uuids, batch_size=bs)
+        uuids, real_sz = get_shard(
+            uuids,
+            batch_size=bs,
+            shard_id=global_rank,
+            num_shards=world_size,
+        )
         chosen_reader = get_cassandra_reader(
             keyspace,
             table_suffix,
