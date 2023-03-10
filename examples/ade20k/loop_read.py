@@ -27,6 +27,7 @@ from fn_shortcuts import (
 # varia
 from clize import run
 from tqdm import trange, tqdm
+import math
 
 # supporting torchrun
 import os
@@ -90,6 +91,9 @@ def read_data(
         file_reader = fn.readers.file(
             file_root=image_root,
             name="Reader",
+            shard_id=global_rank,
+            num_shards=world_size,
+            pad_last_batch=True,
             # speed up reading
             prefetch_queue_depth=2,
             dont_use_mmap=True,
@@ -97,6 +101,9 @@ def read_data(
         )
         mask_reader = fn.readers.file(
             file_root=mask_root,
+            shard_id=global_rank,
+            num_shards=world_size,
+            pad_last_batch=True,
             # speed up reading
             prefetch_queue_depth=2,
             dont_use_mmap=True,
@@ -153,7 +160,8 @@ def read_data(
                 pl.run()
             pl.reset()
     else:
-        steps = (pl.epoch_size()["Reader"] + bs - 1) // bs
+        steps = pl.epoch_size()["Reader"] / (bs*world_size)
+        steps = math.ceil(steps)
         for _ in range(epochs):
             for _ in trange(steps):
                 x, y = pl.run()

@@ -49,7 +49,7 @@ $ python3 loop_read.py --table-suffix=orig
 $ python3 loop_read.py --table-suffix=orig --use-gpu
 
 # - Sharded, tight loop data loading test, using 2 processes via torchrun
-$ torchrun --nproc_per_node=2 python3 loop_read.py --table-suffix=orig
+$ torchrun --nproc_per_node=2 loop_read.py --table-suffix=orig
 ```
 
 ## Compare with DALI fn.readers.file
@@ -62,4 +62,7 @@ $ python3 loop_read.py --reader=file --image-root=/data/ade20k/images/ --mask-ro
 
 # - Tight loop data loading test in GPU memory (GPU:0)
 $ python3 loop_read.py --reader=file --image-root=/data/ade20k/images/ --mask-root=/data/ade20k/annotations/ --use-gpu
+
+# - Sharded, tight loop data loading test, using 2 processes via torchrun
+$ torchrun --nproc_per_node=2 loop_read.py --reader=file --image-root=/data/ade20k/images/ --mask-root=/data/ade20k/annotations/
 ```
