@@ -47,6 +47,9 @@ $ python3 loop_read.py --table-suffix=orig
 
 # - Tight loop data loading test in GPU memory (GPU:0)
 $ python3 loop_read.py --table-suffix=orig --use-gpu
+
+# - Sharded, tight loop data loading test, using 2 processes via torchrun
+$ torchrun --nproc_per_node=2 python3 loop_read.py --table-suffix=orig
 ```
 
 ## Compare with DALI fn.readers.file
