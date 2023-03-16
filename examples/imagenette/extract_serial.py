@@ -5,12 +5,10 @@
 # https://opensource.org/licenses/MIT.
 
 # To insert in DB, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG
-# --keyspace=imagenette --split-subdir=train --table-suffix=train_224_jpg
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split-subdir=train --table-suffix=train_256_jpg
 
 # To save files in a directory, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG
-# --split-subdir=train --target-dir=/data/imagenette/train_224_jpg
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
 
 
 from getpass import getpass
@@ -23,12 +21,12 @@ def save_images(
     *,
     img_format="JPEG",
     keyspace="imagenette",
-    table_suffix="train_224_jpg",
+    table_suffix="train_256_jpg",
     split_subdir="train",
     target_dir=None,
-    img_size=224,
+    img_size=256,
 ):
-    """Save center-cropped images to Cassandra DB or directory
+    """Save resized images to Cassandra DB or directory
 
     :param src_dir: Input directory for Imagenette
     :param img_format: Format of output images

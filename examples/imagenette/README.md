@@ -21,10 +21,10 @@ $ /cassandra/bin/cassandra
 Note that the shell prompt is immediately returned.  Wait until `state
 jump to NORMAL` is shown (about 1 minute).
 
-## Resized and center-cropped dataset
-The following commands will create a resized and center-cropped (to
-224x224 pixels) dataset in Cassandra and use the plugin to read the
-images in NVIDIA DALI.
+## Resized dataset
+The following commands will create a resized dataset in Cassandra
+(with minimum dimension equal to 256 pixels) and use the plugin to
+read the images in NVIDIA DALI.
 
 ```bash
 # - Create the tables in the Cassandra DB
@@ -32,14 +32,17 @@ $ cd examples/imagenette/
 $ /cassandra/bin/cqlsh -f create_tables.cql
 
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --table-suffix=train_224_jpg
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --table-suffix=val_224_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --table-suffix=train_256_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --table-suffix=val_256_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --table-suffix=train_224_jpg
+$ python3 loop_read.py --table-suffix=train_256_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --table-suffix=train_224_jpg --device-id=0
+$ python3 loop_read.py --table-suffix=train_256_jpg --use-gpu
+
+# - Sharded, tight loop data loading test, using 2 processes via torchrun
+$ torchrun --nproc_per_node=2 loop_read.py --table-suffix=train_256_jpg
 ```
 
 ## Compare with DALI fn.readers.file
@@ -47,15 +50,18 @@ The same scripts can be used to save the pre-processed images in the
 filesystem and to read them using the standard DALI file reader.
 
 ```bash
-# - Save the center-cropped files in the filesystem
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --target-dir=/data/imagenette/train_224_jpg
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --target-dir=/data/imagenette/val_224_jpg
+# - Save the resized files in the filesystem
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --target-dir=/data/imagenette/val_256_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_224_jpg
+$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_224_jpg --device-id=0
+$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg --use-gpu
+
+# - Sharded, tight loop data loading test, using 2 processes via torchrun
+$ torchrun --nproc_per_node=2 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg
 ```
 
 ## Storing the unchanged images in the DB (no resize)
@@ -70,7 +76,7 @@ $ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-
 $ python3 loop_read.py --table-suffix=train_orig
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --table-suffix=train_orig --device-id=0
+$ python3 loop_read.py --table-suffix=train_orig --use-gpu
 ```
 
 ## Insert Imagenet dataset in parallel (with Apache Spark)
@@ -86,8 +92,8 @@ parallel, using Apache Spark (pre-installed in the Docker container).
 
 ```bash
 # - Start Spark master+worker
-$ sudo /spark/sbin/start-master.sh
-$ sudo /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
+$ /spark/sbin/start-master.sh
+$ /spark/sbin/start-worker.sh spark://$HOSTNAME:7077
 
 # - Create the tables in the Cassandra DB
 $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
@@ -95,13 +101,13 @@ $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 # - Fill the tables in parallel (10 jobs) with Spark
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --keyspace=imagenet --split-subdir=train --table-suffix=train_224_jpg
+  --keyspace=imagenet --split-subdir=train --table-suffix=train_256_jpg
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --keyspace=imagenet --split-subdir=val --table-suffix=val_224_jpg
+  --keyspace=imagenet --split-subdir=val --table-suffix=val_256_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --keyspace=imagenet --table-suffix=train_224_jpg
+$ python3 loop_read.py --keyspace=imagenet --table-suffix=train_256_jpg
 
 ```
 
@@ -121,11 +127,12 @@ removing any possibile bottleneck.
 - `copy_threads`: number of threads copying the data. Default: 2.
 
 As an extreme example, when raw loading, without any decoding or
-processing, 224x224 JPEG images with `batch_size=128`, over a 25 GbE
-network with an (artificial) latency of 50 ms (set with `tc-netem`,
-with no packet loss), we can achieve about 1000 batches per second
-(with a throughput of roughly 1.2 GB/s) on our test nodes (Intel Xeon
-CPU E5-2650 v4 @ 2.20GHz), using the following parameters:
+processing, the small (minimum dimension = 256px) JPEG images with
+`batch_size=128`, over a 25 GbE network with an (artificial) latency
+of 50 ms (set with `tc-netem`, with no packet loss), we can achieve
+about 1000 batches per second (with a throughput of roughly 2 GB/s)
+on our test nodes (Intel Xeon CPU E5-2650 v4 @ 2.20GHz), using the
+following parameters:
 
 - `prefetch_buffers`: 256 (to hide the high latency)
 - `io_threads`: 20

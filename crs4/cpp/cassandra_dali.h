@@ -11,13 +11,13 @@
 #include <map>
 #include <string>
 #include <cmath>
-#include "dali/pipeline/operator/operator.h"
+#include "dali/pipeline/operator/builtin/input_operator.h"
 #include "dali/operators/reader/reader_op.h"
 #include "./batch_loader.h"
 
 namespace crs4 {
 
-class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
+class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
  public:
   explicit Cassandra(const ::dali::OpSpec &spec);
 
@@ -26,55 +26,45 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
   Cassandra(Cassandra&&) = delete;
   Cassandra& operator=(Cassandra&&) = delete;
 
-  ::dali::ReaderMeta GetReaderMeta() const override {
-    ::dali::ReaderMeta ret;
-    ret.epoch_size = uuids.size();
-    ret.epoch_size_padded = num_shards
-      * std::ceil(uuids.size() / static_cast<double>(num_shards));
-    ret.number_of_shards = num_shards;
-    ret.shard_id = shard_id;
-    ret.pad_last_batch = true;
-    ret.stick_to_shard = true;
-    return ret;
-  }
-
   ~Cassandra() override {
     if (batch_ldr != nullptr) {
       delete batch_ldr;
     }
   }
 
+  int NextBatchSize() override {
+    return batch_size;
+  }
+
+  void Advance() override {
+  }
+
+
+  const ::dali::TensorLayout& in_layout() const override {
+    return in_layout_;
+  }
+
+
+  int in_ndim() const override {
+    return 2;
+  }
+
+
+  ::dali::DALIDataType in_dtype() const override {
+    return ::dali::DALIDataType::DALI_UINT64;
+  }
+  
  protected:
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
-                 const ::dali::Workspace &ws) override {
-    return false;
-  }
-
-  inline void Reset() {
-    current = shard_begin;
-    current_epoch++;
-
-    if (shuffle_after_epoch) {
-      std::mt19937 g(kDaliDataloaderSeed + current_epoch);
-      std::shuffle(uuids.begin(), uuids.end(), g);
-    }
-  }
+                 const ::dali::Workspace &ws) override;
 
   void RunImpl(::dali::Workspace &ws) override;
 
-  void set_shard_sizes() {
-    int dataset_size = uuids.size();
-    shard_size = std::ceil(uuids.size() / static_cast<double>(num_shards));
-    int pos_begin = std::floor(shard_id * dataset_size
-                               / static_cast<double>(num_shards));
-    shard_begin = uuids.begin() + pos_begin;
-    shard_end = shard_begin + shard_size;
-  }
-
  private:
-  void prefetch_one();
+  void prefetch_one(const dali::TensorList<dali::CPUBackend>&);
+  void fill_buffers(::dali::Workspace &ws);
   // variables
-  std::vector<std::string> uuids;
+  dali::TensorList<dali::CPUBackend> uuids;
   std::string cloud_config;
   std::vector<std::string> cassandra_ips;
   int cassandra_port;
@@ -94,14 +84,9 @@ class Cassandra : public ::dali::Operator<::dali::CPUBackend> {
   int comm_threads;
   bool use_ssl;
   std::string ssl_certificate;
-  std::vector<std::string>::iterator current;
-  bool shuffle_after_epoch;
-  int current_epoch = -1;
-  const int shard_id;
-  const int num_shards;
-  std::vector<std::string>::iterator shard_begin;
-  std::vector<std::string>::iterator shard_end;
-  int shard_size;
+  bool buffers_empty = true;
+  std::optional<std::string> null_data_id = std::nullopt;
+  ::dali::TensorLayout in_layout_ = "B";  // Byte stream
 };
 
 }  // namespace crs4

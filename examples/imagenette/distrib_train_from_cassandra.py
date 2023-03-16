@@ -3,10 +3,11 @@
 # (Apache License, Version 2.0)
 #
 # Run with:
-# python3 -m torch.distributed.launch --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
+# torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader
+from cassandra_reader import get_cassandra_reader, get_uuids
+from crs4.cassandra_utils import get_shard
 
 import argparse
 import os
@@ -39,6 +40,12 @@ except ImportError:
     )
 
 
+# supporting torchrun
+global_rank = int(os.getenv("RANK", default=0))
+local_rank = int(os.getenv("LOCAL_RANK", default=0))
+world_size = int(os.getenv("WORLD_SIZE", default=1))
+
+
 def parse():
     model_names = sorted(
         name
@@ -60,14 +67,14 @@ def parse():
         "--train-table-suffix",
         metavar="SUFF",
         default="train_orig",
-        choices=["train_orig", "train_224_jpg", "train_small"],
+        choices=["train_orig", "train_256_jpg", "train_512_jpg"],
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(
         "--val-table-suffix",
         metavar="SUFF",
         default="val_orig",
-        choices=["val_orig", "val_224_jpg", "val_small"],
+        choices=["val_orig", "val_256_jpg", "val_512_jpg"],
         help="Suffix for table names (default: orig)",
     )
     parser.add_argument(
@@ -114,7 +121,7 @@ def parse():
         default=0.1,
         type=float,
         metavar="LR",
-        help="Initial learning rate.  Will be scaled by <global batch size>/256: args.lr = args.lr*float(args.batch_size*args.world_size)/256.  A warmup schedule will also be applied over the first 5 epochs.",
+        help="Initial learning rate.  Will be scaled by <global batch size>/256: args.lr = args.lr*float(args.batch_size*world_size)/256.  A warmup schedule will also be applied over the first 5 epochs.",
     )
     parser.add_argument(
         "--momentum", default=0.9, type=float, metavar="M", help="momentum"
@@ -194,10 +201,9 @@ def to_python_float(t):
 def create_dali_pipeline(
     keyspace,
     table_suffix,
+    bs,
     crop,
     size,
-    shard_id,
-    num_shards,
     dali_cpu=False,
     is_training=True,
     prefetch_buffers=8,
@@ -206,18 +212,17 @@ def create_dali_pipeline(
     copy_threads=2,
     wait_threads=2,
 ):
-    images, labels = get_cassandra_reader(
+    cass_reader = get_cassandra_reader(
         keyspace=keyspace,
         table_suffix=table_suffix,
-        shard_id=shard_id,
-        num_shards=num_shards,
+        batch_size=bs,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
-        name="Reader",
     )
+    images, labels = cass_reader
     dali_device = "cpu" if dali_cpu else "gpu"
     decoder_device = "cpu" if dali_cpu else "mixed"
     # ask nvJPEG to preallocate memory for the biggest sample in ImageNet for CPU and GPU to avoid reallocations in runtime
@@ -268,16 +273,13 @@ def create_dali_pipeline(
         mirror=mirror,
     )
     labels = labels.gpu()
-    return images, labels
+    return (images, labels)
 
 
 def main():
-    global best_prec1, args, local_rank
+    global best_prec1, args
     best_prec1 = 0
-    local_rank = int(os.environ["LOCAL_RANK"])
     args = parse()
-
-    print (f"Local_rank: {local_rank}")
 
     # test mode, use default args for sanity test
     if args.test:
@@ -289,9 +291,7 @@ def main():
         args.sync_bn = False
         print("Test mode - no DDP, no apex, RN50, 10 iterations")
 
-    args.distributed = False
-    if "WORLD_SIZE" in os.environ:
-        args.distributed = int(os.environ["WORLD_SIZE"]) > 1
+    args.distributed = world_size > 1
 
     # make apex optional
     if args.opt_level is not None or args.distributed or args.sync_bn:
@@ -318,19 +318,17 @@ def main():
     if args.deterministic:
         cudnn.benchmark = False
         cudnn.deterministic = True
-        torch.manual_seed(local_rank)
+        torch.manual_seed(local_rank)  # global_rank ?
         torch.set_printoptions(precision=10)
 
     args.gpu = 0
-    args.world_size = 1
 
     if args.distributed:
         args.gpu = local_rank
         torch.cuda.set_device(args.gpu)
         torch.distributed.init_process_group(backend="nccl", init_method="env://")
-        args.world_size = torch.distributed.get_world_size()
 
-    args.total_batch_size = args.world_size * args.batch_size
+    args.total_batch_size = world_size * args.batch_size
     assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # create model
@@ -355,7 +353,7 @@ def main():
         model = model.cuda()
 
     # Scale learning rate based on global batch size
-    args.lr = args.lr * float(args.batch_size * args.world_size) / 256.0
+    args.lr = args.lr * float(args.batch_size * world_size) / 256.0
     optimizer = torch.optim.SGD(
         model.parameters(),
         args.lr,
@@ -425,43 +423,73 @@ def main():
         val_size = 256
 
     # train pipe
+    train_uuids = get_uuids(
+        keyspace=args.keyspace,
+        table_suffix=args.train_table_suffix,
+        shard_id=local_rank,
+    )
     pipe = create_dali_pipeline(
         keyspace=args.keyspace,
         table_suffix=args.train_table_suffix,
         batch_size=args.batch_size,
+        bs=args.batch_size,
         num_threads=args.workers,
         device_id=local_rank,
-        seed=12 + local_rank,
+        seed=12 + local_rank,  # global_rank?
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
-        shard_id=local_rank,
-        num_shards=args.world_size,
         is_training=True,
     )
     pipe.build()
+
+    # pre-feeding train pipeline
+    uuids, real_sz = get_shard(
+        train_uuids,
+        batch_size=args.batch_size,
+        epoch=0,
+        shard_id=local_rank,  # global_rank?
+        num_shards=world_size,
+    )
+    for u in uuids:
+        pipe.feed_input("Reader[0]", u)
     train_loader = DALIClassificationIterator(
-        pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     # val pipe
+    val_uuids = get_uuids(
+        keyspace=args.keyspace,
+        table_suffix=args.val_table_suffix,
+        shard_id=local_rank,
+    )
     pipe = create_dali_pipeline(
         keyspace=args.keyspace,
         table_suffix=args.val_table_suffix,
         batch_size=args.batch_size,
+        bs=args.batch_size,
         num_threads=args.workers,
         device_id=local_rank,
-        seed=12 + local_rank,
+        seed=12 + local_rank,  # global_rank?
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
-        shard_id=local_rank,
-        num_shards=args.world_size,
         is_training=False,
     )
     pipe.build()
+
+    # pre-feeding val pipeline
+    uuids, real_sz = get_shard(
+        val_uuids,
+        batch_size=args.batch_size,
+        epoch=0,
+        shard_id=local_rank,  # global_rank?
+        num_shards=world_size,
+    )
+    for u in uuids:
+        pipe.feed_input("Reader[0]", u)
     val_loader = DALIClassificationIterator(
-        pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     if args.evaluate:
@@ -470,6 +498,27 @@ def main():
 
     total_time = AverageMeter()
     for epoch in range(args.start_epoch, args.epochs):
+        # pre-feeding train pipeline
+        uuids, real_sz = get_shard(
+            train_uuids,
+            batch_size=args.batch_size,
+            epoch=1 + epoch,
+            shard_id=local_rank,  # global_rank?
+            num_shards=world_size,
+        )
+        for u in uuids:
+            train_loader._pipes[0].feed_input("Reader[0]", u)
+        # pre-feeding val  pipeline
+        uuids, real_sz = get_shard(
+            val_uuids,
+            batch_size=args.batch_size,
+            epoch=1 + epoch,
+            shard_id=local_rank,  # global_rank?
+            num_shards=world_size,
+        )
+        for u in uuids:
+            val_loader._pipes[0].feed_input("Reader[0]", u)
+
         # train for one epoch
         avg_train_time = train(train_loader, model, criterion, optimizer, epoch)
         total_time.update(avg_train_time)
@@ -480,7 +529,7 @@ def main():
         [prec1, prec5] = validate(val_loader, model, criterion)
 
         # remember best prec@1 and save checkpoint
-        if local_rank == 0:
+        if local_rank == 0:  # global_rank?
             is_best = prec1 > best_prec1
             best_prec1 = max(prec1, best_prec1)
             save_checkpoint(
@@ -586,7 +635,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             batch_time.update((time.time() - end) / args.print_freq)
             end = time.time()
 
-            if local_rank == 0:
+            if local_rank == 0:  # global_rank?
                 print(
                     "Epoch: [{0}][{1}/{2}]\t"
                     "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
@@ -597,8 +646,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
                         epoch,
                         i,
                         train_loader_len,
-                        args.world_size * args.batch_size / batch_time.val,
-                        args.world_size * args.batch_size / batch_time.avg,
+                        world_size * args.batch_size / batch_time.val,
+                        world_size * args.batch_size / batch_time.avg,
                         batch_time=batch_time,
                         loss=losses,
                         top1=top1,
@@ -658,7 +707,7 @@ def validate(val_loader, model, criterion):
         end = time.time()
 
         # TODO:  Change timings to mirror train().
-        if local_rank == 0 and i % args.print_freq == 0:
+        if local_rank == 0 and i % args.print_freq == 0:  # global_rank?
             print(
                 "Test: [{0}/{1}]\t"
                 "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
@@ -668,8 +717,8 @@ def validate(val_loader, model, criterion):
                 "Prec@5 {top5.val:.3f} ({top5.avg:.3f})".format(
                     i,
                     val_loader_len,
-                    args.world_size * args.batch_size / batch_time.val,
-                    args.world_size * args.batch_size / batch_time.avg,
+                    world_size * args.batch_size / batch_time.val,
+                    world_size * args.batch_size / batch_time.avg,
                     batch_time=batch_time,
                     loss=losses,
                     top1=top1,
@@ -743,7 +792,7 @@ def accuracy(output, target, topk=(1,)):
 def reduce_tensor(tensor):
     rt = tensor.clone()
     dist.all_reduce(rt, op=dist.reduce_op.SUM)
-    rt /= args.world_size
+    rt /= world_size
     return rt
 
 

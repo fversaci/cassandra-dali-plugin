@@ -11,7 +11,7 @@ import nvidia.dali.types as types
 def fn_decode(images):
     return fn.decoders.image(
         images,
-        device="cpu",
+        device="mixed",
         output_type=types.RGB,
         # hybrid_huffman_threshold=100000,
         # memory_stats=True,
