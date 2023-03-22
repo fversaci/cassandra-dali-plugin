@@ -5,7 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, get_uuids
+from cassandra_reader import get_cassandra_reader, read_uuids
 from crs4.cassandra_utils import get_shard
 
 # dali
@@ -41,6 +41,7 @@ def read_data(
     *,
     keyspace="ade20k",
     table_suffix="orig",
+    ids_cache_dir="ids_cache",
     reader="cassandra",
     use_gpu=False,
     image_root=None,
@@ -55,6 +56,7 @@ def read_data(
     :param use_gpu: enable output to GPU (default: False)
     :param image_root: File root for images (only when reading from the filesystem)
     :param mask_root: File root for masks (only when reading from the filesystem)
+    :param ids_cache_dir: Directory containing the cached list of UUIDs (default: ./ids_cache)
     """
     if use_gpu:
         device_id = local_rank
@@ -63,10 +65,10 @@ def read_data(
 
     bs = 128
     if reader == "cassandra":
-        uuids = get_uuids(
+        uuids = read_uuids(
             keyspace,
             table_suffix,
-            shard_id=local_rank,
+            ids_cache_dir=ids_cache_dir,
         )
         uuids, real_sz = get_shard(
             uuids,
@@ -160,7 +162,7 @@ def read_data(
                 pl.run()
             pl.reset()
     else:
-        steps = pl.epoch_size()["Reader"] / (bs*world_size)
+        steps = pl.epoch_size()["Reader"] / (bs * world_size)
         steps = math.ceil(steps)
         for _ in range(epochs):
             for _ in trange(steps):
