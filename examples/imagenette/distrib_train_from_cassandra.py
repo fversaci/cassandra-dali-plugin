@@ -6,7 +6,7 @@
 # torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, get_uuids
+from cassandra_reader import get_cassandra_reader, read_uuids
 from crs4.cassandra_utils import get_shard
 
 import argparse
@@ -76,6 +76,12 @@ def parse():
         default="val_orig",
         choices=["val_orig", "val_256_jpg", "val_512_jpg"],
         help="Suffix for table names (default: orig)",
+    )
+    parser.add_argument(
+        "--ids-cache-dir",
+        metavar="CACH",
+        default="ids_cache",
+        help="Directory containing the cached list of UUIDs (default: ./ids_cache)",
     )
     parser.add_argument(
         "--arch",
@@ -423,10 +429,10 @@ def main():
         val_size = 256
 
     # train pipe
-    train_uuids = get_uuids(
+    train_uuids = read_uuids(
         keyspace=args.keyspace,
         table_suffix=args.train_table_suffix,
-        shard_id=local_rank,
+        ids_cache_dir=args.ids_cache_dir,
     )
     pipe = create_dali_pipeline(
         keyspace=args.keyspace,
@@ -458,10 +464,10 @@ def main():
     )
 
     # val pipe
-    val_uuids = get_uuids(
+    val_uuids = read_uuids(
         keyspace=args.keyspace,
         table_suffix=args.val_table_suffix,
-        shard_id=local_rank,
+        ids_cache_dir=args.ids_cache_dir,
     )
     pipe = create_dali_pipeline(
         keyspace=args.keyspace,

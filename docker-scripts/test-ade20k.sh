@@ -10,13 +10,15 @@ pgrep -f cassandra || /cassandra/bin/cassandra 2>&1 | grep "state jump to NORMAL
                             --py-files extract_common.py extract_spark.py /data/ade20k/images/training/ /data/ade20k/annotations/training/ \
                             --table-suffix=orig && \
     rm -f ids_cache/* && \
-    python3 loop_read.py --table-suffix=orig && \
-    python3 loop_read.py --table-suffix=orig --device-id=0 && \
+    python3 cache_uuids.py --keyspace=ade20k --table-suffix=orig && \
+    python3 loop_read.py --keyspace=ade20k --table-suffix=orig && \
+    python3 loop_read.py --keyspace=ade20k --table-suffix=orig --device-id=0 && \
     /cassandra/bin/cqlsh -e "DROP KEYSPACE ade20k;" && \
     /cassandra/bin/cqlsh -f create_tables.cql && \
     python3 extract_serial.py /data/ade20k/images/training/ /data/ade20k/annotations/training/ --table-suffix=orig && \
     rm -f ids_cache/* && \
-    python3 loop_read.py --table-suffix=orig && \
+    python3 cache_uuids.py --keyspace=ade20k --table-suffix=orig && \
+    python3 loop_read.py --keyspace=ade20k --table-suffix=orig && \
     python3 loop_read.py --reader=file --image-root=/data/ade20k/images/ --mask-root=/data/ade20k/annotations/ && \
     python3 loop_read.py --reader=file --image-root=/data/ade20k/images/ --mask-root=/data/ade20k/annotations/ --device-id=0 && \
     `### BEGIN COMMENT \

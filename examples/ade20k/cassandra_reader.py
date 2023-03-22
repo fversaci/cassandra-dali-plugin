@@ -26,47 +26,15 @@ plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 
 
-def get_uuids(
+def read_uuids(
     keyspace,
     table_suffix,
-    id_col="patch_id",
-    label_type="int",
-    label_col="label",
-    data_col="data",
-    shard_id=0,
+    ids_cache_dir,
 ):
-    # Read Cassandra parameters
-    from private_data import CassConf as CC
-
-    # set uuids cache directory
-    ids_cache = "ids_cache"
-    rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
-
-    # Load list of uuids from Cassandra DB...
-    ap = PlainTextAuthProvider(username=CC.username, password=CC.password)
-    if not os.path.exists(rows_fn):
-        lm = MiniListManager(
-            auth_prov=ap,
-            cassandra_ips=CC.cassandra_ips,
-            cloud_config=CC.cloud_config,
-            port=CC.cassandra_port,
-        )
-        conf = {
-            "table": f"{keyspace}.metadata_{table_suffix}",
-            "id_col": id_col,
-        }
-        lm.set_config(conf)
-        print("Loading list of uuids from DB... ", end="", flush=True)
-        lm.read_rows_from_db()
-        if shard_id == 0:
-            if not os.path.exists(ids_cache):
-                os.makedirs(ids_cache)
-            lm.save_rows(rows_fn)
-        stuff = lm.get_rows()
-    else:  # ...or from the cached file
-        print("Loading list of uuids from cached file... ", end="", flush=True)
-        with open(rows_fn, "rb") as f:
-            stuff = pickle.load(f)
+    rows_fn = os.path.join(ids_cache_dir, f"{keyspace}_{table_suffix}.rows")
+    print("Loading list of uuids from cached file... ", end="", flush=True)
+    with open(rows_fn, "rb") as f:
+        stuff = pickle.load(f)
     # init and return Cassandra reader
     uuids = stuff["row_keys"]
     real_sz = len(uuids)
