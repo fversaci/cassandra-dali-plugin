@@ -115,8 +115,9 @@ RUN \
     && rm 'imagenette2-320.tgz'
 
 ########################################################################
-# Install plugin and run as user
+# Upgrade DALI, install plugin and run as user
 ########################################################################
+RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110==1.23
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
@@ -128,8 +129,6 @@ RUN chown -R user.user "/spark/"
 # create data dir
 RUN mkdir /data
 RUN chown user.user '/data'
-# upgrade DALI
-RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110==1.23
 # install plugin
 WORKDIR /home/user/cassandra-dali-plugin
 RUN pip3 install .
