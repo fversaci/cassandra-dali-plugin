@@ -20,7 +20,7 @@ RUN \
     flex \
     git \
     htop \
-    iperf \
+    iperf3 \
     iproute2 \
     iputils-ping \
     less \
