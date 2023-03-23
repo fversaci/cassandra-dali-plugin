@@ -35,6 +35,9 @@ $ /cassandra/bin/cqlsh -f create_tables.cql
 $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --table-suffix=train_256_jpg
 $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --table-suffix=val_256_jpg
 
+# Read the list of UUIDs and cache it to disk
+$ python3 cache_uuids.py --table-suffix=train_256_jpg
+
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --table-suffix=train_256_jpg
 
@@ -72,6 +75,9 @@ We can also store the original, unchanged files in the DB:
 $ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=train --table-suffix=train_orig
 $ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --table-suffix=val_orig
 
+# Read the list of UUIDs and cache it to disk
+$ python3 cache_uuids.py --table-suffix=train_orig
+
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --table-suffix=train_orig
 
@@ -105,6 +111,9 @@ $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.p
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
   --keyspace=imagenet --split-subdir=val --table-suffix=val_256_jpg
+
+# Read the list of UUIDs and cache it to disk
+$ python3 cache_uuids.py --table-suffix=train_256_jpg
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --keyspace=imagenet --table-suffix=train_256_jpg
@@ -155,7 +164,11 @@ $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
 
 while [our modified version](distrib_train_from_cassandra.py) with:
 ```bash
-# Cassandra version of it:
+# Read the lists of UUIDs and cache them to disk
+$ python3 cache_uuids.py --table-suffix=train_orig
+$ python3 cache_uuids.py --table-suffix=val_orig
+
+# Modified script, reading from Cassandra:
 $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig

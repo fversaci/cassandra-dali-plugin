@@ -80,8 +80,9 @@ void BatchLoader::connect() {
            "Unable to configure cloud using the secure connection bundle: "
            + cloud_config);
     }
-    cass_cluster_set_connect_timeout(cluster, 10000);
   }
+  cass_cluster_set_connect_timeout(cluster, 10000);
+  cass_cluster_set_request_timeout(cluster, 60000);
   cass_cluster_set_credentials(cluster, username.c_str(), password.c_str());
   cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4);
   cass_cluster_set_num_threads_io(cluster, io_threads);
