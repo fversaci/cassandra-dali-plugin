@@ -81,4 +81,5 @@ class imagenet_split_generator(split_generator):
         self.split_metadata['row_keys'] = row_keys
         self.split_metadata['split'] = split
         self.split_metadata['label_type'] = label_type
-
+        self.split_metadata['num_classes'] = num_classes
+        
