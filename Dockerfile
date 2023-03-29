@@ -99,9 +99,11 @@ RUN \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && ln -s "apache-cassandra-$CASS_VERS" cassandra
 
-# increase write timeout to 20 seconds
+# increase write timeout to 20 seconds and listen to all interfaces
 RUN \
-    sed -i 's/^\(write_request_timeout_in_ms:\)\(.*\)/\1 20000/' /cassandra/conf/cassandra.yaml
+    sed -i 's/^\(write_request_timeout_in_ms:\)\(.*\)/\1 20000/' /cassandra/conf/cassandra.yaml \
+    && sed -i 's/^\(rpc_address:\)\(.*\)/\1 0.0.0.0/' /cassandra/conf/cassandra.yaml \
+    && sed -i 's/^\(# \)\(broadcast_rpc_address:\)\(.*\)/\2 127.0.0.1/' /cassandra/conf/cassandra.yaml
 
 EXPOSE 9042
 
