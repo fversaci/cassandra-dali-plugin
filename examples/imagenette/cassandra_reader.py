@@ -12,12 +12,13 @@ from crs4.cassandra_utils import MiniListManager
 import crs4.cassandra_utils
 import nvidia.dali.plugin_manager as plugin_manager
 import nvidia.dali.fn as fn
+import nvidia.dali.types as types
 import pathlib
 
 # varia
-import getpass
 import os
 import pickle
+import numpy as np
 
 plugin_path = pathlib.Path(crs4.cassandra_utils.__path__[0])
 plugin_path = plugin_path.parent.parent.joinpath("libcrs4cassandra.so")
@@ -25,15 +26,30 @@ plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 
 
+def read_uuids(
+    keyspace,
+    table_suffix,
+    ids_cache_dir,
+):
+    rows_fn = os.path.join(ids_cache_dir, f"{keyspace}_{table_suffix}.rows")
+    print("Loading list of uuids from cached file... ", end="", flush=True)
+    with open(rows_fn, "rb") as f:
+        stuff = pickle.load(f)
+    # init and return Cassandra reader
+    uuids = stuff["row_keys"]
+    real_sz = len(uuids)
+    print(f" {real_sz} images")
+    return uuids
+
+
 def get_cassandra_reader(
     keyspace,
     table_suffix,
+    batch_size,
     id_col="patch_id",
     label_type="int",
     label_col="label",
     data_col="data",
-    shard_id=0,
-    num_shards=1,
     io_threads=2,
     prefetch_buffers=2,
     name="Reader",
@@ -45,56 +61,16 @@ def get_cassandra_reader(
     ssl_certificate="",  # "node0.cer.pem",
 ):
     # Read Cassandra parameters
-    try:
-        from private_data import CassConf as CC
-    except ImportError:
-        cassandra_ip = getpass("Insert Cassandra's IP address: ")
-        cassandra_ips = [cassandra_ip]
-        username = getpass("Insert Cassandra user: ")
-        password = getpass("Insert Cassandra password: ")
+    from private_data import CassConf as CC
 
-    # set uuids cache directory
-    ids_cache = "ids_cache"
-    rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
-
-    # Load list of uuids from Cassandra DB...
-    ap = PlainTextAuthProvider(username=CC.username, password=CC.password)
-    if not os.path.exists(rows_fn):
-        lm = MiniListManager(
-            auth_prov=ap,
-            cassandra_ips=CC.cassandra_ips,
-            cloud_config=CC.cloud_config,
-            port=CC.cassandra_port,
-        )
-        conf = {
-            "table": f"{keyspace}.metadata_{table_suffix}",
-            "id_col": id_col,
-        }
-        lm.set_config(conf)
-        print("Loading list of uuids from DB... ", end="", flush=True)
-        lm.read_rows_from_db()
-        if shard_id == 0:
-            if not os.path.exists(ids_cache):
-                os.makedirs(ids_cache)
-            lm.save_rows(rows_fn)
-        stuff = lm.get_rows()
-    else:  # ...or from the cached file
-        print("Loading list of uuids from cached file... ", end="", flush=True)
-        with open(rows_fn, "rb") as f:
-            stuff = pickle.load(f)
-    # init and return Cassandra reader
-    uuids = stuff["row_keys"]
-    uuids = list(map(str, uuids))  # convert uuids to strings
-    print(f" {len(uuids)} images")
     table = f"{keyspace}.data_{table_suffix}"
     if CC.cloud_config:
         connect_bundle = CC.cloud_config["secure_connect_bundle"]
     else:
         connect_bundle = None
+
     cassandra_reader = fn.crs4.cassandra(
         name=name,
-        uuids=uuids,
-        shuffle_after_epoch=shuffle_after_epoch,
         cloud_config=connect_bundle,
         cassandra_ips=CC.cassandra_ips,
         cassandra_port=CC.cassandra_port,
@@ -106,8 +82,6 @@ def get_cassandra_reader(
         id_col=id_col,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
-        num_shards=num_shards,
-        shard_id=shard_id,
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,

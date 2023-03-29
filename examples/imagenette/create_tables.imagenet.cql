@@ -39,41 +39,8 @@ CREATE TABLE imagenet.metadata_val_orig(
   PRIMARY KEY ((patch_id))
 );
 
-// Tables with center-cropped JPEGs
+// Tables with resized JPEGs
 
-// Mapping patch uuid to data and label
-CREATE TABLE imagenet.data_train_224_jpg(
-  patch_id uuid,
-  label int,
-  data blob,
-  PRIMARY KEY ((patch_id))
-);
-
-// Mapping patch uuid to metadata
-CREATE TABLE imagenet.metadata_train_224_jpg(
-  label int,
-  or_label text,
-  or_split text,
-  patch_id uuid,
-  PRIMARY KEY ((patch_id))
-);
-
-// Mapping patch uuid to data and label
-CREATE TABLE imagenet.data_val_224_jpg(
-  patch_id uuid,
-  label int,
-  data blob,
-  PRIMARY KEY ((patch_id))
-);
-
-// Mapping patch uuid to metadata
-CREATE TABLE imagenet.metadata_val_224_jpg(
-  label int,
-  or_label text,
-  or_split text,
-  patch_id uuid,
-  PRIMARY KEY ((patch_id))
-);
 
 // Mapping patch uuid to data and label
 CREATE TABLE imagenet.data_train_512_jpg(

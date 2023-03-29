@@ -6,7 +6,7 @@
 # torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, read_uuids
+from cassandra_reader import get_cassandra_reader
 from crs4.cassandra_utils import get_shard
 
 import argparse
@@ -14,6 +14,7 @@ import os
 import shutil
 import time
 import math
+import pickle
 
 import torch
 import torch.nn as nn
@@ -57,31 +58,24 @@ def parse():
 
     parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
     parser.add_argument(
-        "--keyspace",
-        "-k",
-        metavar="KEYSP",
-        default="imagenette",
-        help="cassandra keyspace, i.e., dataset name (default: imagenette)",
+        "--split-fn",
+        metavar="FILENAME",
+        required=True,
+        help="split file filename",
     )
     parser.add_argument(
-        "--train-table-suffix",
-        metavar="SUFF",
-        default="train_orig",
-        choices=["train_orig", "train_256_jpg", "train_512_jpg"],
-        help="Suffix for table names (default: orig)",
+        "--train-index",
+        metavar="TINDEX",
+        default=0,
+        type=int,
+        help="Index of the split array in the splitfile to be used for training",
     )
     parser.add_argument(
-        "--val-table-suffix",
-        metavar="SUFF",
-        default="val_orig",
-        choices=["val_orig", "val_256_jpg", "val_512_jpg"],
-        help="Suffix for table names (default: orig)",
-    )
-    parser.add_argument(
-        "--ids-cache-dir",
-        metavar="CACH",
-        default="ids_cache",
-        help="Directory containing the cached list of UUIDs (default: ./ids_cache)",
+        "--val-index",
+        metavar="VINDEX",
+        default=1,
+        type=int,
+        help="Index of the split array in the splitfile to be used for validation",
     )
     parser.add_argument(
         "--arch",
@@ -282,10 +276,32 @@ def create_dali_pipeline(
     return (images, labels)
 
 
+def read_split_file(split_fn):
+    data = pickle.load(open(split_fn, "rb"))
+    keyspace = data['keyspace'] 
+    table_suffix = data['table_suffix'] 
+    id_col = data['id_col']
+    data_col = data['data_col'] # Name of the table column with actual data
+    label_type = data['label_type']  
+    label_col = data['label_col'] # Name of the table column with the outcome label
+    row_keys = data['row_keys'] # Numpy array of UUIDs
+    split = data['split'] # List of arrays. Each arrays indexes the row_keys array for each split.
+    num_classes = data['num_classes']
+    
+    return keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes
+
+
 def main():
     global best_prec1, args
     best_prec1 = 0
     args = parse()
+
+    ## Read split file to get data for training
+    keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes = read_split_file(args.split_fn)
+    
+    ## Split indexes
+    train_index = args.train_index
+    val_index = args.val_index
 
     # test mode, use default args for sanity test
     if args.test:
@@ -429,14 +445,11 @@ def main():
         val_size = 256
 
     # train pipe
-    train_uuids = read_uuids(
-        keyspace=args.keyspace,
-        table_suffix=args.train_table_suffix,
-        ids_cache_dir=args.ids_cache_dir,
-    )
+    train_uuids = row_keys[split[train_index]]
+    
     pipe = create_dali_pipeline(
-        keyspace=args.keyspace,
-        table_suffix=args.train_table_suffix,
+        keyspace=keyspace,
+        table_suffix=table_suffix,
         batch_size=args.batch_size,
         bs=args.batch_size,
         num_threads=args.workers,
@@ -464,14 +477,11 @@ def main():
     )
 
     # val pipe
-    val_uuids = read_uuids(
-        keyspace=args.keyspace,
-        table_suffix=args.val_table_suffix,
-        ids_cache_dir=args.ids_cache_dir,
-    )
+    val_uuids = row_keys[split[val_index]]
+
     pipe = create_dali_pipeline(
-        keyspace=args.keyspace,
-        table_suffix=args.val_table_suffix,
+        keyspace=keyspace,
+        table_suffix=table_suffix,
         batch_size=args.batch_size,
         bs=args.batch_size,
         num_threads=args.workers,

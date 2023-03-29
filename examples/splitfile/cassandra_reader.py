@@ -26,22 +26,6 @@ plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 
 
-def read_uuids(
-    keyspace,
-    table_suffix,
-    ids_cache_dir,
-):
-    rows_fn = os.path.join(ids_cache_dir, f"{keyspace}_{table_suffix}.rows")
-    print("Loading list of uuids from cached file... ", end="", flush=True)
-    with open(rows_fn, "rb") as f:
-        stuff = pickle.load(f)
-    # init and return Cassandra reader
-    uuids = stuff["row_keys"]
-    real_sz = len(uuids)
-    print(f" {real_sz} images")
-    return uuids
-
-
 def get_cassandra_reader(
     keyspace,
     table_suffix,
