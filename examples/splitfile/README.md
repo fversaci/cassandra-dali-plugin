@@ -78,7 +78,7 @@ If the metadata table is large in size, caching it to a file can save time for c
 To train and validate a model with the generated split file, just run:
 
 ```bash
-$ torchrun --nproc_per_node=1 distrib_train_from_cassandra.py --split-fn prova_split.pckl -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2
+$ torchrun --nproc_per_node=1 distrib_train_from_cassandra.py --split-fn imagenette_splitfile.pckl -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2
 ```
 
 The split file passed by the required ```--split-fn``` option provides all the information to get the right taining and validation samples from the db. 
@@ -95,5 +95,5 @@ with the first split containing the 20% of the db table data, probably we want t
 
 
 ```bash
-$ torchrun --nproc_per_node=1 distrib_train_from_cassandra.py --split-fn prova_split.pckl --train-index 1 --val-index 0 -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2
+$ torchrun --nproc_per_node=1 distrib_train_from_cassandra.py --split-fn imagenette_splitfile.pckl --train-index 1 --val-index 0 -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2
 ```
