@@ -1,6 +1,6 @@
 # Training using a split file
   
-In this example, we will use Imagenette2-320 to create a training and validation split from the data stored in a Cassandra database. In order to do this, we need to have Imagenette images already stored in at least one table of the database. To achieve this, we can follow the instructions from the section '...' to '...' of the Imagenette example. Once the data is in the database, we can create a split file by running the ```create_split.py``` script. To view the different options available for the script, we can use the command:
+In this example, we will use Imagenette2-320 to create a training and validation split from the data stored in a Cassandra database. In order to do this, we need to have Imagenette images already stored in at least one table of the database. To achieve this, we can follow the instructions from the section [Starting Cassandra server](../imagenette/README.md#Starting-Cassandra-server) to [Insert Imagenet dataset in parallel (with Apache Spark)](..//imagenette/README.md#insert-imagenet-dataset-in-parallel-with-apache-spark) of the Imagenette example. Once the data is in the database, we can create a split file by running the ```create_split.py``` script. To view the different options available for the script, we can use the command:
 
 ```bash
 python3 create_split.py --help
