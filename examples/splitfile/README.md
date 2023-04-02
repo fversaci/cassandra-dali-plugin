@@ -81,7 +81,7 @@ The split file specified by the mandatory ```--split-fn``` option contains all t
 
 The training and validation split can be specified using the CLI options ```--train-index``` and ```--val-index```. The default values for these options are 0 and 1, respectively, which means that the first row (row 0) of the array in the split field of the split file is utilized as the training dataset, while the second row (row 1) is employed for the validation stage.
 
-So, so assuming that the command:
+So, assuming that the command:
 
 ```bash
 python3 create_split.py --metadata-ifn metadata.cache -r 2,8 -o imagenette_splitfile.pckl
