@@ -78,6 +78,23 @@ def parse():
         help="Index of the split array in the splitfile to be used for validation",
     )
     parser.add_argument(
+        "--crossval-index",
+        metavar="CVINDEX",
+        default=None,
+        type=int,
+        help="Index of the split array in the splitfile to be used for validation.\
+                The remaining splits, except the one specified with the --exclude-split option,\
+                are merged and used as training data.\
+                The --train-index and --val-index options will be overridden",
+    )
+    parser.add_argument(
+        "--exclude-index",
+        metavar="EINDEX",
+        default=None,
+        type=int,
+        help="Index of the split to be excluded during the crossvalidation process.",
+    )
+    parser.add_argument(
         "--arch",
         "-a",
         metavar="ARCH",
@@ -291,6 +308,28 @@ def read_split_file(split_fn):
     return keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes
 
 
+def compute_split_index(split, train_index, val_index, crossval_index, exclude_index):
+    n_split = len(split)
+    
+    # Merge splits for training samples if crossvalidation is requested.
+    # Do nothing otherwise
+    if crossval_index and n_split > 2:
+        if exclude_index > n_split:
+            exlcude_index = n_split - 1
+        if crossval_index > n_split or crossval_index == exclude_index:
+            crossval_index = n_split - 2
+
+        tis = np.array([i for i in range(n_split) if i!=exclude_index and i!=val_index])
+        train_split = np.concatenate([split[i] for i in tis])
+        val_split = split[val_index]
+        
+        split = [train_split, val_split]
+        train_index = 0
+        val_index = 1
+    
+    return split, train_index, val_index
+
+
 def main():
     global best_prec1, args
     best_prec1 = 0
@@ -300,8 +339,18 @@ def main():
     keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes = read_split_file(args.split_fn)
     
     ## Split indexes
-    train_index = args.train_index
-    val_index = args.val_index
+    print ([i.shape[0] for i in split])
+
+    # Get split indexes
+    split, train_index, val_index = compute_split_index(split, args.train_index, args.val_index, args.crossval_index, args.exclude_index)
+    #train_index = args.train_index
+    #val_index = args.val_index
+    
+    print (args.crossval_index)
+    print (args.exclude_index)
+    print (train_index)
+    print (val_index)
+    print ([i.shape[0] for i in split])
 
     # test mode, use default args for sanity test
     if args.test:
