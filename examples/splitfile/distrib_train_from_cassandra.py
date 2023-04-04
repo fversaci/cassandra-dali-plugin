@@ -326,7 +326,12 @@ def compute_split_index(split, train_index, val_index, crossval_index, exclude_i
         split = [train_split, val_split]
         train_index = 0
         val_index = 1
-    
+        
+        print (f"\nPerforming a crossvalidation using samples from splits {tis} as training data and samples from split {crossval_index} as validation data")
+        if exclude_index:
+            print (f"Split {exclude_index} is not considered")
+        print ("\n")
+
     return split, train_index, val_index
 
 
@@ -338,20 +343,9 @@ def main():
     ## Read split file to get data for training
     keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes = read_split_file(args.split_fn)
     
-    ## Split indexes
-    print ([i.shape[0] for i in split])
-
     # Get split indexes
     split, train_index, val_index = compute_split_index(split, args.train_index, args.val_index, args.crossval_index, args.exclude_index)
-    #train_index = args.train_index
-    #val_index = args.val_index
     
-    print (args.crossval_index)
-    print (args.exclude_index)
-    print (train_index)
-    print (val_index)
-    print ([i.shape[0] for i in split])
-
     # test mode, use default args for sanity test
     if args.test:
         args.opt_level = None
