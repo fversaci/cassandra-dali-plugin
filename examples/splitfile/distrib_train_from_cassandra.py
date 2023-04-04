@@ -327,9 +327,11 @@ def compute_split_index(split, train_index, val_index, crossval_index, exclude_i
         train_index = 0
         val_index = 1
         
-        print (f"\nPerforming a crossvalidation using samples from splits {tis} as training data and samples from split {crossval_index} as validation data")
+        print ("\nCrossvalidation:")
+        print (f"Training samples will be taken from splits {tis}")
+        print (f"Validation samples will be taken from split {crossval_index}")
         if exclude_index:
-            print (f"Split {exclude_index} is not considered")
+            print (f"Split {exclude_index} will not be used")
         print ("\n")
 
     return split, train_index, val_index
