@@ -13,20 +13,20 @@ pgrep -f cassandra || /cassandra/bin/cassandra 2>&1 | grep "state jump to NORMAL
                             --py-files extract_common.py extract_spark.py /tmp/imagenette2-320/ \
                             --split-subdir=val --table-suffix=val_256_jpg && \
     rm -f ids_cache/* && \
-    python3 cache_uuids.py --table-suffix=train_256_jpg && \
-    python3 loop_read.py --table-suffix=train_256_jpg && \
-    python3 cache_uuids.py --table-suffix=val_256_jpg && \
-    python3 loop_read.py --table-suffix=val_256_jpg && \
-    python3 loop_read.py --table-suffix=train_256_jpg --device-id=0 && \
+    python3 cache_uuids.py --keyspace=imagenette --table-suffix=train_256_jpg && \
+    python3 loop_read.py --keyspace=imagenette --table-suffix=train_256_jpg && \
+    python3 cache_uuids.py --keyspace=imagenette --table-suffix=val_256_jpg && \
+    python3 loop_read.py --keyspace=imagenette --table-suffix=val_256_jpg && \
+    python3 loop_read.py --keyspace=imagenette --table-suffix=train_256_jpg --device-id=0 && \
     /cassandra/bin/cqlsh -e "DROP KEYSPACE imagenette;" && \
     /cassandra/bin/cqlsh -f create_tables.cql && \
     python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --table-suffix=train_256_jpg && \
     python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --table-suffix=val_256_jpg && \
     rm -f ids_cache/* && \
-    python3 cache_uuids.py --table-suffix=train_256_jpg && \
-    python3 loop_read.py --table-suffix=train_256_jpg && \
-    python3 cache_uuids.py --table-suffix=val_256_jpg && \
-    python3 loop_read.py --table-suffix=val_256_jpg && \
+    python3 cache_uuids.py --keyspace=imagenette --table-suffix=train_256_jpg && \
+    python3 loop_read.py --keyspace=imagenette --table-suffix=train_256_jpg && \
+    python3 cache_uuids.py --keyspace=imagenette --table-suffix=val_256_jpg && \
+    python3 loop_read.py --keyspace=imagenette --table-suffix=val_256_jpg && \
     rm -Rf /tmp/imagenette_256_jpg/ && \
     python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --target-dir=/tmp/imagenette_256_jpg/train && \
     python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --target-dir=/tmp/imagenette_256_jpg/val && \

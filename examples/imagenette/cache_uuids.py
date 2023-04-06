@@ -19,7 +19,7 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 def cache_uuids(
     *,
     keyspace="imagenette",
-    table_suffix="train_256_jpg",
+    table_suffix,
     id_col="patch_id",
 ):
     """Cache uuids from DB to local file (via pickle)

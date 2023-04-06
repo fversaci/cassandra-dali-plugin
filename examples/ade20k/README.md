@@ -42,6 +42,9 @@ $ /cassandra/bin/cqlsh -f create_tables.cql
 # - Fill the tables with data and metadata
 $ python3 extract_serial.py /data/ade20k/images/training/ /data/ade20k/annotations/training/ --table-suffix=orig
 
+# Read the list of UUIDs and cache it to disk
+$ python3 cache_uuids.py --table-suffix=orig
+
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --table-suffix=orig
 

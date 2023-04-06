@@ -113,7 +113,7 @@ $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.p
   --keyspace=imagenet --split-subdir=val --table-suffix=val_256_jpg
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --table-suffix=train_256_jpg
+$ python3 cache_uuids.py --keyspace=imagenet --table-suffix=train_256_jpg
 
 # - Tight loop data loading test in host memory
 $ python3 loop_read.py --keyspace=imagenet --table-suffix=train_256_jpg
