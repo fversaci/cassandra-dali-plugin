@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT.
 
 import cassandra
+import ssl
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.cluster import ExecutionProfile
@@ -25,6 +26,7 @@ class CassandraWriter:
         cloud_config=None,
         cassandra_ips=None,
         cassandra_port=None,
+        use_ssl=False,
         masks=False,
     ):
         self.get_data = get_data
@@ -50,6 +52,10 @@ class CassandraWriter:
                 auth_provider=auth_prov,
             )
         else:
+            if use_ssl:
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            else:
+                ssl_context = None
             self.cluster = Cluster(
                 contact_points=cassandra_ips,
                 port=cassandra_port,

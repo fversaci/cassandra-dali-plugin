@@ -8,6 +8,7 @@ from crs4.cassandra_utils._list_manager import ListManager
 
 # pip3 install cassandra-driver
 import cassandra
+import ssl
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
@@ -21,6 +22,7 @@ class MiniListManager(ListManager):
         cassandra_ips= None,
         cloud_config=None,
         port=None,
+        use_ssl=False,
     ):
         """Loads the list of images from Cassandra DB
 
@@ -51,12 +53,17 @@ class MiniListManager(ListManager):
                 auth_provider=auth_prov,
             )
         else:
+            if use_ssl:
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+            else:
+                ssl_context = None
             self.cluster = Cluster(
                 contact_points=cassandra_ips,
                 execution_profiles=profs,
                 protocol_version=4,
                 auth_provider=auth_prov,
                 port=port,
+                ssl_context=ssl_context,
             )
         self.cluster.connect_timeout = 10  # seconds
         self.sess = self.cluster.connect()

@@ -57,7 +57,7 @@ def get_cassandra_reader(
     comm_threads=2,
     copy_threads=2,
     wait_threads=2,
-    use_ssl=False,  # True,
+    use_ssl=True,  # True,
     ssl_certificate="",  # "node0.cer.pem",
 ):
     # Read Cassandra parameters

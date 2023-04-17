@@ -44,6 +44,7 @@ def cache_uuids(
         cassandra_ips=CC.cassandra_ips,
         cloud_config=CC.cloud_config,
         port=CC.cassandra_port,
+        use_ssl=True,
     )
     conf = {
         "table": f"{keyspace}.metadata_{table_suffix}",

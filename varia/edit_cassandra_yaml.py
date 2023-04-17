@@ -10,7 +10,7 @@ with open(yaml_fn, "r") as f:
     cass_conf["rpc_address"] = "0.0.0.0"
     cass_conf["broadcast_rpc_address"] = "127.0.0.1"
     cass_conf["client_encryption_options"]["enabled"] = True
-    cass_conf["client_encryption_options"]["optional"] = True
+    cass_conf["client_encryption_options"]["optional"] = False
     cass_conf["client_encryption_options"]["keystore"] = "/cassandra/conf/keystore"
 with open(yaml_fn, "w") as f:
     yaml.dump(cass_conf, f, sort_keys=False)
