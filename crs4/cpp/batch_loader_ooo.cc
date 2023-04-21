@@ -147,6 +147,7 @@ BatchLoaderOOO::BatchLoaderOOO(std::string table, std::string label_type,
   }                     
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
+  in_batch.resize(prefetch_buffers);
   batch.resize(prefetch_buffers);
   copy_jobs.resize(prefetch_buffers);
   comm_jobs.resize(prefetch_buffers);
@@ -242,6 +243,7 @@ void BatchLoaderOOO::copy_data_img(const CassResult* result,
 }
   
 void BatchLoaderOOO::transfer2copy(CassFuture* query_future, int wb, int i) {
+  int cow = 0;
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
     // Handle error
@@ -310,16 +312,29 @@ void BatchLoaderOOO::transfer2copy(CassFuture* query_future, int wb, int i) {
   }
 }
 
-void BatchLoaderOOO::wrap_t2c(CassFuture* query_future, void* v_fd) {
+void BatchLoaderOOO::wrap_enq(CassFuture* query_future, void* v_fd) {
   futdata* fd = static_cast<futdata*>(v_fd);
   BatchLoaderOOO* batch_ldr = fd->batch_ldr;
-  int wb = fd->wb;
-  int i = fd->i;
   delete(fd);
-  batch_ldr->transfer2copy(query_future, wb, i);
+  batch_ldr->enqueue(query_future);
 }
 
-void BatchLoaderOOO::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
+void BatchLoaderOOO::enqueue(CassFuture* query_future) {
+  // insert future and check if there are now enough to create a new batch
+  curr_buf_mtx.lock();
+  int wb = curr_buf.front();
+  int bsz = bs[wb];
+  int i = in_batch[wb];
+  transfer2copy(query_future, wb, i);
+  in_batch[wb] = ++i;
+  if (i == bsz) {
+    in_batch[wb] = 0;
+    curr_buf.pop();
+  }
+  curr_buf_mtx.unlock();
+}
+
+void BatchLoaderOOO::keys2transfers(const std::vector<CassUuid>& keys) {
   // start all transfers in parallel (send requests to driver)
   for (size_t i=0; i != keys.size(); ++i) {
     CassUuid cuid = keys[i];
@@ -330,9 +345,7 @@ void BatchLoaderOOO::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
     cass_statement_free(statement);
     futdata* fd = new futdata();
     fd->batch_ldr = this;
-    fd->wb = wb;
-    fd->i = i;
-    cass_future_set_callback(query_future, wrap_t2c, fd);
+    cass_future_set_callback(query_future, wrap_enq, fd);
     cass_future_free(query_future);
   }
 }
@@ -342,9 +355,13 @@ std::future<BatchImgLab> BatchLoaderOOO::start_transfers(
   bs[wb] = keys.size();
   copy_jobs[wb].reserve(bs[wb]);
   allocTens(wb);  // allocate space for tensors
+  {
+    std::unique_lock<std::mutex> lck(curr_buf_mtx);
+    curr_buf.push(wb);
+  }
   // enqueue keys for transfers
   comm_jobs[wb] = comm_pool->enqueue(
-                             &BatchLoaderOOO::keys2transfers, this, keys, wb);
+                             &BatchLoaderOOO::keys2transfers, this, keys);
   auto r = wait_pool->enqueue(&BatchLoaderOOO::wait4images, this, wb);
   return(r);
 }
