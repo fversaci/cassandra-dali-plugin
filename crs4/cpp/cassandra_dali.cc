@@ -33,11 +33,11 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   comm_threads(spec.GetArgument<int>("comm_threads")) {
   DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
                "label_type can only be int, image or none.");
-  batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
-                        username, password, cassandra_ips, cassandra_port,
-                        cloud_config, use_ssl, ssl_certificate,
-                        io_threads, prefetch_buffers, copy_threads,
-                        wait_threads, comm_threads);
+  batch_ldr = new BatchLoaderOOO(table, label_type, label_col, data_col,
+                        id_col, username, password, cassandra_ips,
+                        cassandra_port, cloud_config, use_ssl,
+                        ssl_certificate, io_threads, prefetch_buffers,
+                        copy_threads, wait_threads, comm_threads);
 }
 
 void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
