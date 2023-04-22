@@ -13,7 +13,7 @@
 #include <cmath>
 #include "dali/pipeline/operator/builtin/input_operator.h"
 #include "dali/operators/reader/reader_op.h"
-#include "./batch_loader_ooo.h"
+#include "./batch_loader.h"
 
 namespace crs4 {
 
@@ -75,7 +75,7 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   std::string id_col;
   std::string username;
   std::string password;
-  BatchLoaderOOO* batch_ldr = nullptr;
+  BatchLoader* batch_ldr = nullptr;
   int batch_size;
   int prefetch_buffers;
   int io_threads;
@@ -83,6 +83,7 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   int wait_threads;
   int comm_threads;
   bool use_ssl;
+  bool ooo;
   std::string ssl_certificate;
   bool buffers_empty = true;
   std::optional<std::string> null_data_id = std::nullopt;

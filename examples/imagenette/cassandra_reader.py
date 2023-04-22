@@ -88,5 +88,6 @@ def get_cassandra_reader(
         use_ssl=use_ssl,
         ssl_certificate=ssl_certificate,
         label_type=label_type,
+        ooo=False,
     )
     return cassandra_reader

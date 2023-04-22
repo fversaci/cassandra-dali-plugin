@@ -30,14 +30,15 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   io_threads(spec.GetArgument<int>("io_threads")),
   copy_threads(spec.GetArgument<int>("copy_threads")),
   wait_threads(spec.GetArgument<int>("wait_threads")),
-  comm_threads(spec.GetArgument<int>("comm_threads")) {
+  comm_threads(spec.GetArgument<int>("comm_threads")),
+  ooo(spec.GetArgument<bool>("ooo")) {
   DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
                "label_type can only be int, image or none.");
-  batch_ldr = new BatchLoaderOOO(table, label_type, label_col, data_col,
-                        id_col, username, password, cassandra_ips,
-                        cassandra_port, cloud_config, use_ssl,
-                        ssl_certificate, io_threads, prefetch_buffers,
-                        copy_threads, wait_threads, comm_threads);
+  batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
+                        username, password, cassandra_ips, cassandra_port,
+                        cloud_config, use_ssl, ssl_certificate,
+                        io_threads, prefetch_buffers, copy_threads,
+                              wait_threads, comm_threads, ooo);
 }
 
 void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
@@ -123,4 +124,5 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2)
 .AddOptionalArg("blocking", R"(block until the data is available)", true)
 .AddOptionalArg("no_copy", R"(should DALI copy the buffer when ``feed_input`` is called?)", false)
+.AddOptionalArg("ooo", R"(Enable out-of-order batches)", false)
 .AddParent("InputOperatorBase");

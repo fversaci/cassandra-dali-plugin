@@ -25,7 +25,7 @@ BatchLoader::~BatchLoader() {
   }
 }
 
-void load_trusted_cert_file(std::string file, CassSsl* ssl) {
+void BatchLoader::load_trusted_cert_file(std::string file, CassSsl* ssl) {
   CassError rc;
   char* cert;
   int64_t cert_size;
@@ -54,7 +54,7 @@ void load_trusted_cert_file(std::string file, CassSsl* ssl) {
   free(cert);
 }
 
-void set_ssl(CassCluster* cluster, std::string ssl_certificate) {
+void BatchLoader::set_ssl(CassCluster* cluster, std::string ssl_certificate) {
   CassSsl* ssl = cass_ssl_new();
   if (ssl_certificate.empty()) {
     cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
@@ -131,13 +131,13 @@ BatchLoader::BatchLoader(std::string table, std::string label_type,
                          std::string cloud_config, bool use_ssl,
                          std::string ssl_certificate, int io_threads,
                          int prefetch_buffers, int copy_threads,
-                         int wait_threads, int comm_threads) :
+                         int wait_threads, int comm_threads, bool ooo) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   username(username), password(password), cassandra_ips(cassandra_ips),
   cloud_config(cloud_config), port(port), use_ssl(use_ssl),
   ssl_certificate(ssl_certificate), io_threads(io_threads),
   prefetch_buffers(prefetch_buffers), copy_threads(copy_threads),
-  wait_threads(wait_threads), comm_threads(comm_threads) {
+  wait_threads(wait_threads), comm_threads(comm_threads), ooo(ooo) {
   // setting label type, default is lab_none
   if (label_type == "int") {
     label_t = lab_int;
@@ -147,6 +147,7 @@ BatchLoader::BatchLoader(std::string table, std::string label_type,
   }                     
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
+  in_batch.resize(prefetch_buffers);
   batch.resize(prefetch_buffers);
   copy_jobs.resize(prefetch_buffers);
   comm_jobs.resize(prefetch_buffers);
@@ -310,13 +311,33 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   }
 }
 
-void BatchLoader::wrap_t2c(CassFuture* query_future, void* v_fd) {
+void BatchLoader::wrap_enq(CassFuture* query_future, void* v_fd) {
   futdata* fd = static_cast<futdata*>(v_fd);
   BatchLoader* batch_ldr = fd->batch_ldr;
   int wb = fd->wb;
   int i = fd->i;
   delete(fd);
-  batch_ldr->transfer2copy(query_future, wb, i);
+  if (batch_ldr->ooo) {
+    batch_ldr->enqueue(query_future);
+  }
+  else {
+    batch_ldr->transfer2copy(query_future, wb, i);
+  }
+}
+
+void BatchLoader::enqueue(CassFuture* query_future) {
+  // insert future and check if there are now enough to create a new batch
+  curr_buf_mtx.lock();
+  int wb = curr_buf.front();
+  int bsz = bs[wb];
+  int i = in_batch[wb];
+  transfer2copy(query_future, wb, i);
+  in_batch[wb] = ++i;
+  if (i == bsz) {
+    in_batch[wb] = 0;
+    curr_buf.pop();
+  }
+  curr_buf_mtx.unlock();
 }
 
 void BatchLoader::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
@@ -332,7 +353,7 @@ void BatchLoader::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
     fd->batch_ldr = this;
     fd->wb = wb;
     fd->i = i;
-    cass_future_set_callback(query_future, wrap_t2c, fd);
+    cass_future_set_callback(query_future, wrap_enq, fd);
     cass_future_free(query_future);
   }
 }
@@ -342,6 +363,10 @@ std::future<BatchImgLab> BatchLoader::start_transfers(
   bs[wb] = keys.size();
   copy_jobs[wb].reserve(bs[wb]);
   allocTens(wb);  // allocate space for tensors
+  if (ooo) { // out-of-order?
+    std::unique_lock<std::mutex> lck(curr_buf_mtx);
+    curr_buf.push(wb);
+  }
   // enqueue keys for transfers
   comm_jobs[wb] = comm_pool->enqueue(
                              &BatchLoader::keys2transfers, this, keys, wb);
