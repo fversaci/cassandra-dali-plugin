@@ -61,7 +61,7 @@ def read_data(
     else:
         device_id = types.CPU_ONLY_DEVICE_ID
 
-    bs = 128
+    bs = 512
     if reader == "cassandra":
         uuids = read_uuids(
             keyspace,
@@ -79,10 +79,11 @@ def read_data(
             table_suffix,
             batch_size=bs,
             prefetch_buffers=16,
-            io_threads=8,
+            io_threads=6,
             name="Reader",
-            # comm_threads=4,
-            # copy_threads=4,
+            comm_threads=1,
+            copy_threads=4,
+            ooo=True,
         )
     elif reader == "file":
         # alternatively: use fn.readers.file

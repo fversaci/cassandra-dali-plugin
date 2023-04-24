@@ -121,11 +121,11 @@ RUN \
 
 COPY . /home/user/cassandra-dali-plugin
 
-# increase write timeout to 20 seconds, listen to all interfaces
-# and enable SSL
+# increase write timeout to 20 seconds, listen to all interfaces,
+# enable SSL and increase max direct memory available
 RUN \
     cp /home/user/cassandra-dali-plugin/varia/keystore /cassandra/conf/ \
-    && python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_yaml.py
+    && python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_conf.py
 
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'
 RUN chown -R user.user "/spark/"
