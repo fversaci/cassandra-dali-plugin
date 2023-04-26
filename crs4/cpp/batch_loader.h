@@ -66,7 +66,7 @@ class BatchLoader {
   std::vector<std::vector<std::future<void>>> copy_jobs;
   // current batch
   std::vector<int> bs;
-  std::vector<int> in_batch; // how many images currently in batch
+  std::vector<int> in_batch;  // how many images currently in batch
   std::vector<std::future<BatchImgLab>> batch;
   std::vector<BatchRawImage> v_feats;
   std::vector<BatchLabel> v_labs;
@@ -84,7 +84,8 @@ class BatchLoader {
   void copy_data_int(const CassResult* result, const cass_byte_t* data,
                      size_t sz, cass_int32_t lab, int off, int wb);
   void copy_data_img(const CassResult* result, const cass_byte_t* data,
-                     size_t sz, const cass_byte_t* lab, size_t l_sz, int off, int wb);
+                     size_t sz, const cass_byte_t* lab, size_t l_sz,
+                     int off, int wb);
   std::future<BatchImgLab> start_transfers(const std::vector<CassUuid>& keys,
                                            int wb);
   BatchImgLab wait4images(int wb);

@@ -70,8 +70,7 @@ void BatchLoader::connect() {
     // direct connection
     cass_cluster_set_contact_points(cluster, s_cassandra_ips.c_str());
     cass_cluster_set_port(cluster, port);
-  }
-  else {
+  } else {
     // cloud configuration (e.g., AstraDB)
     if (cass_cluster_set_cloud_secure_connection_bundle(cluster,
                                                         cloud_config.c_str())
@@ -101,7 +100,7 @@ void BatchLoader::connect() {
   }
   // assemble query
   std::stringstream ss;
-  ss << "SELECT " ;
+  ss << "SELECT ";
   if (label_t != lab_none) {  // getting label/mask?
     ss << label_col << ", ";
   }
@@ -124,8 +123,8 @@ void BatchLoader::connect() {
 }
 
 BatchLoader::BatchLoader(std::string table, std::string label_type,
-			 std::string label_col, std::string data_col,
-			 std::string id_col,
+                         std::string label_col, std::string data_col,
+                         std::string id_col,
                          std::string username, std::string password,
                          std::vector<std::string> cassandra_ips, int port,
                          std::string cloud_config, bool use_ssl,
@@ -144,7 +143,7 @@ BatchLoader::BatchLoader(std::string table, std::string label_type,
   } else if (label_type == "image") {
     label_t = lab_img;
     lab_shapes.resize(prefetch_buffers);
-  }                     
+  }
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
   in_batch.resize(prefetch_buffers);
@@ -185,7 +184,7 @@ void BatchLoader::allocTens(int wb) {
     std::vector<int64_t> v_sz(bs[wb], 1);
     ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
     v_labs[wb].Resize(t_sz, DALI_INT_TYPE);
-  } 
+  }
 }
 
 void BatchLoader::copy_data_none(const CassResult* result,
@@ -241,7 +240,7 @@ void BatchLoader::copy_data_img(const CassResult* result,
   // free Cassandra result memory (data included)
   cass_result_free(result);
 }
-  
+
 void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
@@ -292,7 +291,7 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     // enqueue image copy + image label (e.g., mask)
     cj = copy_pool->enqueue(&BatchLoader::copy_data_img, this,
                             result, data, sz, lab, l_sz, i, wb);
-  }    
+  }
   // saving raw image size
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
@@ -319,8 +318,7 @@ void BatchLoader::wrap_enq(CassFuture* query_future, void* v_fd) {
   delete(fd);
   if (batch_ldr->ooo) {
     batch_ldr->enqueue(query_future);
-  }
-  else {
+  } else {
     batch_ldr->transfer2copy(query_future, wb, i);
   }
 }
@@ -363,7 +361,7 @@ std::future<BatchImgLab> BatchLoader::start_transfers(
   bs[wb] = keys.size();
   copy_jobs[wb].reserve(bs[wb]);
   allocTens(wb);  // allocate space for tensors
-  if (ooo) { // out-of-order?
+  if (ooo) {  // out-of-order?
     std::unique_lock<std::mutex> lck(curr_buf_mtx);
     curr_buf.push(wb);
   }

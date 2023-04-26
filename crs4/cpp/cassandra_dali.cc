@@ -38,13 +38,13 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
                         io_threads, prefetch_buffers, copy_threads,
-                              wait_threads, comm_threads, ooo);
+                        wait_threads, comm_threads, ooo);
 }
 
 void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
   assert(batch_size == input.num_samples());
   auto cass_uuids = std::vector<CassUuid>(batch_size);
-  for(auto i=0; i!=batch_size; ++i){
+  for (auto i=0; i != batch_size; ++i) {
     auto d_ptr = input[i].data<dali::uint64>();
     auto c_uuid = &cass_uuids[i];
     c_uuid->time_and_version = *(d_ptr++);
@@ -74,7 +74,7 @@ void Cassandra::fill_buffers(::dali::Workspace &ws) {
   }
   buffers_empty = false;
 }
-  
+
 void Cassandra::RunImpl(::dali::Workspace &ws) {
   if (buffers_empty) {
     fill_buffers(ws);

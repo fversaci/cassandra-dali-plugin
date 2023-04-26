@@ -53,7 +53,7 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   ::dali::DALIDataType in_dtype() const override {
     return ::dali::DALIDataType::DALI_UINT64;
   }
-  
+
  protected:
   bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
                  const ::dali::Workspace &ws) override;
