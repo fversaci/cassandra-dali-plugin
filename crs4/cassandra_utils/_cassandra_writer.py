@@ -62,6 +62,7 @@ class CassandraWriter:
                 execution_profiles=profs,
                 protocol_version=4,
                 auth_provider=auth_prov,
+                ssl_context=ssl_context,
             )
         self.sess = self.cluster.connect()
 

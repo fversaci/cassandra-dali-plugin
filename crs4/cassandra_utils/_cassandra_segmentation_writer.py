@@ -28,6 +28,7 @@ class CassandraSegmentationWriter(CassandraWriter):
         cloud_config=None,
         cassandra_ips=None,
         cassandra_port=None,
+        use_ssl=False,
         masks=False,
     ):
 
@@ -43,6 +44,7 @@ class CassandraSegmentationWriter(CassandraWriter):
             cloud_config,
             cassandra_ips,
             cassandra_port,
+            use_ssl,
             masks,
         )
 

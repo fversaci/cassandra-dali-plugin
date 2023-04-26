@@ -84,6 +84,7 @@ def send_images_to_db(
             auth_prov=auth_prov,
             cassandra_ips=cassandra_ips,
             cassandra_port=cassandra_port,
+            use_ssl=True,
             table_data=f"{keyspace}.data_{table_suffix}",
             table_metadata=f"{keyspace}.metadata_{table_suffix}",
             id_col="patch_id",
