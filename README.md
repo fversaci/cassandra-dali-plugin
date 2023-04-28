@@ -70,8 +70,8 @@ Cassandra Data Loader is developed by
 
 ## License
 
-cassandra-dali-plugin is licensed under the MIT License.  See LICENSE
-for further details.
+cassandra-dali-plugin is licensed under the under the Apache License,
+Version 2.0. See LICENSE for further details.
 
 ## Acknowledgment
 
