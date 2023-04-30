@@ -70,7 +70,9 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
 
  private:
   void prefetch_one(const dali::TensorList<dali::CPUBackend>&);
+  void fill_buffer(::dali::Workspace &ws);
   void fill_buffers(::dali::Workspace &ws);
+  bool ok_to_fill();
   // variables
   dali::TensorList<dali::CPUBackend> uuids;
   std::string cloud_config;
@@ -92,8 +94,11 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   int comm_threads;
   bool use_ssl;
   bool ooo;
+  int slow_start;  // prefetch dilution
+  int cow_dilute;  // counter for prefetch dilution
+  int curr_prefetch = 0;
   std::string ssl_certificate;
-  bool buffers_empty = true;
+  bool buffers_not_full = true;
   std::optional<std::string> null_data_id = std::nullopt;
   ::dali::TensorLayout in_layout_ = "B";  // Byte stream
 };

@@ -36,6 +36,7 @@ from fn_shortcuts import (
 from clize import run
 from tqdm import trange, tqdm
 import math
+import time
 
 # supporting torchrun
 import os
@@ -43,6 +44,11 @@ import os
 global_rank = int(os.getenv("RANK", default=0))
 local_rank = int(os.getenv("LOCAL_RANK", default=0))
 world_size = int(os.getenv("WORLD_SIZE", default=1))
+
+
+def just_sleep(im1, im2):
+    time.sleep(2e-5 * world_size)
+    return im1, im2
 
 
 def read_data(
@@ -86,12 +92,13 @@ def read_data(
             keyspace,
             table_suffix,
             batch_size=bs,
-            prefetch_buffers=16,
-            io_threads=6,
+            prefetch_buffers=32,
+            io_threads=8,
             name="Reader",
             comm_threads=1,
             copy_threads=4,
             ooo=True,
+            slow_start=4,
         )
     elif reader == "file":
         # alternatively: use fn.readers.file
@@ -116,11 +123,22 @@ def read_data(
         num_threads=4,
         device_id=device_id,
         prefetch_queue_depth=2,
+        #########################
+        # - uncomment to enable delay via just_sleep
+        # exec_async=False,
+        # exec_pipelined=False,
+        #########################
         # py_start_method="spawn",
         # enable_memory_stats=True,
     )
     def get_dali_pipeline():
         images, labels = chosen_reader
+
+        ####################################################################
+        # - add a delay proportional to the number of ranks
+        # images, labels = fn.python_function(
+        #     images, labels, function=just_sleep, num_outputs=2
+        # )
         ####################################################################
         # - decode, resize and crop, must use GPU (e.g., --device-id=0)
         # images = fn_image_random_crop(images)

@@ -39,9 +39,13 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   copy_threads(spec.GetArgument<int>("copy_threads")),
   wait_threads(spec.GetArgument<int>("wait_threads")),
   comm_threads(spec.GetArgument<int>("comm_threads")),
-  ooo(spec.GetArgument<bool>("ooo")) {
+  ooo(spec.GetArgument<bool>("ooo")),
+  slow_start(spec.GetArgument<int>("slow_start")),
+  cow_dilute(slow_start -1) {
   DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
                "label_type can only be int, image or none.");
+  DALI_ENFORCE(slow_start >= 0,
+               "slow_start should be either 0 (disabled) or >= 1 (prefetch dilution).");
   batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
@@ -75,16 +79,38 @@ bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
 
 void Cassandra::fill_buffers(::dali::Workspace &ws) {
   // start prefetching
-  for (int i=0; i < prefetch_buffers; ++i) {
-    prefetch_one(uuids);
-    auto &thread_pool = ws.GetThreadPool();
-    ForwardCurrentData(uuids, null_data_id, thread_pool);
+  int num_buff = slow_start > 0 ? 1 : prefetch_buffers;
+  for (int i=0; i < num_buff && ok_to_fill(); ++i) {
+    fill_buffer(ws);
   }
-  buffers_empty = false;
+  if (curr_prefetch == prefetch_buffers) {
+    buffers_not_full = false;
+  }
+}
+
+bool Cassandra::ok_to_fill() {
+  // fast start
+  if (slow_start == 0)
+    return true;
+  // slow start: prefetch once every slow_start steps
+  ++cow_dilute;
+  cow_dilute %= slow_start;
+  if (cow_dilute !=0) {
+    return false;
+  }
+  return true;
+}
+
+void Cassandra::fill_buffer(::dali::Workspace &ws) {
+  // start prefetching
+  prefetch_one(uuids);
+  ++curr_prefetch;
+  auto &thread_pool = ws.GetThreadPool();
+  ForwardCurrentData(uuids, null_data_id, thread_pool);
 }
 
 void Cassandra::RunImpl(::dali::Workspace &ws) {
-  if (buffers_empty) {
+  if (buffers_not_full) {
     fill_buffers(ws);
   }
   BatchImgLab batch = batch_ldr->blocking_get_batch();
@@ -133,4 +159,5 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("blocking", R"(block until the data is available)", true)
 .AddOptionalArg("no_copy", R"(should DALI copy the buffer when ``feed_input`` is called?)", false)
 .AddOptionalArg("ooo", R"(Enable out-of-order batches)", false)
+.AddOptionalArg("slow_start", R"(How much to dilute prefetching)", 0)
 .AddParent("InputOperatorBase");
