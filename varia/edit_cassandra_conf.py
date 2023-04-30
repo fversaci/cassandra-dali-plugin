@@ -35,4 +35,4 @@ from pathlib import Path
 jvm_fns = Path("/cassandra/conf/").glob("jvm*server.options")
 for fn in jvm_fns:
     with open(fn, "a") as f:
-        f.write("-XX:MaxDirectMemorySize=32G")
+        f.write("-XX:MaxDirectMemorySize=64G")
