@@ -95,6 +95,7 @@ def read_data(
             # comm_threads=4,
             # copy_threads=4,
             # ooo=True,
+            slow_start=4,
         )
     elif reader == "file":
         # alternatively: use fn.readers.file

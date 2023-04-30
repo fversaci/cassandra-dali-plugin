@@ -68,6 +68,7 @@ def get_cassandra_reader(
     use_ssl=True,  # True,
     ssl_certificate="",  # "node0.cer.pem",
     ooo=False,
+    slow_start=0,
 ):
     # Read Cassandra parameters
     from private_data import CassConf as CC
@@ -98,5 +99,6 @@ def get_cassandra_reader(
         ssl_certificate=ssl_certificate,
         label_type=label_type,
         ooo=ooo,
+        slow_start=slow_start,
     )
     return cassandra_reader
