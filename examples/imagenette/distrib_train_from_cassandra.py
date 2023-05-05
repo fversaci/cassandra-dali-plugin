@@ -227,6 +227,8 @@ def create_dali_pipeline(
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
+        ooo=True,
+        slow_start=4,
     )
     images, labels = cass_reader
     dali_device = "cpu" if dali_cpu else "gpu"

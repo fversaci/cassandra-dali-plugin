@@ -1,8 +1,16 @@
-// Copyright 2021-2 CRS4
+// Copyright 2022 CRS4 (http://www.crs4.it/)
 //
-// Use of this source code is governed by an MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <iostream>
 #include <fstream>
@@ -30,20 +38,25 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   io_threads(spec.GetArgument<int>("io_threads")),
   copy_threads(spec.GetArgument<int>("copy_threads")),
   wait_threads(spec.GetArgument<int>("wait_threads")),
-  comm_threads(spec.GetArgument<int>("comm_threads")) {
+  comm_threads(spec.GetArgument<int>("comm_threads")),
+  ooo(spec.GetArgument<bool>("ooo")),
+  slow_start(spec.GetArgument<int>("slow_start")),
+  cow_dilute(slow_start -1) {
   DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
                "label_type can only be int, image or none.");
+  DALI_ENFORCE(slow_start >= 0,
+               "slow_start should be either 0 (disabled) or >= 1 (prefetch dilution).");
   batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
                         io_threads, prefetch_buffers, copy_threads,
-                        wait_threads, comm_threads);
+                        wait_threads, comm_threads, ooo);
 }
 
 void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
   assert(batch_size == input.num_samples());
   auto cass_uuids = std::vector<CassUuid>(batch_size);
-  for(auto i=0; i!=batch_size; ++i){
+  for (auto i=0; i != batch_size; ++i) {
     auto d_ptr = input[i].data<dali::uint64>();
     auto c_uuid = &cass_uuids[i];
     c_uuid->time_and_version = *(d_ptr++);
@@ -66,16 +79,38 @@ bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
 
 void Cassandra::fill_buffers(::dali::Workspace &ws) {
   // start prefetching
-  for (int i=0; i < prefetch_buffers; ++i) {
-    prefetch_one(uuids);
-    auto &thread_pool = ws.GetThreadPool();
-    ForwardCurrentData(uuids, null_data_id, thread_pool);
+  int num_buff = slow_start > 0 ? 1 : prefetch_buffers;
+  for (int i=0; i < num_buff && ok_to_fill(); ++i) {
+    fill_buffer(ws);
   }
-  buffers_empty = false;
+  if (curr_prefetch == prefetch_buffers) {
+    buffers_not_full = false;
+  }
 }
-  
+
+bool Cassandra::ok_to_fill() {
+  // fast start
+  if (slow_start == 0)
+    return true;
+  // slow start: prefetch once every slow_start steps
+  ++cow_dilute;
+  cow_dilute %= slow_start;
+  if (cow_dilute !=0) {
+    return false;
+  }
+  return true;
+}
+
+void Cassandra::fill_buffer(::dali::Workspace &ws) {
+  // start prefetching
+  prefetch_one(uuids);
+  ++curr_prefetch;
+  auto &thread_pool = ws.GetThreadPool();
+  ForwardCurrentData(uuids, null_data_id, thread_pool);
+}
+
 void Cassandra::RunImpl(::dali::Workspace &ws) {
-  if (buffers_empty) {
+  if (buffers_not_full) {
     fill_buffers(ws);
   }
   BatchImgLab batch = batch_ldr->blocking_get_batch();
@@ -123,4 +158,6 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2)
 .AddOptionalArg("blocking", R"(block until the data is available)", true)
 .AddOptionalArg("no_copy", R"(should DALI copy the buffer when ``feed_input`` is called?)", false)
+.AddOptionalArg("ooo", R"(Enable out-of-order batches)", false)
+.AddOptionalArg("slow_start", R"(How much to dilute prefetching)", 0)
 .AddParent("InputOperatorBase");
