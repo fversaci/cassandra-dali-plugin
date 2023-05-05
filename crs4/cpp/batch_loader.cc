@@ -1,8 +1,16 @@
-// Copyright 2021-2 CRS4
+// Copyright 2022 CRS4 (http://www.crs4.it/)
 //
-// Use of this source code is governed by an MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "./batch_loader.h"
 
@@ -25,7 +33,7 @@ BatchLoader::~BatchLoader() {
   }
 }
 
-void load_trusted_cert_file(std::string file, CassSsl* ssl) {
+void BatchLoader::load_trusted_cert_file(std::string file, CassSsl* ssl) {
   CassError rc;
   char* cert;
   int64_t cert_size;
@@ -54,7 +62,7 @@ void load_trusted_cert_file(std::string file, CassSsl* ssl) {
   free(cert);
 }
 
-void set_ssl(CassCluster* cluster, std::string ssl_certificate) {
+void BatchLoader::set_ssl(CassCluster* cluster, std::string ssl_certificate) {
   CassSsl* ssl = cass_ssl_new();
   if (ssl_certificate.empty()) {
     cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
@@ -70,8 +78,7 @@ void BatchLoader::connect() {
     // direct connection
     cass_cluster_set_contact_points(cluster, s_cassandra_ips.c_str());
     cass_cluster_set_port(cluster, port);
-  }
-  else {
+  } else {
     // cloud configuration (e.g., AstraDB)
     if (cass_cluster_set_cloud_secure_connection_bundle(cluster,
                                                         cloud_config.c_str())
@@ -101,7 +108,7 @@ void BatchLoader::connect() {
   }
   // assemble query
   std::stringstream ss;
-  ss << "SELECT " ;
+  ss << "SELECT ";
   if (label_t != lab_none) {  // getting label/mask?
     ss << label_col << ", ";
   }
@@ -124,29 +131,30 @@ void BatchLoader::connect() {
 }
 
 BatchLoader::BatchLoader(std::string table, std::string label_type,
-			 std::string label_col, std::string data_col,
-			 std::string id_col,
+                         std::string label_col, std::string data_col,
+                         std::string id_col,
                          std::string username, std::string password,
                          std::vector<std::string> cassandra_ips, int port,
                          std::string cloud_config, bool use_ssl,
                          std::string ssl_certificate, int io_threads,
                          int prefetch_buffers, int copy_threads,
-                         int wait_threads, int comm_threads) :
+                         int wait_threads, int comm_threads, bool ooo) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   username(username), password(password), cassandra_ips(cassandra_ips),
   cloud_config(cloud_config), port(port), use_ssl(use_ssl),
   ssl_certificate(ssl_certificate), io_threads(io_threads),
   prefetch_buffers(prefetch_buffers), copy_threads(copy_threads),
-  wait_threads(wait_threads), comm_threads(comm_threads) {
+  wait_threads(wait_threads), comm_threads(comm_threads), ooo(ooo) {
   // setting label type, default is lab_none
   if (label_type == "int") {
     label_t = lab_int;
   } else if (label_type == "image") {
     label_t = lab_img;
     lab_shapes.resize(prefetch_buffers);
-  }                     
+  }
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
+  in_batch.resize(prefetch_buffers);
   batch.resize(prefetch_buffers);
   copy_jobs.resize(prefetch_buffers);
   comm_jobs.resize(prefetch_buffers);
@@ -184,7 +192,7 @@ void BatchLoader::allocTens(int wb) {
     std::vector<int64_t> v_sz(bs[wb], 1);
     ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
     v_labs[wb].Resize(t_sz, DALI_INT_TYPE);
-  } 
+  }
 }
 
 void BatchLoader::copy_data_none(const CassResult* result,
@@ -240,7 +248,7 @@ void BatchLoader::copy_data_img(const CassResult* result,
   // free Cassandra result memory (data included)
   cass_result_free(result);
 }
-  
+
 void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
@@ -291,7 +299,7 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     // enqueue image copy + image label (e.g., mask)
     cj = copy_pool->enqueue(&BatchLoader::copy_data_img, this,
                             result, data, sz, lab, l_sz, i, wb);
-  }    
+  }
   // saving raw image size
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
@@ -310,13 +318,32 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   }
 }
 
-void BatchLoader::wrap_t2c(CassFuture* query_future, void* v_fd) {
+void BatchLoader::wrap_enq(CassFuture* query_future, void* v_fd) {
   futdata* fd = static_cast<futdata*>(v_fd);
   BatchLoader* batch_ldr = fd->batch_ldr;
   int wb = fd->wb;
   int i = fd->i;
   delete(fd);
-  batch_ldr->transfer2copy(query_future, wb, i);
+  if (batch_ldr->ooo) {
+    batch_ldr->enqueue(query_future);
+  } else {
+    batch_ldr->transfer2copy(query_future, wb, i);
+  }
+}
+
+void BatchLoader::enqueue(CassFuture* query_future) {
+  // insert future and check if there are now enough to create a new batch
+  curr_buf_mtx.lock();
+  int wb = curr_buf.front();
+  int bsz = bs[wb];
+  int i = in_batch[wb];
+  transfer2copy(query_future, wb, i);
+  in_batch[wb] = ++i;
+  if (i == bsz) {
+    in_batch[wb] = 0;
+    curr_buf.pop();
+  }
+  curr_buf_mtx.unlock();
 }
 
 void BatchLoader::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
@@ -332,7 +359,7 @@ void BatchLoader::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
     fd->batch_ldr = this;
     fd->wb = wb;
     fd->i = i;
-    cass_future_set_callback(query_future, wrap_t2c, fd);
+    cass_future_set_callback(query_future, wrap_enq, fd);
     cass_future_free(query_future);
   }
 }
@@ -342,6 +369,10 @@ std::future<BatchImgLab> BatchLoader::start_transfers(
   bs[wb] = keys.size();
   copy_jobs[wb].reserve(bs[wb]);
   allocTens(wb);  // allocate space for tensors
+  if (ooo) {  // out-of-order?
+    std::unique_lock<std::mutex> lck(curr_buf_mtx);
+    curr_buf.push(wb);
+  }
   // enqueue keys for transfers
   comm_jobs[wb] = comm_pool->enqueue(
                              &BatchLoader::keys2transfers, this, keys, wb);

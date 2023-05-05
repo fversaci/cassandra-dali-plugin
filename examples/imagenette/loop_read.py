@@ -1,8 +1,16 @@
-# Copyright 2021-2 CRS4
+# Copyright 2022 CRS4 (http://www.crs4.it/)
 #
-# Use of this source code is governed by an MIT-style
-# license that can be found in the LICENSE file or at
-# https://opensource.org/licenses/MIT.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, read_uuids
@@ -28,6 +36,7 @@ from fn_shortcuts import (
 from clize import run
 from tqdm import trange, tqdm
 import math
+import time
 
 # supporting torchrun
 import os
@@ -35,6 +44,11 @@ import os
 global_rank = int(os.getenv("RANK", default=0))
 local_rank = int(os.getenv("LOCAL_RANK", default=0))
 world_size = int(os.getenv("WORLD_SIZE", default=1))
+
+
+def just_sleep(im1, im2):
+    time.sleep(2e-5 * world_size)
+    return im1, im2
 
 
 def read_data(
@@ -61,7 +75,7 @@ def read_data(
     else:
         device_id = types.CPU_ONLY_DEVICE_ID
 
-    bs = 128
+    bs = 512
     if reader == "cassandra":
         uuids = read_uuids(
             keyspace,
@@ -78,11 +92,13 @@ def read_data(
             keyspace,
             table_suffix,
             batch_size=bs,
-            prefetch_buffers=16,
+            prefetch_buffers=32,
             io_threads=8,
             name="Reader",
-            # comm_threads=4,
-            # copy_threads=4,
+            comm_threads=1,
+            copy_threads=4,
+            ooo=True,
+            slow_start=4,
         )
     elif reader == "file":
         # alternatively: use fn.readers.file
@@ -107,11 +123,22 @@ def read_data(
         num_threads=4,
         device_id=device_id,
         prefetch_queue_depth=2,
+        #########################
+        # - uncomment to enable delay via just_sleep
+        # exec_async=False,
+        # exec_pipelined=False,
+        #########################
         # py_start_method="spawn",
         # enable_memory_stats=True,
     )
     def get_dali_pipeline():
         images, labels = chosen_reader
+
+        ####################################################################
+        # - add a delay proportional to the number of ranks
+        # images, labels = fn.python_function(
+        #     images, labels, function=just_sleep, num_outputs=2
+        # )
         ####################################################################
         # - decode, resize and crop, must use GPU (e.g., --device-id=0)
         # images = fn_image_random_crop(images)

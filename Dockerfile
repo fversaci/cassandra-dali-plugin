@@ -99,12 +99,6 @@ RUN \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && ln -s "apache-cassandra-$CASS_VERS" cassandra
 
-# increase write timeout to 20 seconds, listen to all interfaces
-# and enable SSL
-COPY varia/keystore /cassandra/conf/
-RUN \
-    python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_yaml.py
-
 EXPOSE 9042
 
 ########################################################################
@@ -126,6 +120,13 @@ RUN \
     && chown -R user.user /apache-cassandra-$CASS_V*
 
 COPY . /home/user/cassandra-dali-plugin
+
+# increase write timeout to 20 seconds, listen to all interfaces,
+# enable SSL and increase max direct memory available
+RUN \
+    cp /home/user/cassandra-dali-plugin/varia/keystore /cassandra/conf/ \
+    && python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_conf.py
+
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'
 RUN chown -R user.user "/spark/"
 # create data dir
