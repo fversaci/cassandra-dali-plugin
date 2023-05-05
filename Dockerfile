@@ -64,7 +64,7 @@ RUN \
 #install cassandra python driver + some python libraries
 RUN \
     pip3 install --upgrade --no-cache matplotlib pandas clize \
-      opencv-python cassandra-driver pybind11 tqdm tifffile
+      opencv-python cassandra-driver pybind11 tqdm tifffile pyyaml
 
 ########################################################################
 # SPARK installation, to test examples
@@ -99,10 +99,6 @@ RUN \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && ln -s "apache-cassandra-$CASS_VERS" cassandra
 
-# increase write timeout to 20 seconds
-RUN \
-    sed -i 's/^\(write_request_timeout_in_ms:\)\(.*\)/\1 20000/' /cassandra/conf/cassandra.yaml
-
 EXPOSE 9042
 
 ########################################################################
@@ -124,6 +120,13 @@ RUN \
     && chown -R user.user /apache-cassandra-$CASS_V*
 
 COPY . /home/user/cassandra-dali-plugin
+
+# increase write timeout to 20 seconds, listen to all interfaces,
+# enable SSL and increase max direct memory available
+RUN \
+    cp /home/user/cassandra-dali-plugin/varia/keystore /cassandra/conf/ \
+    && python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_conf.py
+
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'
 RUN chown -R user.user "/spark/"
 # create data dir

@@ -1,8 +1,16 @@
-// Copyright 2021-2 CRS4
+// Copyright 2022 CRS4 (http://www.crs4.it/)
 //
-// Use of this source code is governed by an MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef CRS4_CPP_BATCH_LOADER_H_
 #define CRS4_CPP_BATCH_LOADER_H_
@@ -33,6 +41,7 @@ class BatchLoader {
   dali::DALIDataType DALI_IMG_TYPE = ::dali::DALI_UINT8;
   // parameters
   bool connected = false;
+  bool ooo = false;  // enabling out-of-order?
   std::string table;
   lab_type label_t = lab_none;
   std::string label_col;
@@ -65,11 +74,14 @@ class BatchLoader {
   std::vector<std::vector<std::future<void>>> copy_jobs;
   // current batch
   std::vector<int> bs;
+  std::vector<int> in_batch;  // how many images currently in batch
   std::vector<std::future<BatchImgLab>> batch;
   std::vector<BatchRawImage> v_feats;
   std::vector<BatchLabel> v_labs;
   std::queue<int> read_buf;
   std::queue<int> write_buf;
+  std::queue<int> curr_buf;  // active ooo buffers
+  std::mutex curr_buf_mtx;
   std::vector<std::vector<int64_t>> shapes;
   std::vector<std::vector<int64_t>> lab_shapes;
   // methods
@@ -80,14 +92,18 @@ class BatchLoader {
   void copy_data_int(const CassResult* result, const cass_byte_t* data,
                      size_t sz, cass_int32_t lab, int off, int wb);
   void copy_data_img(const CassResult* result, const cass_byte_t* data,
-                     size_t sz, const cass_byte_t* lab, size_t l_sz, int off, int wb);
+                     size_t sz, const cass_byte_t* lab, size_t l_sz,
+                     int off, int wb);
   std::future<BatchImgLab> start_transfers(const std::vector<CassUuid>& keys,
                                            int wb);
   BatchImgLab wait4images(int wb);
   void keys2transfers(const std::vector<CassUuid>& keys, int wb);
   void transfer2copy(CassFuture* query_future, int wb, int i);
-  static void wrap_t2c(CassFuture* query_future, void* v_fd);
+  void enqueue(CassFuture* query_future);
+  static void wrap_enq(CassFuture* query_future, void* v_fd);
   void allocTens(int wb);
+  static void load_trusted_cert_file(std::string file, CassSsl* ssl);
+  static void set_ssl(CassCluster* cluster, std::string ssl_certificate);
 
  public:
   BatchLoader(std::string table, std::string label_type, std::string label_col,
@@ -96,7 +112,7 @@ class BatchLoader {
               int port, std::string cloud_config, bool use_ssl,
               std::string ssl_certificate, int io_threads,
               int prefetch_buffers, int copy_threads,
-              int wait_threads, int comm_threads);
+              int wait_threads, int comm_threads, bool ooo);
   ~BatchLoader();
   void prefetch_batch(const std::vector<CassUuid>& keys);
   BatchImgLab blocking_get_batch();
