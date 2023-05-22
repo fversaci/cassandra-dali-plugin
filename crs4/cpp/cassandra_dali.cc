@@ -42,6 +42,8 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   ooo(spec.GetArgument<bool>("ooo")),
   slow_start(spec.GetArgument<int>("slow_start")),
   cow_dilute(slow_start -1) {
+  DALI_ENFORCE(prefetch_buffers >= 0,
+               "prefetch_buffers should be non-negative.");
   DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
                "label_type can only be int, image or none.");
   DALI_ENFORCE(slow_start >= 0,
@@ -49,12 +51,12 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
-                        io_threads, prefetch_buffers, copy_threads,
+                        io_threads, 1 + prefetch_buffers, copy_threads,
                         wait_threads, comm_threads, ooo);
 }
 
 void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
-  assert(batch_size == input.num_samples());
+  // assert(batch_size == input.num_samples());
   auto cass_uuids = std::vector<CassUuid>(batch_size);
   for (auto i=0; i != batch_size; ++i) {
     auto d_ptr = input[i].data<dali::uint64>();
@@ -79,7 +81,7 @@ bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
 
 void Cassandra::fill_buffers(::dali::Workspace &ws) {
   // start prefetching
-  int num_buff = slow_start > 0 ? 1 : prefetch_buffers;
+  int num_buff = (slow_start > 0 && prefetch_buffers > 0) ? 1 : prefetch_buffers;
   for (int i=0; i < num_buff && ok_to_fill(); ++i) {
     fill_buffer(ws);
   }
@@ -113,9 +115,8 @@ void Cassandra::RunImpl(::dali::Workspace &ws) {
   if (buffers_not_full) {
     fill_buffers(ws);
   }
-  BatchImgLab batch = batch_ldr->blocking_get_batch();
-  // std::cout << (int) *(batch.second[0].data<dali::int32>()) << std::endl;
   prefetch_one(uuids);
+  BatchImgLab batch = batch_ldr->blocking_get_batch();
   // share features with output
   auto &features = ws.Output<::dali::CPUBackend>(0);
   features.ShareData(batch.first);
@@ -149,7 +150,7 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
 .AddOptionalArg<std::string>("ssl_certificate",
    R"(Optional SSL certificate)", "")
-.AddOptionalArg("prefetch_buffers", R"(Number or prefetch buffers)", 1)
+.AddOptionalArg("prefetch_buffers", R"(Number of prefetch buffers)", 1)
 .AddOptionalArg("io_threads",
    R"(Number of io threads used by the Cassandra driver)", 2)
 .AddOptionalArg("copy_threads",
