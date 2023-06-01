@@ -22,7 +22,7 @@ $ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-
 $ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --table-suffix=orig
 ```
 
-# Training using a split file
+## Create a split file
 Once the data is in the database, we can create a split file by running the ```create_split.py``` script. To view the different options available for the script, we can use the command:
 
 ```bash
