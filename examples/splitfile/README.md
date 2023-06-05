@@ -1,17 +1,29 @@
-# Training using a split file
-  
-In this example, we will use Imagenette2-320 to create a training and
-validation split from the data stored in a Cassandra database. In
-order to do this, we need to have the Imagenette images already stored in
-at least one table of the database. To achieve this, we can follow the
-instructions from the section [Starting Cassandra
-server](../imagenette/README.md#Starting-Cassandra-server) to [Insert
-Imagenet dataset in parallel (with Apache
-Spark)](../imagenette/README.md#insert-imagenet-dataset-in-parallel-with-apache-spark)
-of the Imagenette example. Once the data is in the database, we can
-create a split file by running the `create_split.py` script. To
-view the different options available for the script, we can use the
-command:
+# Training a model by using a split file
+In this example we will train a classifier for the [Imagenette2-320
+dataset](https://github.com/fastai/imagenette) (a subset of ImageNet)
+as a Cassandra dataset and then read the data into NVIDIA DALI.
+The raw files are already present in the `/tmp` directory of the
+provided [Docker container](../../README.md#running-the-docker-container),
+from which the following commands can be run.
+
+Before starting the training process, we will see how to store data into the database and the procedure of generating a split file. This file will contain essential information, including training and validation splits, which will serve as input for the training application.
+
+## Store imagenette dataset to Cassandra DB
+After the Cassandra DB server is started (follow the instructions from the section [Starting Cassandra server](../imagenette/README.md#Starting-Cassandra-server) to [Insert Imagenet dataset in parallel (with Apache Spark)](..//imagenette/README.md#insert-imagenet-dataset-in-parallel-with-apache-spark)), it is possibile to populate it with images of the imagenette dataset.
+The following commands will create the data and metadata tables within the Cassandra DB and store all imagenette images to it:
+
+```bash
+# - Create the tables in the Cassandra DB
+$ cd examples/splitfile/
+$ /cassandra/bin/cqlsh -f create_tables.cql
+
+# - Fill the tables with data and metadata
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=train --table-suffix=orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --table-suffix=orig
+```
+
+## Create a split file
+Once the data is in the database, we can create a split file by running the ```create_split.py``` script. To view the different options available for the script, we can use the command:
 
 ```bash
 python3 create_split.py --help
