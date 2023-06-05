@@ -1,15 +1,20 @@
-# Adapted from
+# Adapted to use cassandra-dali-plugin, from
 # https://github.com/NVIDIA/DALI/blob/main/docs/examples/use_cases/pytorch/resnet50/main.py
 # (Apache License, Version 2.0)
 #
 # Run with:
-# torchrun --nproc_per_node=NUM_GPUS distrib_train_from_file.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 /tmp/imagenette2-320/train /tmp/imagenette2-320/val
+# torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
+
+# cassandra reader
+from cassandra_reader import get_cassandra_reader
+from crs4.cassandra_utils import get_shard
 
 import argparse
 import os
 import shutil
 import time
 import math
+import pickle
 
 import torch
 import torch.nn as nn
@@ -36,6 +41,12 @@ except ImportError:
     )
 
 
+# supporting torchrun
+global_rank = int(os.getenv("RANK", default=0))
+local_rank = int(os.getenv("LOCAL_RANK", default=0))
+world_size = int(os.getenv("WORLD_SIZE", default=1))
+
+
 def parse():
     model_names = sorted(
         name
@@ -47,12 +58,41 @@ def parse():
 
     parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
     parser.add_argument(
-        "data",
-        metavar="DIR",
-        nargs="*",
-        help="path(s) to dataset (if one path is provided, it is assumed\n"
-        + 'to have subdirectories named "train" and "val"; alternatively,\n'
-        + "train and val paths can be specified directly by providing both paths as arguments)",
+        "--split-fn",
+        metavar="FILENAME",
+        required=True,
+        help="split file filename",
+    )
+    parser.add_argument(
+        "--train-index",
+        metavar="TINDEX",
+        default=0,
+        type=int,
+        help="Index of the split array in the splitfile to be used for training",
+    )
+    parser.add_argument(
+        "--val-index",
+        metavar="VINDEX",
+        default=1,
+        type=int,
+        help="Index of the split array in the splitfile to be used for validation",
+    )
+    parser.add_argument(
+        "--crossval-index",
+        metavar="CVINDEX",
+        default=None,
+        type=int,
+        help="Index of the split array in the splitfile to be used for validation.\
+                The remaining splits, except the one specified with the --exclude-split option,\
+                are merged and used as training data.\
+                The --train-index and --val-index options will be overridden",
+    )
+    parser.add_argument(
+        "--exclude-index",
+        metavar="EINDEX",
+        default=None,
+        type=int,
+        help="Index of the split to be excluded during the crossvalidation process.",
     )
     parser.add_argument(
         "--arch",
@@ -98,7 +138,7 @@ def parse():
         default=0.1,
         type=float,
         metavar="LR",
-        help="Initial learning rate.  Will be scaled by <global batch size>/256: args.lr = args.lr*float(args.batch_size*args.world_size)/256.  A warmup schedule will also be applied over the first 5 epochs.",
+        help="Initial learning rate.  Will be scaled by <global batch size>/256: args.lr = args.lr*float(args.batch_size*world_size)/256.  A warmup schedule will also be applied over the first 5 epochs.",
     )
     parser.add_argument(
         "--momentum", default=0.9, type=float, metavar="M", help="momentum"
@@ -176,16 +216,30 @@ def to_python_float(t):
 
 @pipeline_def
 def create_dali_pipeline(
-    data_dir, crop, size, shard_id, num_shards, dali_cpu=False, is_training=True
+    keyspace,
+    table_suffix,
+    bs,
+    crop,
+    size,
+    dali_cpu=False,
+    is_training=True,
+    prefetch_buffers=8,
+    io_threads=1,
+    comm_threads=2,
+    copy_threads=2,
+    wait_threads=2,
 ):
-    images, labels = fn.readers.file(
-        file_root=data_dir,
-        shard_id=shard_id,
-        num_shards=num_shards,
-        random_shuffle=is_training,
-        pad_last_batch=True,
-        name="Reader",
+    cass_reader = get_cassandra_reader(
+        keyspace=keyspace,
+        table_suffix=table_suffix,
+        batch_size=bs,
+        prefetch_buffers=prefetch_buffers,
+        io_threads=io_threads,
+        comm_threads=comm_threads,
+        copy_threads=copy_threads,
+        wait_threads=wait_threads,
     )
+    images, labels = cass_reader
     dali_device = "cpu" if dali_cpu else "gpu"
     decoder_device = "cpu" if dali_cpu else "mixed"
     # ask nvJPEG to preallocate memory for the biggest sample in ImageNet for CPU and GPU to avoid reallocations in runtime
@@ -236,15 +290,64 @@ def create_dali_pipeline(
         mirror=mirror,
     )
     labels = labels.gpu()
-    return images, labels
+    return (images, labels)
+
+
+def read_split_file(split_fn):
+    data = pickle.load(open(split_fn, "rb"))
+    keyspace = data['keyspace'] 
+    table_suffix = data['table_suffix'] 
+    id_col = data['id_col']
+    data_col = data['data_col'] # Name of the table column with actual data
+    label_type = data['label_type']  
+    label_col = data['label_col'] # Name of the table column with the outcome label
+    row_keys = data['row_keys'] # Numpy array of UUIDs
+    split = data['split'] # List of arrays. Each arrays indexes the row_keys array for each split.
+    num_classes = data['num_classes']
+    
+    return keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes
+
+
+def compute_split_index(split, train_index, val_index, crossval_index, exclude_index):
+    n_split = len(split)
+    
+    # Merge splits for training samples if crossvalidation is requested.
+    # Do nothing otherwise
+    if crossval_index and n_split > 2:
+        if exclude_index > n_split:
+            exlcude_index = n_split - 1
+        if crossval_index > n_split or crossval_index == exclude_index:
+            crossval_index = n_split - 2
+
+        tis = np.array([i for i in range(n_split) if i!=exclude_index and i!=val_index])
+        train_split = np.concatenate([split[i] for i in tis])
+        val_split = split[val_index]
+        
+        split = [train_split, val_split]
+        train_index = 0
+        val_index = 1
+        
+        print ("\nCrossvalidation:")
+        print (f"Training samples will be taken from splits {tis}")
+        print (f"Validation samples will be taken from split {crossval_index}")
+        if exclude_index:
+            print (f"Split {exclude_index} will not be used")
+        print ("\n")
+
+    return split, train_index, val_index
 
 
 def main():
-    global best_prec1, args, local_rank
-    local_rank = int(os.environ["LOCAL_RANK"])
+    global best_prec1, args
     best_prec1 = 0
     args = parse()
 
+    ## Read split file to get data for training
+    keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes = read_split_file(args.split_fn)
+    
+    # Get split indexes
+    split, train_index, val_index = compute_split_index(split, args.train_index, args.val_index, args.crossval_index, args.exclude_index)
+    
     # test mode, use default args for sanity test
     if args.test:
         args.opt_level = None
@@ -252,18 +355,10 @@ def main():
         args.start_epoch = 0
         args.arch = "resnet50"
         args.batch_size = 64
-        args.data = []
         args.sync_bn = False
-        args.data.append("/data/imagenet/train-jpeg/")
-        args.data.append("/data/imagenet/val-jpeg/")
         print("Test mode - no DDP, no apex, RN50, 10 iterations")
 
-    if not len(args.data):
-        raise Exception("error: No data set provided")
-
-    args.distributed = False
-    if "WORLD_SIZE" in os.environ:
-        args.distributed = int(os.environ["WORLD_SIZE"]) > 1
+    args.distributed = world_size > 1
 
     # make apex optional
     if args.opt_level is not None or args.distributed or args.sync_bn:
@@ -290,19 +385,17 @@ def main():
     if args.deterministic:
         cudnn.benchmark = False
         cudnn.deterministic = True
-        torch.manual_seed(local_rank)
+        torch.manual_seed(local_rank)  # global_rank ?
         torch.set_printoptions(precision=10)
 
     args.gpu = 0
-    args.world_size = 1
 
     if args.distributed:
         args.gpu = local_rank
         torch.cuda.set_device(args.gpu)
         torch.distributed.init_process_group(backend="nccl", init_method="env://")
-        args.world_size = torch.distributed.get_world_size()
 
-    args.total_batch_size = args.world_size * args.batch_size
+    args.total_batch_size = world_size * args.batch_size
     assert torch.backends.cudnn.enabled, "Amp requires cudnn backend to be enabled."
 
     # create model
@@ -327,7 +420,7 @@ def main():
         model = model.cuda()
 
     # Scale learning rate based on global batch size
-    args.lr = args.lr * float(args.batch_size * args.world_size) / 256.0
+    args.lr = args.lr * float(args.batch_size * world_size) / 256.0
     optimizer = torch.optim.SGD(
         model.parameters(),
         args.lr,
@@ -335,8 +428,9 @@ def main():
         weight_decay=args.weight_decay,
     )
 
-    # Initialize Amp.  Amp accepts either values or strings for the optional override arguments,
-    # for convenient interoperation with argparse.
+    # Initialize Amp.  Amp accepts either values or strings for the
+    # optional override arguments, for convenient interoperation with
+    # argparse.
     if args.opt_level is not None:
         model, optimizer = amp.initialize(
             model,
@@ -346,15 +440,17 @@ def main():
             loss_scale=args.loss_scale,
         )
 
-    # For distributed training, wrap the model with apex.parallel.DistributedDataParallel.
-    # This must be done AFTER the call to amp.initialize.  If model = DDP(model) is called
-    # before model, ... = amp.initialize(model, ...), the call to amp.initialize may alter
-    # the types of model's parameters in a way that disrupts or destroys DDP's allreduce hooks.
+    # For distributed training, wrap the model with
+    # apex.parallel.DistributedDataParallel.  This must be done AFTER
+    # the call to amp.initialize.  If model = DDP(model) is called
+    # before model, ... = amp.initialize(model, ...), the call to
+    # amp.initialize may alter the types of model's parameters in a
+    # way that disrupts or destroys DDP's allreduce hooks.
     if args.distributed:
-        # By default, apex.parallel.DistributedDataParallel overlaps communication with
-        # computation in the backward pass.
-        # model = DDP(model)
-        # delay_allreduce delays all communication to the end of the backward pass.
+        # By default, apex.parallel.DistributedDataParallel overlaps
+        # communication with computation in the backward pass.  model
+        # = DDP(model) delay_allreduce delays all communication to the
+        # end of the backward pass.
         model = DDP(model, delay_allreduce=True)
 
     # define loss function (criterion) and optimizer
@@ -385,14 +481,6 @@ def main():
 
         resume()
 
-    # Data loading code
-    if len(args.data) == 1:
-        traindir = os.path.join(args.data[0], "train")
-        valdir = os.path.join(args.data[0], "val")
-    else:
-        traindir = args.data[0]
-        valdir = args.data[1]
-
     if args.arch == "inception_v3":
         raise RuntimeError("Currently, inception_v3 is not supported by this example.")
         # crop_size = 299
@@ -401,40 +489,68 @@ def main():
         crop_size = 224
         val_size = 256
 
+    # train pipe
+    train_uuids = row_keys[split[train_index]]
+    
     pipe = create_dali_pipeline(
+        keyspace=keyspace,
+        table_suffix=table_suffix,
         batch_size=args.batch_size,
+        bs=args.batch_size,
         num_threads=args.workers,
         device_id=local_rank,
-        seed=12 + local_rank,
-        data_dir=traindir,
+        seed=12 + local_rank,  # global_rank?
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
-        shard_id=local_rank,
-        num_shards=args.world_size,
         is_training=True,
     )
     pipe.build()
+
+    # pre-feeding train pipeline
+    uuids, real_sz = get_shard(
+        train_uuids,
+        batch_size=args.batch_size,
+        epoch=0,
+        shard_id=local_rank,  # global_rank?
+        num_shards=world_size,
+    )
+    for u in uuids:
+        pipe.feed_input("Reader[0]", u)
     train_loader = DALIClassificationIterator(
-        pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
+    # val pipe
+    val_uuids = row_keys[split[val_index]]
+
     pipe = create_dali_pipeline(
+        keyspace=keyspace,
+        table_suffix=table_suffix,
         batch_size=args.batch_size,
+        bs=args.batch_size,
         num_threads=args.workers,
         device_id=local_rank,
-        seed=12 + local_rank,
-        data_dir=valdir,
+        seed=12 + local_rank,  # global_rank?
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
-        shard_id=local_rank,
-        num_shards=args.world_size,
         is_training=False,
     )
     pipe.build()
+
+    # pre-feeding val pipeline
+    uuids, real_sz = get_shard(
+        val_uuids,
+        batch_size=args.batch_size,
+        epoch=0,
+        shard_id=local_rank,  # global_rank?
+        num_shards=world_size,
+    )
+    for u in uuids:
+        pipe.feed_input("Reader[0]", u)
     val_loader = DALIClassificationIterator(
-        pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     if args.evaluate:
@@ -443,6 +559,27 @@ def main():
 
     total_time = AverageMeter()
     for epoch in range(args.start_epoch, args.epochs):
+        # pre-feeding train pipeline
+        uuids, real_sz = get_shard(
+            train_uuids,
+            batch_size=args.batch_size,
+            epoch=1 + epoch,
+            shard_id=local_rank,  # global_rank?
+            num_shards=world_size,
+        )
+        for u in uuids:
+            train_loader._pipes[0].feed_input("Reader[0]", u)
+        # pre-feeding val  pipeline
+        uuids, real_sz = get_shard(
+            val_uuids,
+            batch_size=args.batch_size,
+            epoch=1 + epoch,
+            shard_id=local_rank,  # global_rank?
+            num_shards=world_size,
+        )
+        for u in uuids:
+            val_loader._pipes[0].feed_input("Reader[0]", u)
+
         # train for one epoch
         avg_train_time = train(train_loader, model, criterion, optimizer, epoch)
         total_time.update(avg_train_time)
@@ -453,7 +590,7 @@ def main():
         [prec1, prec5] = validate(val_loader, model, criterion)
 
         # remember best prec@1 and save checkpoint
-        if local_rank == 0:
+        if local_rank == 0:  # global_rank?
             is_best = prec1 > best_prec1
             best_prec1 = max(prec1, best_prec1)
             save_checkpoint(
@@ -534,9 +671,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
             torch.cuda.nvtx.range_pop()
 
         if i % args.print_freq == 0:
-            # Every print_freq iterations, check the loss, accuracy, and speed.
-            # For best performance, it doesn't make sense to print these metrics every
-            # iteration, since they incur an allreduce and some host<->device syncs.
+            # Every print_freq iterations, check the loss, accuracy,
+            # and speed.  For best performance, it doesn't make sense
+            # to print these metrics every iteration, since they incur
+            # an allreduce and some host<->device syncs.
 
             # Measure accuracy
             prec1, prec5 = accuracy(output.data, target, topk=(1, 5))
@@ -558,7 +696,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             batch_time.update((time.time() - end) / args.print_freq)
             end = time.time()
 
-            if local_rank == 0:
+            if local_rank == 0:  # global_rank?
                 print(
                     "Epoch: [{0}][{1}/{2}]\t"
                     "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
@@ -569,8 +707,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
                         epoch,
                         i,
                         train_loader_len,
-                        args.world_size * args.batch_size / batch_time.val,
-                        args.world_size * args.batch_size / batch_time.avg,
+                        world_size * args.batch_size / batch_time.val,
+                        world_size * args.batch_size / batch_time.avg,
                         batch_time=batch_time,
                         loss=losses,
                         top1=top1,
@@ -630,7 +768,7 @@ def validate(val_loader, model, criterion):
         end = time.time()
 
         # TODO:  Change timings to mirror train().
-        if local_rank == 0 and i % args.print_freq == 0:
+        if local_rank == 0 and i % args.print_freq == 0:  # global_rank?
             print(
                 "Test: [{0}/{1}]\t"
                 "Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t"
@@ -640,8 +778,8 @@ def validate(val_loader, model, criterion):
                 "Prec@5 {top5.val:.3f} ({top5.avg:.3f})".format(
                     i,
                     val_loader_len,
-                    args.world_size * args.batch_size / batch_time.val,
-                    args.world_size * args.batch_size / batch_time.avg,
+                    world_size * args.batch_size / batch_time.val,
+                    world_size * args.batch_size / batch_time.avg,
                     batch_time=batch_time,
                     loss=losses,
                     top1=top1,
@@ -715,7 +853,7 @@ def accuracy(output, target, topk=(1,)):
 def reduce_tensor(tensor):
     rt = tensor.clone()
     dist.all_reduce(rt, op=dist.reduce_op.SUM)
-    rt /= args.world_size
+    rt /= world_size
     return rt
 
 
