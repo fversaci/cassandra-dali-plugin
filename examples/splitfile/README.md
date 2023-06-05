@@ -6,10 +6,24 @@ The raw files are already present in the `/tmp` directory of the
 provided [Docker container](../../README.md#running-the-docker-container),
 from which the following commands can be run.
 
-Before starting the training process, we will see how to store data into the database and the procedure of generating a split file. This file will contain essential information, including training and validation splits, which will serve as input for the training application.
+Before starting the training process, we will see how to start the Cassandra server, how to store data into the database and the procedure of generating a split file. This file will contain essential information, including training and validation splits, which will serve as input for the training application.
+
+## Starting Cassandra server
+We can start the Cassandra server shipped with the provided
+Docker container issuing this command:
+
+```bash
+# Start Cassandra server
+$ /cassandra/bin/cassandra
+
+```
+
+Note that the shell prompt is immediately returned.  Wait until `state
+jump to NORMAL` is shown (about 1 minute).
 
 ## Store imagenette dataset to Cassandra DB
-After the Cassandra DB server is started (follow the instructions from the section [Starting Cassandra server](../imagenette/README.md#Starting-Cassandra-server) to [Insert Imagenet dataset in parallel (with Apache Spark)](..//imagenette/README.md#insert-imagenet-dataset-in-parallel-with-apache-spark)), it is possibile to populate it with images of the imagenette dataset.
+After the Cassandra DB server is started, it is possibile to populate it with images of the imagenette dataset.
+
 The following commands will create the data and metadata tables within the Cassandra DB and store all imagenette images to it:
 
 ```bash
@@ -54,11 +68,10 @@ Other actions:
   -h, --help                    Show the help  
 ```
 
-To create a training and validation split from the training table of
-256-sized images in Imagenette, we can use the following command:
+To create a training and validation split from the training table images in Imagenette, we can use the following command:
 
 ```bash
-python3 create_split.py -k imagenette -s train_256_jpg -r 8,2 -o imagenette_splitfile.pckl
+python3 create_split.py -k imagenette -s train_orig -r 8,2 -o imagenette_splitfile.pckl
 ```
 
 The execution of this command will result in the creation of an output
@@ -73,7 +86,7 @@ data retrieval information from the database
 
 ```python
 {'keyspace': 'imagenette',  
- 'table_suffix': 'train_256_jpg',  
+ 'table_suffix': 'train_orig',  
  'id_col': 'patch_id',  
  'data_col': 'data',  
  'label_type': 'int',  
@@ -95,7 +108,7 @@ its name using the CLI option `--metadata-ofn`. For example, by
 executing:
  
 ```bash
-python3 create_split.py -k imagenette -s train_256_jpg -r 8,2 --metadata-ofn metadata.cache -o imagenette_splitfile.pckl
+python3 create_split.py -k imagenette -s train_orig -r 8,2 --metadata-ofn metadata.cache -o imagenette_splitfile.pckl
 ```
 
 Next time, when generating a new split, you can skip passing the
