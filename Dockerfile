@@ -72,7 +72,7 @@ RUN \
 # download and install spark
 ARG SPARK_V=3.3
 RUN \
-    export SPARK_VER=$(curl 'https://downloads.apache.org/spark/' | grep -o "$SPARK_V\.." | tail -n 1) \
+    export SPARK_VER=$(curl 'https://downloads.apache.org/spark/' | grep -o "$SPARK_V\.[[:digit:]]\+" | tail -n 1) \
     && cd /tmp && wget -nv "https://downloads.apache.org/spark/spark-$SPARK_VER/spark-$SPARK_VER-bin-hadoop3.tgz" \
     && cd / && tar xfz "/tmp/spark-$SPARK_VER-bin-hadoop3.tgz" \
     && ln -s "spark-$SPARK_VER-bin-hadoop3" spark
@@ -94,7 +94,7 @@ EXPOSE 4040
 ########################################################################
 ARG CASS_V=4.0
 RUN \
-    export CASS_VERS=$(curl 'https://downloads.apache.org/cassandra/' | grep -o "$CASS_V\.." | tail -n 1) \
+    export CASS_VERS=$(curl 'https://downloads.apache.org/cassandra/' | grep -o "$CASS_V\.[[:digit:]]\+" | tail -n 1) \
     && cd /tmp && wget -nv "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && ln -s "apache-cassandra-$CASS_VERS" cassandra
