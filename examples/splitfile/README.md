@@ -71,7 +71,7 @@ Other actions:
 To create a training and validation split from the training table images in Imagenette, we can use the following command:
 
 ```bash
-python3 create_split.py -k imagenette -s train_orig -r 8,2 -o imagenette_splitfile.pckl
+python3 create_split.py -k imagenette -s orig -r 8,2 -o imagenette_splitfile.pckl
 ```
 
 The execution of this command will result in the creation of an output
@@ -86,7 +86,7 @@ data retrieval information from the database
 
 ```python
 {'keyspace': 'imagenette',  
- 'table_suffix': 'train_orig',  
+ 'table_suffix': 'orig',  
  'id_col': 'patch_id',  
  'data_col': 'data',  
  'label_type': 'int',  
@@ -108,7 +108,7 @@ its name using the CLI option `--metadata-ofn`. For example, by
 executing:
  
 ```bash
-python3 create_split.py -k imagenette -s train_orig -r 8,2 --metadata-ofn metadata.cache -o imagenette_splitfile.pckl
+python3 create_split.py -k imagenette -s orig -r 8,2 --metadata-ofn metadata.cache -o imagenette_splitfile.pckl
 ```
 
 Next time, when generating a new split, you can skip passing the
