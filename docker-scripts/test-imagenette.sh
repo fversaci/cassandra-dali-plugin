@@ -17,7 +17,7 @@ pgrep -f cassandra || /cassandra/bin/cassandra 2>&1 | grep "state jump to NORMAL
     python3 loop_read.py --keyspace=imagenette --table-suffix=train_256_jpg && \
     python3 cache_uuids.py --keyspace=imagenette --table-suffix=val_256_jpg && \
     python3 loop_read.py --keyspace=imagenette --table-suffix=val_256_jpg && \
-    python3 loop_read.py --keyspace=imagenette --table-suffix=train_256_jpg --device-id=0 && \ # 
+    python3 loop_read.py --keyspace=imagenette --table-suffix=train_256_jpg --use-gpu && \
     SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE imagenette;" && \
     SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -f create_tables.cql && \
     python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --table-suffix=train_256_jpg && \
