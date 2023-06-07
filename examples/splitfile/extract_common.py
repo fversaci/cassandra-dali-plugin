@@ -113,7 +113,8 @@ def send_images_to_db(
             get_data=get_data(img_format, img_size=img_size),
         )
         for path, label, partition_items in tqdm(jobs):
-            cw.save_image(path, label, partition_items)
+            cw.enqueue_image(path, label, partition_items)
+        cw.send_enqueued()
 
     return ret
 

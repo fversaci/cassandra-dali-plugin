@@ -102,6 +102,7 @@ def send_images_to_db(
             get_data=get_data(img_format),
         )
         for path_img, path_mask in tqdm(jobs):
-            cw.save_image(path_img, path_mask, (path_img,))
+            cw.enqueue_image(path_img, path_mask, (path_img,))
+        cw.send_enqueued()
 
     return ret
