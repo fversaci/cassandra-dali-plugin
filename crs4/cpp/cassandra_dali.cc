@@ -48,6 +48,8 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
                "label_type can only be int, image or none.");
   DALI_ENFORCE(slow_start >= 0,
                "slow_start should be either 0 (disabled) or >= 1 (prefetch dilution).");
+  DALI_ENFORCE(batch_size * prefetch_buffers <= 32768 * io_threads,
+               "please satisfy this constraint: batch_size * prefetch_buffers <= 32768 * io_threads");
   batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
@@ -69,8 +71,12 @@ void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
 
 bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
                           const ::dali::Workspace &ws) {
+  
+  // InputOperator<::dali::CPUBackend>::HandleDataAvailability();
+  DALI_ENFORCE(InputOperator<::dali::CPUBackend>::HasDataInQueue(),
+               "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
+  
   // link input data to uuids tensorlist
-  InputOperator<::dali::CPUBackend>::HandleDataAvailability();
   uuids.Reset();
   uuids.set_pinned(false);
   auto &thread_pool = ws.GetThreadPool();
@@ -108,6 +114,8 @@ void Cassandra::fill_buffer(::dali::Workspace &ws) {
   prefetch_one(uuids);
   ++curr_prefetch;
   auto &thread_pool = ws.GetThreadPool();
+  DALI_ENFORCE(InputOperator<::dali::CPUBackend>::HasDataInQueue(),
+               "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
   ForwardCurrentData(uuids, null_data_id, thread_pool);
 }
 
