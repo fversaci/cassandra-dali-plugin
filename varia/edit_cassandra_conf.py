@@ -19,7 +19,7 @@ import yaml
 yaml_fn = "/cassandra/conf/cassandra.yaml"
 with open(yaml_fn, "r") as f:
     cass_conf = yaml.safe_load(f)
-    cass_conf["write_request_timeout_in_ms"] = 20000
+    cass_conf["write_request_timeout"] = "20s"
     cass_conf["rpc_address"] = "0.0.0.0"
     cass_conf["broadcast_rpc_address"] = "127.0.0.1"
     cass_conf["client_encryption_options"]["enabled"] = True

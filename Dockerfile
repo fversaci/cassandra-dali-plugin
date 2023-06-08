@@ -92,7 +92,7 @@ EXPOSE 4040
 ########################################################################
 # Cassandra server installation, to test examples
 ########################################################################
-ARG CASS_V=4.0
+ARG CASS_V=4.1
 RUN \
     export CASS_VERS=$(curl 'https://downloads.apache.org/cassandra/' | grep -o "$CASS_V\.[[:digit:]]\+" | tail -n 1) \
     && cd /tmp && wget -nv "https://downloads.apache.org/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
@@ -113,7 +113,7 @@ RUN \
 ########################################################################
 # Upgrade DALI, install plugin and run as user
 ########################################################################
-RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110==1.23
+RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda110==1.26
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
