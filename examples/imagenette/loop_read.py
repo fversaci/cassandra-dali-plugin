@@ -140,7 +140,7 @@ def read_data(
         #     images, labels, function=just_sleep, num_outputs=2
         # )
         ####################################################################
-        # - decode, resize and crop, must use GPU (e.g., --device-id=0)
+        # - decode, resize and crop, must use GPU (e.g., --use-gpu)
         # images = fn_image_random_crop(images)
         # images = fn_resize(images)
         # images = fn_crop_normalize(images)
