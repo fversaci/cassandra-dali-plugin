@@ -44,6 +44,11 @@ optimize this plugin:
 A (less) annotated example for segmentation can be found in:
 - [ADE20k](examples/ade20k/)
 
+### Split-file
+
+An example of how to create a single file with data split to feed the training application:
+- [Split file](examples/splitfile)
+
 ## Installation on a bare machine
 
 cassandra-dali-plugin requires:
