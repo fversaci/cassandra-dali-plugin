@@ -71,7 +71,7 @@ def get_cassandra_reader(
     slow_start=0,
 ):
     # Read Cassandra parameters
-    from private_data import CassConf as CC
+    from private_data import cass_conf as CC
 
     table = f"{keyspace}.data_{table_suffix}"
     if CC.cloud_config:

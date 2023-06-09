@@ -16,7 +16,7 @@ import os
 from cassandra.auth import PlainTextAuthProvider
 from clize import run
 from crs4.cassandra_utils import MiniListManager
-from private_data import CassConf as CC
+from private_data import cass_conf as CC
 from tqdm import trange, tqdm
 
 global_rank = int(os.getenv("RANK", default=0))

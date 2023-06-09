@@ -14,9 +14,9 @@
 
 from cassandra_config import CassandraConf
 
-CassConf = CassandraConf()
-CassConf.username = "guest"
-CassConf.password = "test"
-CassConf.cassandra_ips = ["127.0.0.1"]
-# CassConf.cassandra_port = 9042
-# CassConf.cloud_config = {'secure_connect_bundle': 'tmp/secure-connect-ade20k.zip'}
+cass_conf = CassandraConf()
+cass_conf.username = "guest"
+cass_conf.password = "test"
+cass_conf.cassandra_ips = ["127.0.0.1"]
+# cass_conf.cassandra_port = 9042
+# cass_conf.cloud_config = {'secure_connect_bundle': 'tmp/secure-connect-ade20k.zip'}

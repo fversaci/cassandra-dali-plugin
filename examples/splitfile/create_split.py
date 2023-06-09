@@ -39,7 +39,7 @@ def main(*, keyspace:'k'=None, table_suffix:'s'=None, id_col:'i'='patch_id', dat
     # Load metadata
     if not metadata_ifn:
         print ("Loading metadata from database")
-        from private_data import CassConf as CC
+        from private_data import cass_conf as CC
         isg.load_from_db(CC, keyspace, table_suffix)
     else:
         print("Loading metadata from file")

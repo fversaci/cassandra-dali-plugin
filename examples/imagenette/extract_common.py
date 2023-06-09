@@ -85,16 +85,17 @@ def get_jobs(src_dir, splits=["train", "val"]):
 
 
 def send_images_to_db(
-    username,
-    password,
+    cass_conf,
     img_format,
     keyspace,
     table_suffix,
-    cloud_config=None,
-    cassandra_ips=None,
-    cassandra_port=None,
     img_size=def_size,
 ):
+    cloud_config=cass_conf.cloud_config
+    cassandra_ips=cass_conf.cassandra_ips
+    cassandra_port=cass_conf.cassandra_port
+    username=cass_conf.username
+    password=cass_conf.password
     auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
