@@ -12,21 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# cassandra
-from cassandra.auth import PlainTextAuthProvider
-from crs4.cassandra_utils import MiniListManager
-
 # load cassandra-dali-plugin
 import crs4.cassandra_utils
 import nvidia.dali.plugin_manager as plugin_manager
 import nvidia.dali.fn as fn
-import nvidia.dali.types as types
 import pathlib
 
 # varia
 import os
 import pickle
-import numpy as np
 
 plugin_path = pathlib.Path(crs4.cassandra_utils.__path__[0])
 plugin_path = plugin_path.parent.parent.joinpath("libcrs4cassandra.so")

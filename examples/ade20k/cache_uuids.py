@@ -13,11 +13,9 @@
 # limitations under the License.
 
 import os
-from cassandra.auth import PlainTextAuthProvider
 from clize import run
 from crs4.cassandra_utils import MiniListManager
 from private_data import cass_conf as CC
-from tqdm import trange, tqdm
 
 global_rank = int(os.getenv("RANK", default=0))
 local_rank = int(os.getenv("LOCAL_RANK", default=0))
@@ -45,13 +43,8 @@ def cache_uuids(
     rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
 
     # Load list of uuids from Cassandra DB...
-    ap = PlainTextAuthProvider(username=CC.username, password=CC.password)
-
     lm = MiniListManager(
-        auth_prov=ap,
-        cassandra_ips=CC.cassandra_ips,
-        cloud_config=CC.cloud_config,
-        port=CC.cassandra_port,
+        cass_conf=CC,
         use_ssl=True,
     )
     conf = {

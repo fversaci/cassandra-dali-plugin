@@ -19,7 +19,6 @@
 # python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
 
 
-from getpass import getpass
 import extract_common
 from clize import run
 

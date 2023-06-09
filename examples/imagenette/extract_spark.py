@@ -18,7 +18,6 @@
 # To save files in a directory, run with, e.g.,
 # /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
 
-from getpass import getpass
 import extract_common
 from pyspark.conf import SparkConf
 from pyspark.context import SparkContext

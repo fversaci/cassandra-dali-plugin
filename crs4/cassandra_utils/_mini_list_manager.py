@@ -26,23 +26,24 @@ from cassandra.cluster import ExecutionProfile
 class MiniListManager(ListManager):
     def __init__(
         self,
-        auth_prov,
-        cassandra_ips= None,
-        cloud_config=None,
-        port=None,
+        cass_conf,
         use_ssl=False,
     ):
         """Loads the list of images from Cassandra DB
 
-        :param auth_prov: Authenticator for Cassandra
-        :param cassandra_ips: List of Cassandra ip's
-        :param cloud_config: Cloud configuration for Cassandra (e.g., AstraDB)
-        :param port: Cassandra server port (default: 9042)
+        :param cass_conf: Configuration for Cassandra
+        :param use_ssl: Should use SSL connection?
         :returns:
         :rtype:
 
         """
         super().__init__()
+        auth_prov = PlainTextAuthProvider(
+            username=cass_conf.username, password=cass_conf.password)
+        cassandra_ips=cass_conf.cassandra_ips
+        cloud_config=cass_conf.cloud_config
+        port=cass_conf.cassandra_port
+
         # cassandra parameters
         prof_dict = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
