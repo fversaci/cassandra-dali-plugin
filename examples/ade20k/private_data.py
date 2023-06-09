@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from cassandra_config import CassandraConf
+from crs4.cassandra_utils import CassandraConf
 
 cass_conf = CassandraConf()
 cass_conf.username = "guest"
