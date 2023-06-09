@@ -20,3 +20,4 @@ class CassandraConf:
         self.cloud_config = None
         self.cassandra_ips = None
         self.cassandra_port = 9042
+        self.use_ssl = False

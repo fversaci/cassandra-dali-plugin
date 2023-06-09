@@ -31,7 +31,6 @@ class CassandraWriter:
         data_col,
         cols,
         get_data,
-        use_ssl=False,
         masks=False,
     ):
         self.get_data = get_data
@@ -47,6 +46,7 @@ class CassandraWriter:
         cassandra_ips=cass_conf.cassandra_ips
         cloud_config=cass_conf.cloud_config
         cassandra_port=cass_conf.cassandra_port
+        use_ssl=cass_conf.use_ssl,
 
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),

@@ -95,7 +95,6 @@ def send_images_to_db(
     def ret(jobs):
         cw = CassandraClassificationWriter(
             cass_conf=cass_conf,
-            use_ssl=True,
             table_data=f"{keyspace}.data_{table_suffix}",
             table_metadata=f"{keyspace}.metadata_{table_suffix}",
             id_col="patch_id",

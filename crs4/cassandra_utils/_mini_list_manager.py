@@ -27,7 +27,6 @@ class MiniListManager(ListManager):
     def __init__(
         self,
         cass_conf,
-        use_ssl=False,
     ):
         """Loads the list of images from Cassandra DB
 
@@ -43,6 +42,7 @@ class MiniListManager(ListManager):
         cassandra_ips=cass_conf.cassandra_ips
         cloud_config=cass_conf.cloud_config
         port=cass_conf.cassandra_port
+        use_ssl=cass_conf.use_ssl,
 
         # cassandra parameters
         prof_dict = ExecutionProfile(

@@ -34,7 +34,6 @@ class CassandraClassificationWriter(CassandraWriter):
         data_col,
         cols,
         get_data,
-        use_ssl=False,
         masks=False,
     ):
 
@@ -47,7 +46,6 @@ class CassandraClassificationWriter(CassandraWriter):
             data_col=data_col,
             cols=cols,
             get_data=get_data,
-            use_ssl=use_ssl,
             masks=masks,
         )
         self.queue_data = []

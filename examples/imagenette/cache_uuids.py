@@ -45,7 +45,6 @@ def cache_uuids(
     # Load list of uuids from Cassandra DB...
     lm = MiniListManager(
         cass_conf=CC,
-        use_ssl=True,
     )
     conf = {
         "table": f"{keyspace}.metadata_{table_suffix}",
