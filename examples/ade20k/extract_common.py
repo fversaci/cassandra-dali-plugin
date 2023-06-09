@@ -80,19 +80,10 @@ def send_images_to_db(
     keyspace,
     table_suffix,
 ):
-    cloud_config=cass_conf.cloud_config
-    cassandra_ips=cass_conf.cassandra_ips
-    cassandra_port=cass_conf.cassandra_port
-    username=cass_conf.username
-    password=cass_conf.password
-    auth_prov = PlainTextAuthProvider(username, password)
 
     def ret(jobs):
         cw = CassandraSegmentationWriter(
-            cloud_config=cloud_config,
-            auth_prov=auth_prov,
-            cassandra_ips=cassandra_ips,
-            cassandra_port=cassandra_port,
+            cass_conf=cass_conf,
             use_ssl=True,
             table_data=f"{keyspace}.data_{table_suffix}",
             table_metadata=f"{keyspace}.metadata_{table_suffix}",

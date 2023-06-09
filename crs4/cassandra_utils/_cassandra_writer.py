@@ -23,7 +23,7 @@ from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 class CassandraWriter:
     def __init__(
         self,
-        auth_prov,
+        cass_conf,
         table_data,
         table_metadata,
         id_col,
@@ -31,9 +31,6 @@ class CassandraWriter:
         data_col,
         cols,
         get_data,
-        cloud_config=None,
-        cassandra_ips=None,
-        cassandra_port=None,
         use_ssl=False,
         masks=False,
     ):
@@ -45,6 +42,11 @@ class CassandraWriter:
         self.label_col = label_col
         self.data_col = data_col
         self.cols = cols
+        auth_prov = PlainTextAuthProvider(
+            username=cass_conf.username, password=cass_conf.password)
+        cassandra_ips=cass_conf.cassandra_ips
+        cloud_config=cass_conf.cloud_config
+        cassandra_port=cass_conf.cassandra_port
 
         prof = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),

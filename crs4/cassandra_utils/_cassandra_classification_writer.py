@@ -26,7 +26,7 @@ from crs4.cassandra_utils._cassandra_writer import CassandraWriter
 class CassandraClassificationWriter(CassandraWriter):
     def __init__(
         self,
-        auth_prov,
+        cass_conf,
         table_data,
         table_metadata,
         id_col,
@@ -34,27 +34,21 @@ class CassandraClassificationWriter(CassandraWriter):
         data_col,
         cols,
         get_data,
-        cloud_config=None,
-        cassandra_ips=None,
-        cassandra_port=None,
         use_ssl=False,
         masks=False,
     ):
 
         super().__init__(
-            auth_prov,
-            table_data,
-            table_metadata,
-            id_col,
-            label_col,
-            data_col,
-            cols,
-            get_data,
-            cloud_config,
-            cassandra_ips,
-            cassandra_port,
-            use_ssl,
-            masks,
+            cass_conf=cass_conf,
+            table_data=table_data,
+            table_metadata=table_metadata,
+            id_col=id_col,
+            label_col=label_col,
+            data_col=data_col,
+            cols=cols,
+            get_data=get_data,
+            use_ssl=use_ssl,
+            masks=masks,
         )
         self.queue_data = []
         self.queue_meta = []
