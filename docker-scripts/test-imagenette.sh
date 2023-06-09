@@ -2,8 +2,7 @@
 
 pgrep -f cassandra || /cassandra/bin/cassandra 2>&1 | grep "state jump to NORMAL" && \
     cd examples/imagenette/ && \
-    (SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -e "SELECT keyspace_name FROM system_schema.keyspaces WHERE keyspace_name='imagenette';" && \
-         SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE IF EXISTS imagenette;") || true && \
+    SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE IF EXISTS imagenette;" && \
     SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -f create_tables.cql && \
     pgrep -f spark || (/spark/sbin/start-master.sh  && /spark/sbin/start-worker.sh spark://$HOSTNAME:7077) && \
     /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
