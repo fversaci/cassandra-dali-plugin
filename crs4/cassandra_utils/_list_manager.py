@@ -14,6 +14,7 @@
 
 import pickle
 
+
 class ListManager:
     def __init__(self):
         self.row_keys = None
@@ -24,16 +25,16 @@ class ListManager:
     def get_config(self):
         """Return dictionary with configuration"""
         pass
-    
+
     def set_config(self):
         """Apply saved configuration"""
         pass
-    
+
     def get_rows(self):
         """Return list of UUIDs and splits"""
         stuff = {
             "row_keys": self.row_keys,
-            "config" : self.get_config(),
+            "config": self.get_config(),
             "split": self.split,
         }
         return stuff
