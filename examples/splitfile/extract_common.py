@@ -91,7 +91,6 @@ def send_images_to_db(
     table_suffix,
     img_size=def_size,
 ):
-
     def ret(jobs):
         cw = CassandraClassificationWriter(
             cass_conf=cass_conf,

@@ -80,7 +80,6 @@ def send_images_to_db(
     keyspace,
     table_suffix,
 ):
-
     def ret(jobs):
         cw = CassandraSegmentationWriter(
             cass_conf=cass_conf,

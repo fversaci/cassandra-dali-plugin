@@ -1,9 +1,6 @@
 # Adapted to use cassandra-dali-plugin, from
 # https://github.com/NVIDIA/DALI/blob/main/docs/examples/use_cases/pytorch/resnet50/main.py
 # (Apache License, Version 2.0)
-#
-# Run with:
-# torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, read_uuids

@@ -62,11 +62,11 @@ def read_data(
         device_id = types.CPU_ONLY_DEVICE_ID
 
     data = pickle.load(open(split_fn, "rb"))
-    keyspace = data['keyspace'] 
-    table_suffix = data['table_suffix'] 
-    row_keys = data['row_keys']
-    split = data['split']
-    uuids = row_keys[split[use_index]]        
+    keyspace = data["keyspace"]
+    table_suffix = data["table_suffix"]
+    row_keys = data["row_keys"]
+    split = data["split"]
+    uuids = row_keys[split[use_index]]
 
     bs = 128
     uuids, real_sz = get_shard(
@@ -88,7 +88,6 @@ def read_data(
         slow_start=4,
     )
 
-    
     # create dali pipeline
     @pipeline_def(
         batch_size=bs,
@@ -134,7 +133,6 @@ def read_data(
             pl.run()
         pl.reset()
 
-        
     ########################################################################
     # alternatively: use pytorch iterator
     # (note: decode of images must be enabled)
