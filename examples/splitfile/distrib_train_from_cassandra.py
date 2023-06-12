@@ -1,9 +1,6 @@
 # Adapted to use cassandra-dali-plugin, from
 # https://github.com/NVIDIA/DALI/blob/main/docs/examples/use_cases/pytorch/resnet50/main.py
 # (Apache License, Version 2.0)
-#
-# Run with:
-# torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader
@@ -216,6 +213,10 @@ def to_python_float(t):
 def create_dali_pipeline(
     keyspace,
     table_suffix,
+    id_col,
+    label_type,
+    label_col,
+    data_col,
     bs,
     crop,
     size,
@@ -230,6 +231,10 @@ def create_dali_pipeline(
     cass_reader = get_cassandra_reader(
         keyspace=keyspace,
         table_suffix=table_suffix,
+        id_col=id_col,
+        label_type=label_type,
+        label_col=label_col,
+        data_col=data_col,
         batch_size=bs,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
@@ -293,22 +298,34 @@ def create_dali_pipeline(
 
 def read_split_file(split_fn):
     data = pickle.load(open(split_fn, "rb"))
-    keyspace = data['keyspace'] 
-    table_suffix = data['table_suffix'] 
-    id_col = data['id_col']
-    data_col = data['data_col'] # Name of the table column with actual data
-    label_type = data['label_type']  
-    label_col = data['label_col'] # Name of the table column with the outcome label
-    row_keys = data['row_keys'] # Numpy array of UUIDs
-    split = data['split'] # List of arrays. Each arrays indexes the row_keys array for each split.
-    num_classes = data['num_classes']
-    
-    return keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes
+    keyspace = data["keyspace"]
+    table_suffix = data["table_suffix"]
+    id_col = data["id_col"]
+    data_col = data["data_col"]  # Name of the table column with actual data
+    label_type = data["label_type"]
+    label_col = data["label_col"]  # Name of the table column with the outcome label
+    row_keys = data["row_keys"]  # Numpy array of UUIDs
+    split = data[
+        "split"
+    ]  # List of arrays. Each arrays indexes the row_keys array for each split.
+    num_classes = data["num_classes"]
+
+    return (
+        keyspace,
+        table_suffix,
+        id_col,
+        data_col,
+        label_type,
+        label_col,
+        row_keys,
+        split,
+        num_classes,
+    )
 
 
 def compute_split_index(split, train_index, val_index, crossval_index, exclude_index):
     n_split = len(split)
-    
+
     # Merge splits for training samples if crossvalidation is requested.
     # Do nothing otherwise
     if crossval_index and n_split > 2:
@@ -317,20 +334,22 @@ def compute_split_index(split, train_index, val_index, crossval_index, exclude_i
         if crossval_index > n_split or crossval_index == exclude_index:
             crossval_index = n_split - 2
 
-        tis = np.array([i for i in range(n_split) if i!=exclude_index and i!=val_index])
+        tis = np.array(
+            [i for i in range(n_split) if i != exclude_index and i != val_index]
+        )
         train_split = np.concatenate([split[i] for i in tis])
         val_split = split[val_index]
-        
+
         split = [train_split, val_split]
         train_index = 0
         val_index = 1
-        
-        print ("\nCrossvalidation:")
-        print (f"Training samples will be taken from splits {tis}")
-        print (f"Validation samples will be taken from split {crossval_index}")
+
+        print("\nCrossvalidation:")
+        print(f"Training samples will be taken from splits {tis}")
+        print(f"Validation samples will be taken from split {crossval_index}")
         if exclude_index:
-            print (f"Split {exclude_index} will not be used")
-        print ("\n")
+            print(f"Split {exclude_index} will not be used")
+        print("\n")
 
     return split, train_index, val_index
 
@@ -341,11 +360,23 @@ def main():
     args = parse()
 
     ## Read split file to get data for training
-    keyspace, table_suffix, id_col, data_col, label_type, label_col, row_keys, split, num_classes = read_split_file(args.split_fn)
-    
+    (
+        keyspace,
+        table_suffix,
+        id_col,
+        data_col,
+        label_type,
+        label_col,
+        row_keys,
+        split,
+        num_classes,
+    ) = read_split_file(args.split_fn)
+
     # Get split indexes
-    split, train_index, val_index = compute_split_index(split, args.train_index, args.val_index, args.crossval_index, args.exclude_index)
-    
+    split, train_index, val_index = compute_split_index(
+        split, args.train_index, args.val_index, args.crossval_index, args.exclude_index
+    )
+
     # test mode, use default args for sanity test
     if args.test:
         args.opt_level = None
@@ -489,10 +520,14 @@ def main():
 
     # train pipe
     train_uuids = row_keys[split[train_index]]
-    
+
     pipe = create_dali_pipeline(
         keyspace=keyspace,
         table_suffix=table_suffix,
+        id_col=id_col,
+        label_type=label_type,
+        label_col=label_col,
+        data_col=data_col,
         batch_size=args.batch_size,
         bs=args.batch_size,
         num_threads=args.workers,
@@ -525,6 +560,10 @@ def main():
     pipe = create_dali_pipeline(
         keyspace=keyspace,
         table_suffix=table_suffix,
+        id_col=id_col,
+        label_type=label_type,
+        label_col=label_col,
+        data_col=data_col,
         batch_size=args.batch_size,
         bs=args.batch_size,
         num_threads=args.workers,
@@ -822,7 +861,7 @@ def adjust_learning_rate(optimizer, epoch, step, len_epoch):
     if epoch >= 80:
         factor = factor + 1
 
-    lr = args.lr * (0.1 ** factor)
+    lr = args.lr * (0.1**factor)
 
     """Warmup"""
     if epoch < 5:
