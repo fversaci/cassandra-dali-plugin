@@ -12,12 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import cassandra
-import ssl
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster
-from cassandra.cluster import ExecutionProfile
-from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
+from crs4.cassandra_utils._cassandra_session import CassandraSession
 
 
 class CassandraWriter:
@@ -41,48 +36,13 @@ class CassandraWriter:
         self.label_col = label_col
         self.data_col = data_col
         self.cols = cols
-        auth_prov = PlainTextAuthProvider(
-            username=cass_conf.username, password=cass_conf.password)
-        cassandra_ips=cass_conf.cassandra_ips
-        cloud_config=cass_conf.cloud_config
-        cassandra_port=cass_conf.cassandra_port
-        use_ssl=cass_conf.use_ssl,
-
-        prof = ExecutionProfile(
-            load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
-            row_factory=cassandra.query.dict_factory,
-        )
-        profs = {"default": prof}
-
-        if cloud_config:
-            self.cluster = Cluster(
-                cloud=cloud_config,
-                execution_profiles=profs,
-                protocol_version=4,
-                auth_provider=auth_prov,
-            )
-        else:
-            if use_ssl:
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-            else:
-                ssl_context = None
-            self.cluster = Cluster(
-                contact_points=cassandra_ips,
-                port=cassandra_port,
-                execution_profiles=profs,
-                protocol_version=4,
-                auth_provider=auth_prov,
-                ssl_context=ssl_context,
-            )
-        self.sess = self.cluster.connect()
+        self._cs = CassandraSession(cass_conf)
+        self.sess = self._cs.sess
 
         # Query and session prepare have to be implemented
         # in subclasses set_query() method as well as
         # session execute in subclass save_item method
         self.set_query()
-
-    def __del__(self):
-        self.cluster.shutdown()
 
     def set_query(self):
         # set query and prepare

@@ -13,14 +13,11 @@
 # limitations under the License.
 
 import cassandra
-from cassandra.auth import PlainTextAuthProvider
-from cassandra.cluster import Cluster
-from cassandra.cluster import ExecutionProfile
-from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from cassandra import concurrent
 import uuid
 
 from crs4.cassandra_utils._cassandra_writer import CassandraWriter
+from crs4.cassandra_utils._cassandra_session import CassandraSession
 
 
 class CassandraSegmentationWriter(CassandraWriter):
@@ -64,9 +61,6 @@ class CassandraSegmentationWriter(CassandraWriter):
         self.prep_data = self.sess.prepare(query_data)
         self.prep_meta = self.sess.prepare(query_meta)
 
-    def __del__(self):
-        self.cluster.shutdown()
-
     def save_item(self, item):
         image_id, label, data, partition_items = item
         stuff = (image_id, *partition_items)
@@ -74,14 +68,14 @@ class CassandraSegmentationWriter(CassandraWriter):
         self.sess.execute(
             self.prep_meta,
             stuff,
-            execution_profile="default",
+            execution_profile="tuple",
             timeout=30,
         )
         # insert heavy data
         self.sess.execute(
             self.prep_data,
             (image_id, label, data),
-            execution_profile="default",
+            execution_profile="tuple",
             timeout=30,
         )
 
