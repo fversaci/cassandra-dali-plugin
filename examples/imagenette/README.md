@@ -120,34 +120,6 @@ $ python3 loop_read.py --keyspace=imagenet --table-suffix=train_256_jpg
 
 ```
 
-## Tuning cassandra-dali-plugin internal parallelism
-
-The plugin exploits parallelism, via C++ multithreading, in different
-points of the loading pipeline. When necessary, the following
-parameters can be finely tuned, to improve the maximum throughput by
-removing any possibile bottleneck.
-
-- `prefetch_buffers`: the plugin employs multi-buffering, to hide the
-  network latencies. Default: 2.
-- `io_threads`: number of IO threads used by the Cassandra driver
-  (which also limits the number of TCP connections). Default: 2.
-- `comm_threads`: number of threads handling the
-  communications. Default: 2.
-- `copy_threads`: number of threads copying the data. Default: 2.
-
-As an extreme example, when raw loading, without any decoding or
-processing, the small (minimum dimension = 256px) JPEG images with
-`batch_size=128`, over a 25 GbE network with an (artificial) latency
-of 50 ms (set with `tc-netem`, with no packet loss), we can achieve
-about 1000 batches per second (with a throughput of roughly 2 GB/s)
-on our test nodes (Intel Xeon CPU E5-2650 v4 @ 2.20GHz), using the
-following parameters:
-
-- `prefetch_buffers`: 256 (to hide the high latency)
-- `io_threads`: 20
-- `comm_threads`: 4
-- `copy_threads`: 4
-
 ## Multi-GPU training
 
 We have adapted NVIDIA DALI [ImageNet Training in PyTorch
@@ -173,3 +145,61 @@ $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 ```
+
+# Long fat networks
+
+Let's now see how to optimize our data loader for use across long fat
+networks, i.e., networks that have a high [bandwidth-delay
+product](https://en.wikipedia.org/wiki/Bandwidth-delay_product), e.g.,
+100 ms latency and 10 Gb/s bandwidth.
+
+As an example consider a setup where you have your Cassandra DB,
+containing the images needed for the training, in a datacenter A,
+whereas the computing nodes with the GPUs are in another datacenter B,
+possibly far in a different country.
+
+To exploit such networks it is important to have a deep prefetch
+queue, handled in parallel. To this purporse, our plugin exposes the
+following configurable parameters:
+
+- `prefetch_buffers`: the plugin employs multi-buffering, to hide the
+  network latencies. Default: 2.
+- `io_threads`: number of IO threads used by the Cassandra driver
+  (which also limits the number of TCP connections). Default: 2.
+- `comm_threads`: number of threads handling the
+  communications. Default: 2.
+- `copy_threads`: number of threads copying the data. Default: 2.
+
+As an example, when raw loading, without any decoding or processing,
+the original ImageNet dataset with `batch_size=512`, over a 25 GbE
+network with an (artificial) latency of 100 ms (set with `tc-netem`,
+with no packet loss), we can achieve about 40 batches per second
+(i.e., more than 20.000 images/s, with a throughput of roughly 2.5
+GB/s) on our test nodes (Intel Xeon CPU E5-2650 v4 @ 2.20GHz), using
+the following parameters:
+
+- `prefetch_buffers`: 16
+- `io_threads`: 8
+- `comm_threads`: 1
+- `copy_threads`: 4
+
+## Handling variance and packet loss
+
+When sending packets at large distance across the internet it is
+common to encounter packet loss along congested routes. This can be
+extremely detrimental for the throughput when requesting a sequence of
+transfers, since a delay in one of them can stall the entire pipeline.
+
+This issue can be further made worse by the prefetching that produces
+an initial burst of requests which might lead to higher packet loss.
+
+To overcome these problems and allow high bandwidth transfers over
+large distances (i.e., latencies) we have extended out code in two
+ways:
+
+1. We have written and out-of-order version of the data loader, which
+   can be enabled by setting `ooo=True`
+2. We have implemented a parametrized diluted prefetching, which
+   requests an additional image every `n` normal requests, thus
+   limiting the initial burst. To enable it, just set, e.g.,
+   `slow_start=4`.
