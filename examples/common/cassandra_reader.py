@@ -59,7 +59,6 @@ def get_cassandra_reader(
     comm_threads=2,
     copy_threads=2,
     wait_threads=2,
-    ssl_certificate="",  # "node0.cer.pem",
     ooo=False,
     slow_start=0,
 ):
@@ -80,6 +79,7 @@ def get_cassandra_reader(
         username=CC.username,
         password=CC.password,
         use_ssl=CC.use_ssl,
+        ssl_certificate=CC.ssl_certificate,
         table=table,
         label_col=label_col,
         data_col=data_col,
@@ -89,7 +89,6 @@ def get_cassandra_reader(
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
-        ssl_certificate=ssl_certificate,
         label_type=label_type,
         ooo=ooo,
         slow_start=slow_start,

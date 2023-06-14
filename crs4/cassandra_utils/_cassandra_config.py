@@ -21,3 +21,4 @@ class CassandraConf:
         self.cassandra_ips = None
         self.cassandra_port = 9042
         self.use_ssl = False
+        self.ssl_certificate = ""  # "node0.cer.pem"

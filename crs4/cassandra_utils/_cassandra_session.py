@@ -21,8 +21,10 @@ from cassandra.cluster import ExecutionProfile
 import pandas as pd
 import ssl
 
+
 def pandas_factory(colnames, rows):
     return pd.DataFrame(rows, columns=colnames)
+
 
 class CassandraSession:
     def __init__(self, cass_conf):
@@ -33,6 +35,7 @@ class CassandraSession:
         )
         cassandra_ips = cass_conf.cassandra_ips
         cloud_config = cass_conf.cloud_config
+        ssl_certificate = cass_conf.ssl_certificate
         port = cass_conf.cassandra_port
         use_ssl = (cass_conf.use_ssl,)
         # set profiles
@@ -60,6 +63,9 @@ class CassandraSession:
         else:
             if use_ssl:
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
+                if ssl_certificate:
+                    ssl_context.load_verify_locations(ssl_certificate)
+                    ssl_context.verify_mode = ssl.CERT_REQUIRED
             else:
                 ssl_context = None
             self.cluster = Cluster(
