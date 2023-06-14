@@ -62,11 +62,11 @@ cassandra_reader = fn.crs4.cassandra(
 
 Below, we'll provide a summary of the parameters' meanings. If you
 prefer to skip this section, here you can find some [working
-examples](#examples).
+examples](README.md#examples).
 
 ### Basic parameters
 
-` `name`: name of the module to be passed to DALI (e.g. "Reader")
+- `name`: name of the module to be passed to DALI (e.g. "Reader")
 - `cassandra_ips`: list of IP pointing to the DB (e.g., `["127.0.0.1"]`)
 - `cassandra_port`: Cassandra TCP port (default: `9042`)
 - `username`: username for Cassandra
