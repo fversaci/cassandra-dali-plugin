@@ -186,20 +186,19 @@ the following parameters:
 ## Handling variance and packet loss
 
 When sending packets at large distance across the internet it is
-common to encounter packet loss along congested routes. This can be
-extremely detrimental for the throughput when requesting a sequence of
-transfers, since a delay in one of them can stall the entire pipeline.
+common to experience packet loss along due to congested routes.  This
+can significantly impact throughput, especially when requesting a
+sequence of transfers, as a delay in one transfer can stall the entire
+pipeline. Prefetching can exacerbate this issue by producing an
+initial burst of requests, leading to even higher packet loss.
 
-This issue can be further made worse by the prefetching that produces
-an initial burst of requests which might lead to higher packet loss.
+To address these problems and enable high-bandwidth transfers over
+long distances (i.e., high latencies), we have extended our code in
+two ways:
 
-To overcome these problems and allow high bandwidth transfers over
-large distances (i.e., latencies) we have extended out code in two
-ways:
-
-1. We have written and out-of-order version of the data loader, which
-   can be enabled by setting `ooo=True`
-2. We have implemented a parametrized diluted prefetching, which
+1. We have created an out-of-order version of the data loader that can
+   be activated by setting `ooo=True`.
+2. We have implemented a parametrized diluted prefetching method that
    requests an additional image every `n` normal requests, thus
-   limiting the initial burst. To enable it, just set, e.g.,
-   `slow_start=4`.
+   limiting the initial burst. To activate it, set `slow_start=4`, for
+   example.
