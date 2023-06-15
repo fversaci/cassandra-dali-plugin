@@ -47,9 +47,11 @@ plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 ```
 
-At this point the plugin can be called with
+At this point the plugin can be integrated in a [DALI
+pipeline](https://docs.nvidia.com/deeplearning/dali/user-guide/docs/pipeline.html),
+for example replacing a call to `fn.readers.file` with
 ```python
-cassandra_reader = fn.crs4.cassandra(
+images, labels = fn.crs4.cassandra(
     name,
     cassandra_ips, cassandra_port, username, password,
     use_ssl, ssl_certificate, cloud_config,
@@ -88,10 +90,10 @@ networks, i.e., networks that have a high [bandwidth-delay
 product](https://en.wikipedia.org/wiki/Bandwidth-delay_product), e.g.,
 100 ms latency and 10 Gb/s bandwidth.
 
-For instance, imagine that a setup where you have your Cassandra DB,
+For instance, imagine a setup where you have your Cassandra DB,
 containing the required training images in datacenter A, while the
 computing nodes with the GPUs are located in datacenter B, which may
-be far in a different country.
+even be far away in a different country.
 
 To take advantage of such networks, it is crucial to have a deep
 prefetch queue that can be processed in parallel. To this purporse,
