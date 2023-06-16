@@ -113,12 +113,17 @@ no packet loss), using a `batch_size` of 512 and without any decoding
 or preprocessing. Our test nodes (equipped with an Intel Xeon CPU
 E5-2650 v4 @ 2.20GHz), achieved about 40 batches per second, which
 translates to more than 20,000 images per second and a throughput of
-roughly 20 Gb/s. We used the following parameters for the test:
+roughly 20 Gb/s. Note that this throughput refers to a single python process,
+and that in [a distributed training](examples/imagenette/README.md#multi-gpu-training)
+there is such a process *for each GPU*. We used the following
+parameters for the test:
 
 - `prefetch_buffers`: 16
 - `io_threads`: 8
 - `comm_threads`: 1
 - `copy_threads`: 4
+
+
 
 #### Handling variance and packet loss
 
