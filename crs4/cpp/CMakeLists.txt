@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-set(CMAKE_CUDA_ARCHITECTURES "35;50;52;60;61;70;75;80;86")
+set(CMAKE_CUDA_ARCHITECTURES "50;52;60;61;70;75;80;86")
 
 project(crs4_cassandra_plugin LANGUAGES CUDA CXX C)
 

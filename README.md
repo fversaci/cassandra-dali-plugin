@@ -18,7 +18,7 @@ a Cassandra server, PyTorch and Apache Spark, as shown in the commands below.
 ```bash
 # Build and run cassandradl docker container
 $ docker build -t cassandra-dali-plugin .
-$ docker run --rm -it --cap-add=sys_nice cassandra-dali-plugin
+$ docker run --rm -it --cap-add=sys_admin cassandra-dali-plugin
 ```
 
 Alternatively, for better performance and for data persistence, it is
