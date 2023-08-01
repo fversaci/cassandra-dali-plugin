@@ -55,6 +55,9 @@ class BatchLoader {
   int port = 9042;
   bool use_ssl = false;
   std::string ssl_certificate;
+  std::string ssl_own_certificate;
+  std::string ssl_own_key;
+  std::string ssl_own_key_pass;
   // Cassandra connection and execution
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
@@ -102,16 +105,19 @@ class BatchLoader {
   void enqueue(CassFuture* query_future);
   static void wrap_enq(CassFuture* query_future, void* v_fd);
   void allocTens(int wb);
-  static void load_trusted_cert_file(std::string file, CassSsl* ssl);
-  static void set_ssl(CassCluster* cluster, std::string ssl_certificate);
+  void load_own_cert_file(std::string file, CassSsl* ssl);
+  void load_own_key_file(std::string file, CassSsl* ssl, std::string passw);
+  void load_trusted_cert_file(std::string file, CassSsl* ssl);
+  void set_ssl(CassCluster* cluster);
 
  public:
   BatchLoader(std::string table, std::string label_type, std::string label_col,
               std::string data_col, std::string id_col, std::string username,
               std::string password, std::vector<std::string> cassandra_ips,
               int port, std::string cloud_config, bool use_ssl,
-              std::string ssl_certificate, int io_threads,
-              int prefetch_buffers, int copy_threads,
+              std::string ssl_certificate, std::string ssl_own_certificate,
+              std::string ssl_own_key, std::string ssl_own_key_pass,
+              int io_threads, int prefetch_buffers, int copy_threads,
               int wait_threads, int comm_threads, bool ooo);
   ~BatchLoader();
   void prefetch_batch(const std::vector<CassUuid>& keys);

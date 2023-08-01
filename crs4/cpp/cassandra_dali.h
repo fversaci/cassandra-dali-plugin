@@ -98,6 +98,9 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   int cow_dilute;  // counter for prefetch dilution
   int curr_prefetch = 0;
   std::string ssl_certificate;
+  std::string ssl_own_certificate;
+  std::string ssl_own_key;
+  std::string ssl_own_key_pass;
   bool buffers_not_full = true;
   std::optional<std::string> null_data_id = std::nullopt;
   ::dali::TensorLayout in_layout_ = "B";  // Byte stream

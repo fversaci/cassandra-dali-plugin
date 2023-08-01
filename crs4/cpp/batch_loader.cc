@@ -33,6 +33,68 @@ BatchLoader::~BatchLoader() {
   }
 }
 
+void BatchLoader::load_own_cert_file(std::string file, CassSsl* ssl) {
+  CassError rc;
+  char* cert;
+  int64_t cert_size;
+
+  FILE *in = fopen(file.c_str(), "rb");
+  if (in == NULL) {
+    throw std::runtime_error("Error loading certificate file " + file);
+  }
+
+  fseek(in, 0, SEEK_END);
+  cert_size = ftell(in);
+  rewind(in);
+
+  cert = reinterpret_cast<char*>(malloc(cert_size));
+  fread(cert, sizeof(char), cert_size, in);
+  fclose(in);
+
+  // Add the trusted certificate (or chain) to the driver
+  rc = cass_ssl_set_cert_n(ssl, cert, cert_size);
+  if (rc != CASS_OK) {
+    free(cert);
+    throw std::runtime_error("Error loading SSL certificate: "
+                             + std::string(cass_error_desc(rc)));
+  }
+
+  free(cert);
+}
+
+void BatchLoader::load_own_key_file(std::string file, CassSsl* ssl, std::string passw) {
+  CassError rc;
+  char* cert;
+  int64_t cert_size;
+
+  // Get the C-style password
+  const char* password = passw.c_str();
+  size_t password_length = passw.length();
+
+  FILE *in = fopen(file.c_str(), "rb");
+  if (in == NULL) {
+    throw std::runtime_error("Error loading certificate file " + file);
+  }
+
+  fseek(in, 0, SEEK_END);
+  cert_size = ftell(in);
+  rewind(in);
+
+  cert = reinterpret_cast<char*>(malloc(cert_size));
+  fread(cert, sizeof(char), cert_size, in);
+  fclose(in);
+
+  // Add the trusted certificate (or chain) to the driver
+  rc = cass_ssl_set_private_key_n(ssl, cert, cert_size, password, password_length);
+  if (rc != CASS_OK) {
+    free(cert);
+    throw std::runtime_error("Error loading SSL certificate: "
+                             + std::string(cass_error_desc(rc)));
+  }
+
+  free(cert);
+}
+  
 void BatchLoader::load_trusted_cert_file(std::string file, CassSsl* ssl) {
   CassError rc;
   char* cert;
@@ -62,12 +124,18 @@ void BatchLoader::load_trusted_cert_file(std::string file, CassSsl* ssl) {
   free(cert);
 }
 
-void BatchLoader::set_ssl(CassCluster* cluster, std::string ssl_certificate) {
+void BatchLoader::set_ssl(CassCluster* cluster) {
   CassSsl* ssl = cass_ssl_new();
+  // verify server certificate
   if (ssl_certificate.empty()) {
     cass_ssl_set_verify_flags(ssl, CASS_SSL_VERIFY_NONE);
   } else {
     load_trusted_cert_file(ssl_certificate, ssl);
+  }
+  // client authentication, needs both certificate and key
+  if (!ssl_own_certificate.empty() && !ssl_own_key.empty()) {
+    load_own_cert_file(ssl_own_certificate, ssl);
+    load_own_key_file(ssl_own_key, ssl, ssl_own_key_pass);
   }
   cass_cluster_set_ssl(cluster, ssl);
   cass_ssl_free(ssl);
@@ -98,7 +166,7 @@ void BatchLoader::connect() {
   cass_cluster_set_queue_size_io(cluster, 65536);  // max pending requests
   // set ssl if required
   if (use_ssl) {
-    set_ssl(cluster, ssl_certificate);
+    set_ssl(cluster);
   }
   CassFuture* connect_future = cass_session_connect(session, cluster);
   CassError rc = cass_future_error_code(connect_future);
@@ -132,17 +200,19 @@ void BatchLoader::connect() {
 
 BatchLoader::BatchLoader(std::string table, std::string label_type,
                          std::string label_col, std::string data_col,
-                         std::string id_col,
-                         std::string username, std::string password,
+                         std::string id_col, std::string username, std::string password,
                          std::vector<std::string> cassandra_ips, int port,
                          std::string cloud_config, bool use_ssl,
-                         std::string ssl_certificate, int io_threads,
-                         int prefetch_buffers, int copy_threads,
+                         std::string ssl_certificate, std::string ssl_own_certificate,
+                         std::string ssl_own_key, std::string ssl_own_key_pass,
+                         int io_threads, int prefetch_buffers, int copy_threads,
                          int wait_threads, int comm_threads, bool ooo) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   username(username), password(password), cassandra_ips(cassandra_ips),
   cloud_config(cloud_config), port(port), use_ssl(use_ssl),
-  ssl_certificate(ssl_certificate), io_threads(io_threads),
+  ssl_certificate(ssl_certificate), ssl_own_certificate(ssl_own_certificate),
+  ssl_own_key(ssl_own_key), ssl_own_key_pass(ssl_own_key_pass), 
+  io_threads(io_threads),
   prefetch_buffers(prefetch_buffers), copy_threads(copy_threads),
   wait_threads(wait_threads), comm_threads(comm_threads), ooo(ooo) {
   // setting label type, default is lab_none

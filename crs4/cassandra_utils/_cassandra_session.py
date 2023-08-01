@@ -28,16 +28,10 @@ def pandas_factory(colnames, rows):
 
 class CassandraSession:
     def __init__(self, cass_conf):
-        self.cass_conf = cass_conf
         # read parameters
         auth_prov = PlainTextAuthProvider(
             username=cass_conf.username, password=cass_conf.password
         )
-        cassandra_ips = cass_conf.cassandra_ips
-        cloud_config = cass_conf.cloud_config
-        ssl_certificate = cass_conf.ssl_certificate
-        port = cass_conf.cassandra_port
-        use_ssl = (cass_conf.use_ssl,)
         # set profiles
         prof_dict = ExecutionProfile(
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
@@ -53,27 +47,33 @@ class CassandraSession:
         )
         profs = {"dict": prof_dict, "tuple": prof_tuple, "pandas": prof_pandas}
         # init cluster
-        if cloud_config:
+        if cass_conf.cloud_config:
             self.cluster = Cluster(
-                cloud=cloud_config,
+                cloud=cass_conf.cloud_config,
                 execution_profiles=profs,
                 protocol_version=4,
                 auth_provider=auth_prov,
             )
         else:
-            if use_ssl:
+            if cass_conf.use_ssl:
                 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
-                if ssl_certificate:
-                    ssl_context.load_verify_locations(ssl_certificate)
+                if cass_conf.ssl_certificate:
+                    ssl_context.load_verify_locations(cass_conf.ssl_certificate)
                     ssl_context.verify_mode = ssl.CERT_REQUIRED
+                if cass_conf.ssl_own_certificate and cass_conf.ssl_own_key:
+                    ssl_context.load_cert_chain(
+                        certfile=cass_conf.ssl_own_certificate,
+                        keyfile=cass_conf.ssl_own_key,
+                        password=cass_conf.ssl_own_key_pass,
+                    )
             else:
                 ssl_context = None
             self.cluster = Cluster(
-                contact_points=cassandra_ips,
+                contact_points=cass_conf.cassandra_ips,
                 execution_profiles=profs,
                 protocol_version=4,
                 auth_provider=auth_prov,
-                port=port,
+                port=cass_conf.cassandra_port,
                 ssl_context=ssl_context,
             )
         self.cluster.connect_timeout = 10  # seconds

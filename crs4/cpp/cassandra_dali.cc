@@ -34,6 +34,9 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   password(spec.GetArgument<std::string>("password")),
   use_ssl(spec.GetArgument<bool>("use_ssl")),
   ssl_certificate(spec.GetArgument<std::string>("ssl_certificate")),
+  ssl_own_certificate(spec.GetArgument<std::string>("ssl_own_certificate")),
+  ssl_own_key(spec.GetArgument<std::string>("ssl_own_key")),
+  ssl_own_key_pass(spec.GetArgument<std::string>("ssl_own_key_pass")),
   prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   io_threads(spec.GetArgument<int>("io_threads")),
   copy_threads(spec.GetArgument<int>("copy_threads")),
@@ -53,6 +56,7 @@ Cassandra::Cassandra(const ::dali::OpSpec &spec) :
   batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
+                        ssl_own_certificate, ssl_own_key, ssl_own_key_pass,
                         io_threads, 1 + prefetch_buffers, copy_threads,
                         wait_threads, comm_threads, ooo);
 }
@@ -157,7 +161,13 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg<std::string>("password", R"()", nullptr)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
 .AddOptionalArg<std::string>("ssl_certificate",
-   R"(Optional SSL certificate)", "")
+   R"(Optional SSL server certificate)", "")
+.AddOptionalArg<std::string>("ssl_own_certificate",
+   R"(Optional SSL client certificate)", "")
+.AddOptionalArg<std::string>("ssl_own_key",
+   R"(Optional SSL key)", "")
+.AddOptionalArg<std::string>("ssl_own_key_pass",
+   R"(Optional password for SSL key)", "")
 .AddOptionalArg("prefetch_buffers", R"(Number of prefetch buffers)", 1)
 .AddOptionalArg("io_threads",
    R"(Number of io threads used by the Cassandra driver)", 2)
