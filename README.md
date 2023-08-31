@@ -7,6 +7,9 @@ database](https://cassandra.apache.org) to [NVIDIA Data Loading
 Library (DALI)](https://github.com/NVIDIA/DALI) (which can be used to
 load and preprocess images for PyTorch or TensorFlow).
 
+### DALI compatibility
+The plugin has been tested and is compatible with DALI v1.26.
+
 ## Running the docker container
 
 The easiest way to test the cassandra-dali-plugin is by using the
