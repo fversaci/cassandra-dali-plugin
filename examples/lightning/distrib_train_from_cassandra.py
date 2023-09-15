@@ -12,9 +12,12 @@ import shutil
 import time
 import math
 
+from IPython import embed
+
 import lightning as L
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
 import torch.nn.parallel
@@ -290,8 +293,6 @@ class ImageNetLightningModel(L.LightningModule):
 
     def __init__(
         self,
-        train_uuids: list = None,
-        val_uuids: list = None,
         arch: str = "resnet_50",
         pretrained: bool = False,
         lr: float = 0.1,
@@ -309,12 +310,8 @@ class ImageNetLightningModel(L.LightningModule):
         self.lr = lr
         self.momentum = momentum
         self.weight_decay = weight_decay
-        # self.data_path = data_path
         self.batch_size = batch_size
         self.workers = workers
-        self.train_uuids = train_uuids
-        self.val_uuids = val_uuids
-        self.world_size = 2   ### FIXME: It needed to be read from somewhere
 
         print('*' * 80)
         print(f'*************** Loading model {self.arch}')
@@ -325,9 +322,9 @@ class ImageNetLightningModel(L.LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        image = batch["data"]
+        images = batch["data"]
         target = batch["label"].squeeze(-1).long()
-
+        #print (batch)
         #images, target = batch
         #target = target.squeeze()
         output = self(images)
@@ -342,7 +339,7 @@ class ImageNetLightningModel(L.LightningModule):
         return loss_train
 
     def eval_step(self, batch, batch_idx, prefix: str):
-        image = batch["data"]
+        images = batch["data"]
         target = batch["label"].squeeze(-1).long()
         #images, target = batch
         #target = target.squeeze()
@@ -355,7 +352,8 @@ class ImageNetLightningModel(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         return self.eval_step(batch, batch_idx, "val")
-
+    
+    @staticmethod
     def __accuracy(output, target, topk=(1,)):
         """Computes the accuracy over the k top predictions for the specified values of k."""
         with torch.no_grad():
@@ -386,14 +384,14 @@ class ImageNetLightningModel(L.LightningModule):
             batch_size = self.batch_size,
             epoch = 1 + self.current_epoch,
             shard_id = self.local_rank,  # global_rank?
-            num_shards = self.world_size, ## FIXME 
+            num_shards = self.trainer.world_size 
         )
 
         for u in uuids:
-            self.train_dataloader._pipes[0].feed_input("Reader[0]", u)
+            self.train_loader._pipes[0].feed_input("Reader[0]", u)
     
     def on_train_epoch_end(self):
-        self.train_dataloader.reset()
+        self.train_loader.reset()
     
     def on_validation_epoch_start(self):
         # pre-feeding val  pipeline
@@ -402,13 +400,90 @@ class ImageNetLightningModel(L.LightningModule):
             batch_size = self.batch_size,
             epoch = 1 + self.current_epoch,
             shard_id = self.local_rank,  # global_rank?
-            num_shards = self.world_size, ### FIXME
+            num_shards =  self.trainer.world_size
         )
+
+        print (dir(self.val_dataloader))
         for u in uuids:
-            self.val_dataloader._pipes[0].feed_input("Reader[0]", u)
+            self.val_loader._pipes[0].feed_input("Reader[0]", u)
 
     def on_validation_epoch_end(self):
-        self.val_dataloader.reset()
+        self.val_loader.reset()
+
+
+class DALI_ImageNetLightningModel(ImageNetLightningModel):
+    def __init__(self, 
+            args,
+        ):
+        super().__init__(**vars(args))
+
+    def prepare_data(self):
+        # no preparation is needed in DALI
+        pass
+
+    def setup(self, stage=None):
+        device_id = self.local_rank
+        shard_id = self.global_rank
+        num_shards = self.trainer.world_size
+
+        class LightningWrapper(DALIClassificationIterator):
+            def __init__(self, *kargs, **kvargs):
+                super().__init__(*kargs, **kvargs)
+
+            def __next__(self):
+                out = super().__next__()
+                # DDP is used so only one pipeline per process
+                # also we need to transform dict returned by DALIClassificationIterator to iterable
+                # and squeeze the lables
+                out = out[0]
+                return {k:out[k] if k != "label" else torch.squeeze(out[k]) for k in self.output_map}
+
+        train_pipeline, real_sz, self.train_uuids = self.GetPipeline(args, args.train_table_suffix, is_training=True, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
+        self.train_loader = LightningWrapper(train_pipeline, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL)
+
+        val_pipeline, real_sz, self.val_uuids = self.GetPipeline(args, args.val_table_suffix, is_training=False, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
+        self.val_loader = LightningWrapper(val_pipeline, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL)
+    
+    def train_dataloader(self):
+        return self.train_loader
+    
+    def val_dataloader(self):
+        return self.val_loader
+    
+    @staticmethod
+    def GetPipeline(args, table_suffix, is_training, device_id, shard_id, num_shards, num_threads):
+        in_uuids = read_uuids(
+            keyspace = args.keyspace,
+            table_suffix = table_suffix,
+            ids_cache_dir = args.ids_cache_dir,
+        )
+        pipe = create_dali_pipeline(
+            keyspace = args.keyspace,
+            table_suffix = table_suffix,
+            batch_size = args.batch_size,
+            bs = args.batch_size,
+            num_threads = args.workers,
+            device_id = device_id,
+            seed = 12 + device_id,  # device_id = local_rank
+            crop = args.crop_size,
+            size = args.val_size,
+            dali_cpu = args.dali_cpu,
+            is_training = is_training,
+        )
+        pipe.build()
+
+        # pre-feeding train pipeline
+        uuids, real_sz = get_shard(
+            in_uuids,
+            batch_size=args.batch_size,
+            epoch=0,
+            shard_id=local_rank,  # global_rank?
+            num_shards=world_size,
+        )
+        for u in uuids:
+            pipe.feed_input("Reader[0]", u)
+        
+        return pipe, real_sz, in_uuids
 
 
 def main():
@@ -436,86 +511,15 @@ def main():
         # crop_size = 299
         # val_size = 320 # I chose this value arbitrarily, we can adjust.
     else:
-        crop_size = 224
-        val_size = 256
+        args.crop_size = 224
+        args.val_size = 256
 
-    # train pipe
-    train_uuids = read_uuids(
-        keyspace=args.keyspace,
-        table_suffix=args.train_table_suffix,
-        ids_cache_dir=args.ids_cache_dir,
-    )
-    pipe = create_dali_pipeline(
-        keyspace=args.keyspace,
-        table_suffix=args.train_table_suffix,
-        batch_size=args.batch_size,
-        bs=args.batch_size,
-        num_threads=args.workers,
-        device_id=local_rank,
-        seed=12 + local_rank,  # global_rank?
-        crop=crop_size,
-        size=val_size,
-        dali_cpu=args.dali_cpu,
-        is_training=True,
-    )
-    pipe.build()
-
-    # pre-feeding train pipeline
-    uuids, real_sz = get_shard(
-        train_uuids,
-        batch_size=args.batch_size,
-        epoch=0,
-        shard_id=local_rank,  # global_rank?
-        num_shards=world_size,
-    )
-    for u in uuids:
-        pipe.feed_input("Reader[0]", u)
-    
-    train_loader = DALIClassificationIterator(
-        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
-    )
-
-    # val pipe
-    val_uuids = read_uuids(
-        keyspace=args.keyspace,
-        table_suffix=args.val_table_suffix,
-        ids_cache_dir=args.ids_cache_dir,
-    )
-    pipe = create_dali_pipeline(
-        keyspace=args.keyspace,
-        table_suffix=args.val_table_suffix,
-        batch_size=args.batch_size,
-        bs=args.batch_size,
-        num_threads=args.workers,
-        device_id=local_rank,
-        seed=12 + local_rank,  # global_rank?
-        crop=crop_size,
-        size=val_size,
-        dali_cpu=args.dali_cpu,
-        is_training=False,
-    )
-    pipe.build()
-
-    # pre-feeding val pipeline
-    uuids, real_sz = get_shard(
-        val_uuids,
-        batch_size=args.batch_size,
-        epoch=0,
-        shard_id=local_rank,  # global_rank?
-        num_shards=world_size,
-    )
-    for u in uuids:
-        pipe.feed_input("Reader[0]", u)
-    val_loader = DALIClassificationIterator(
-        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
-    )
-
-    if args.evaluate:
-        validate(val_loader, model, criterion)
-        return
+    #if args.evaluate:
+    #    validate(val_loader, model, criterion)
+    #    return
 
     # create lightning model
-    model = ImageNetLightningModel(train_uuids, val_uuids, **vars(args))
+    model = DALI_ImageNetLightningModel(args)
 
     # Optionally resume from a checkpoint
     if args.resume:
@@ -547,8 +551,8 @@ def main():
 
 
     ### Lightning Trainer
-    trainer = L.Trainer(max_epochs=args.epochs,  accelerator="gpu", devices=2, strategy='ddp')
-    trainer.fit(model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    trainer = L.Trainer(max_epochs=args.epochs,  accelerator="gpu", devices=1, strategy='ddp')
+    trainer.fit(model)
 
 
 def adjust_learning_rate(optimizer, epoch, step, len_epoch):
