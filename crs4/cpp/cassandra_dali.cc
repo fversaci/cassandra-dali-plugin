@@ -142,7 +142,7 @@ void Cassandra::RunImpl(::dali::Workspace &ws) {
 DALI_REGISTER_OPERATOR(crs4__cassandra, ::crs4::Cassandra, ::dali::CPU);
 
 DALI_SCHEMA(crs4__cassandra)
-.DocStr("Reads UUIDs via feed_pipeline and returns images and labels/masks")
+.DocStr("Reads UUIDs via feed_input and returns images and labels/masks")
 .NumInput(0)
 .NumOutput(2)
 .AddOptionalArg<std::string>("cloud_config",
