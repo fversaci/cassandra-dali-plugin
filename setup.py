@@ -69,6 +69,7 @@ setup(
     ],
     install_requires=[
         "cassandra-driver",
+        "pandas",
         "tqdm",
     ],
     python_requires=">=3.6",
