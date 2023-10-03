@@ -260,7 +260,7 @@ void BatchLoader::allocTens(int wb) {
   } else {
     // if labels are not images we can already allocate the memory
     std::vector<int64_t> v_sz(bs[wb], 1);
-    ::dali::TensorListShape t_sz(v_sz, bs[wb], 1);
+    dali::TensorListShape t_sz(v_sz, bs[wb], 1);
     v_labs[wb].Resize(t_sz, DALI_INT_TYPE);
   }
 }
@@ -377,10 +377,10 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     // if all copy_jobs added
     if (copy_jobs[wb].size() == bs[wb]) {
       // allocate feature tensor and notify waiting threads
-      ::dali::TensorListShape t_sz(shapes[wb], bs[wb], 1);
+      dali::TensorListShape t_sz(shapes[wb], bs[wb], 1);
       v_feats[wb].Resize(t_sz, DALI_IMG_TYPE);
       if (label_t == lab_img) {
-        ::dali::TensorListShape t_sz(lab_shapes[wb], bs[wb], 1);
+        dali::TensorListShape t_sz(lab_shapes[wb], bs[wb], 1);
         v_labs[wb].Resize(t_sz, DALI_IMG_TYPE);
       }
       alloc_cv[wb].notify_all();

@@ -19,8 +19,8 @@
 
 namespace crs4 {
 
-Cassandra::Cassandra(const ::dali::OpSpec &spec) :
-  ::dali::InputOperator<dali::CPUBackend>(spec),
+Cassandra::Cassandra(const dali::OpSpec &spec) :
+  dali::InputOperator<dali::CPUBackend>(spec),
   batch_size(spec.GetArgument<int>("max_batch_size")),
   cloud_config(spec.GetArgument<std::string>("cloud_config")),
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
@@ -73,11 +73,11 @@ void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
   batch_ldr->prefetch_batch(cass_uuids);
 }
 
-bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
-                          const ::dali::Workspace &ws) {
+bool Cassandra::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
+                          const dali::Workspace &ws) {
   
-  // InputOperator<::dali::CPUBackend>::HandleDataAvailability();
-  DALI_ENFORCE(InputOperator<::dali::CPUBackend>::HasDataInQueue(),
+  // InputOperator<dali::CPUBackend>::HandleDataAvailability();
+  DALI_ENFORCE(InputOperator<dali::CPUBackend>::HasDataInQueue(),
                "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
   
   // link input data to uuids tensorlist
@@ -89,7 +89,7 @@ bool Cassandra::SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
   return false;
 }
 
-void Cassandra::fill_buffers(::dali::Workspace &ws) {
+void Cassandra::fill_buffers(dali::Workspace &ws) {
   // start prefetching
   int num_buff = (slow_start > 0 && prefetch_buffers > 0) ? 1 : prefetch_buffers;
   for (int i=0; i < num_buff && ok_to_fill(); ++i) {
@@ -113,33 +113,33 @@ bool Cassandra::ok_to_fill() {
   return true;
 }
 
-void Cassandra::fill_buffer(::dali::Workspace &ws) {
+void Cassandra::fill_buffer(dali::Workspace &ws) {
   // start prefetching
   prefetch_one(uuids);
   ++curr_prefetch;
   auto &thread_pool = ws.GetThreadPool();
-  DALI_ENFORCE(InputOperator<::dali::CPUBackend>::HasDataInQueue(),
+  DALI_ENFORCE(InputOperator<dali::CPUBackend>::HasDataInQueue(),
                "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
   ForwardCurrentData(uuids, null_data_id, thread_pool);
 }
 
-void Cassandra::RunImpl(::dali::Workspace &ws) {
+void Cassandra::RunImpl(dali::Workspace &ws) {
   if (buffers_not_full) {
     fill_buffers(ws);
   }
   prefetch_one(uuids);
   BatchImgLab batch = batch_ldr->blocking_get_batch();
   // share features with output
-  auto &features = ws.Output<::dali::CPUBackend>(0);
+  auto &features = ws.Output<dali::CPUBackend>(0);
   features.ShareData(batch.first);
   // share labels with output
-  auto &labels = ws.Output<::dali::CPUBackend>(1);
+  auto &labels = ws.Output<dali::CPUBackend>(1);
   labels.ShareData(batch.second);
 }
 
 }  // namespace crs4
 
-DALI_REGISTER_OPERATOR(crs4__cassandra, ::crs4::Cassandra, ::dali::CPU);
+DALI_REGISTER_OPERATOR(crs4__cassandra, crs4::Cassandra, dali::CPU);
 
 DALI_SCHEMA(crs4__cassandra)
 .DocStr("Reads UUIDs via feed_input and returns images and labels/masks")
