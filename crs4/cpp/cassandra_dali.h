@@ -25,6 +25,9 @@
 
 namespace crs4 {
 
+using StrUUIDs = std::vector<std::string>;
+using TL_UUIDs = dali::TensorList<dali::CPUBackend>;
+  
 class Cassandra : public dali::InputOperator<dali::CPUBackend> {
  public:
   explicit Cassandra(const dali::OpSpec &spec);
@@ -75,6 +78,9 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   bool ok_to_fill();
   // variables
   dali::TensorList<dali::CPUBackend> uuids;
+  StrUUIDs source_uuids;
+  TL_UUIDs tl_uuids;
+  void convert_uuids();
   std::string cloud_config;
   std::vector<std::string> cassandra_ips;
   int cassandra_port;

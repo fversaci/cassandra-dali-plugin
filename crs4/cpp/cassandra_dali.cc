@@ -21,6 +21,7 @@ namespace crs4 {
 
 Cassandra::Cassandra(const dali::OpSpec &spec) :
   dali::InputOperator<dali::CPUBackend>(spec),
+  source_uuids(spec.GetArgument<crs4::StrUUIDs>("source_uuids")),
   batch_size(spec.GetArgument<int>("max_batch_size")),
   cloud_config(spec.GetArgument<std::string>("cloud_config")),
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
@@ -46,13 +47,13 @@ Cassandra::Cassandra(const dali::OpSpec &spec) :
   slow_start(spec.GetArgument<int>("slow_start")),
   cow_dilute(slow_start -1) {
   DALI_ENFORCE(prefetch_buffers >= 0,
-               "prefetch_buffers should be non-negative.");
+     "prefetch_buffers should be non-negative.");
   DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
-               "label_type can only be int, image or none.");
+     "label_type can only be int, image or none.");
   DALI_ENFORCE(slow_start >= 0,
-               "slow_start should be either 0 (disabled) or >= 1 (prefetch dilution).");
+     "slow_start should be either 0 (disabled) or >= 1 (prefetch dilution).");
   DALI_ENFORCE(batch_size * prefetch_buffers <= 32768 * io_threads,
-               "please satisfy this constraint: batch_size * prefetch_buffers <= 32768 * io_threads");
+     "please satisfy this constraint: batch_size * prefetch_buffers <= 32768 * io_threads");
   batch_ldr = new BatchLoader(table, label_type, label_col, data_col, id_col,
                         username, password, cassandra_ips, cassandra_port,
                         cloud_config, use_ssl, ssl_certificate,
@@ -61,10 +62,28 @@ Cassandra::Cassandra(const dali::OpSpec &spec) :
                         wait_threads, comm_threads, ooo);
 }
 
+void Cassandra::convert_uuids(){
+  auto sz = source_uuids.size();
+  std::vector<int64_t> v_sz(sz, 2);
+  dali::TensorListShape t_sz(v_sz, sz, 1);
+  tl_uuids = TL_UUIDs();
+  tl_uuids.set_pinned(false);
+  tl_uuids.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
+  int num=0;
+  for (auto id = source_uuids.begin(); id != source_uuids.end(); ++id, ++num){
+    CassUuid cuid;
+    cass_uuid_from_string(id->c_str(), &cuid);
+    auto ten = (dali::uint64*) tl_uuids.raw_mutable_tensor(num);
+    ten[0] = cuid.time_and_version;
+    ten[1] = cuid.clock_seq_and_node;
+  }
+  SetDataSource(tl_uuids);
+}
+
 void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
   // assert(batch_size == input.num_samples());
   auto cass_uuids = std::vector<CassUuid>(batch_size);
-  for (auto i=0; i != batch_size; ++i) {
+  for (auto i = 0; i != batch_size; ++i) {
     auto d_ptr = input[i].data<dali::uint64>();
     auto c_uuid = &cass_uuids[i];
     c_uuid->time_and_version = *(d_ptr++);
@@ -75,7 +94,7 @@ void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
 
 bool Cassandra::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                           const dali::Workspace &ws) {
-  
+  convert_uuids();
   // InputOperator<dali::CPUBackend>::HandleDataAvailability();
   DALI_ENFORCE(InputOperator<dali::CPUBackend>::HasDataInQueue(),
                "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
@@ -179,4 +198,6 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("no_copy", R"(should DALI copy the buffer when ``feed_input`` is called?)", false)
 .AddOptionalArg("ooo", R"(Enable out-of-order batches)", false)
 .AddOptionalArg("slow_start", R"(How much to dilute prefetching)", 0)
+.AddOptionalArg("source_uuids", R"(Alternative list of uuids -- experimental)",
+   std::vector<std::string>())
 .AddParent("InputOperatorBase");
