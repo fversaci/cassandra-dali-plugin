@@ -69,7 +69,7 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   void RunImpl(dali::Workspace &ws) override;
 
  private:
-  void prefetch_one(const dali::TensorList<dali::CPUBackend>&);
+  void prefetch_one();
   void fill_buffer(dali::Workspace &ws);
   void fill_buffers(dali::Workspace &ws);
   bool ok_to_fill();

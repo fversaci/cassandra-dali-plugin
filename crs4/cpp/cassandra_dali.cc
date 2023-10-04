@@ -61,11 +61,10 @@ Cassandra::Cassandra(const dali::OpSpec &spec) :
                         wait_threads, comm_threads, ooo);
 }
 
-void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
-  // assert(batch_size == input.num_samples());
+void Cassandra::prefetch_one() {
   auto cass_uuids = std::vector<CassUuid>(batch_size);
   for (auto i=0; i != batch_size; ++i) {
-    auto d_ptr = input[i].data<dali::uint64>();
+    auto d_ptr = uuids[i].data<dali::uint64>();
     auto c_uuid = &cass_uuids[i];
     c_uuid->time_and_version = *(d_ptr++);
     c_uuid->clock_seq_and_node = *d_ptr;
@@ -74,9 +73,7 @@ void Cassandra::prefetch_one(const dali::TensorList<dali::CPUBackend>& input) {
 }
 
 bool Cassandra::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
-                          const dali::Workspace &ws) {
-  
-  // InputOperator<dali::CPUBackend>::HandleDataAvailability();
+                          const dali::Workspace &ws) {  
   DALI_ENFORCE(InputOperator<dali::CPUBackend>::HasDataInQueue(),
                "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
   
@@ -115,7 +112,7 @@ bool Cassandra::ok_to_fill() {
 
 void Cassandra::fill_buffer(dali::Workspace &ws) {
   // start prefetching
-  prefetch_one(uuids);
+  prefetch_one();
   ++curr_prefetch;
   auto &thread_pool = ws.GetThreadPool();
   DALI_ENFORCE(InputOperator<dali::CPUBackend>::HasDataInQueue(),
@@ -127,7 +124,7 @@ void Cassandra::RunImpl(dali::Workspace &ws) {
   if (buffers_not_full) {
     fill_buffers(ws);
   }
-  prefetch_one(uuids);
+  prefetch_one();
   BatchImgLab batch = batch_ldr->blocking_get_batch();
   // share features with output
   auto &features = ws.Output<dali::CPUBackend>(0);
