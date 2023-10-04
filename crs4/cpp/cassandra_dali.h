@@ -73,6 +73,7 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   void fill_buffer(dali::Workspace &ws);
   void fill_buffers(dali::Workspace &ws);
   bool ok_to_fill();
+  void try_read_input(const dali::Workspace &ws);
   // variables
   dali::TensorList<dali::CPUBackend> uuids;
   std::string cloud_config;
@@ -101,7 +102,8 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   std::string ssl_own_certificate;
   std::string ssl_own_key;
   std::string ssl_own_key_pass;
-  bool buffers_not_full = true;
+  bool buffers_full = false;
+  bool input_read = false;
   std::optional<std::string> null_data_id = std::nullopt;
   dali::TensorLayout in_layout_ = "B";  // Byte stream
 };

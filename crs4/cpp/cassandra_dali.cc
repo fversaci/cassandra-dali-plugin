@@ -70,31 +70,27 @@ void Cassandra::prefetch_one() {
     c_uuid->clock_seq_and_node = *d_ptr;
   }
   batch_ldr->prefetch_batch(cass_uuids);
+  ++curr_prefetch;
 }
 
+void Cassandra::try_read_input(const dali::Workspace &ws) {
+  if (HasDataInQueue()) {
+    // forward input data to uuids tensorlist
+    auto &thread_pool = ws.GetThreadPool();
+    ForwardCurrentData(uuids, null_data_id, thread_pool);
+    input_read = true;
+  }
+  else {
+    input_read = false;
+  }
+}
+  
 bool Cassandra::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                           const dali::Workspace &ws) {  
-  DALI_ENFORCE(InputOperator<dali::CPUBackend>::HasDataInQueue(),
-               "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
-  
-  // link input data to uuids tensorlist
   uuids.Reset();
   uuids.set_pinned(false);
-  auto &thread_pool = ws.GetThreadPool();
-  ForwardCurrentData(uuids, null_data_id, thread_pool);
-
+  try_read_input(ws);
   return false;
-}
-
-void Cassandra::fill_buffers(dali::Workspace &ws) {
-  // start prefetching
-  int num_buff = (slow_start > 0 && prefetch_buffers > 0) ? 1 : prefetch_buffers;
-  for (int i=0; i < num_buff && ok_to_fill(); ++i) {
-    fill_buffer(ws);
-  }
-  if (curr_prefetch == prefetch_buffers) {
-    buffers_not_full = false;
-  }
 }
 
 bool Cassandra::ok_to_fill() {
@@ -112,19 +108,32 @@ bool Cassandra::ok_to_fill() {
 
 void Cassandra::fill_buffer(dali::Workspace &ws) {
   // start prefetching
-  prefetch_one();
-  ++curr_prefetch;
-  auto &thread_pool = ws.GetThreadPool();
-  DALI_ENFORCE(InputOperator<dali::CPUBackend>::HasDataInQueue(),
-               "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
-  ForwardCurrentData(uuids, null_data_id, thread_pool);
+  if (input_read) {  
+    prefetch_one();
+    try_read_input(ws);
+  }
+}
+
+void Cassandra::fill_buffers(dali::Workspace &ws) {
+  // start prefetching
+  int num_buff = (slow_start > 0 && prefetch_buffers > 0) ? 1 : prefetch_buffers;
+  for (int i=0; i < num_buff && ok_to_fill(); ++i) {
+    fill_buffer(ws);
+  }
+  if (curr_prefetch == prefetch_buffers) {
+    buffers_full = true;
+  }
 }
 
 void Cassandra::RunImpl(dali::Workspace &ws) {
-  if (buffers_not_full) {
+  // fill prefetch buffers
+  if (!buffers_full) {
     fill_buffers(ws);
   }
-  prefetch_one();
+  // if possible prefetch one before getting one
+  if (input_read) {
+    prefetch_one();
+  } 
   BatchImgLab batch = batch_ldr->blocking_get_batch();
   // share features with output
   auto &features = ws.Output<dali::CPUBackend>(0);
@@ -132,6 +141,7 @@ void Cassandra::RunImpl(dali::Workspace &ws) {
   // share labels with output
   auto &labels = ws.Output<dali::CPUBackend>(1);
   labels.ShareData(batch.second);
+  --curr_prefetch;
 }
 
 }  // namespace crs4
