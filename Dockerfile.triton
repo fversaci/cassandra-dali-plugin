@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
-FROM nvcr.io/nvidia/tritonserver:23.08-py3
+FROM nvcr.io/nvidia/tritonserver:23.09-py3
 
 # install some useful tools
 RUN \
@@ -187,7 +187,7 @@ RUN \
 # install plugin
 WORKDIR /home/triton-server/cassandra-dali-plugin
 # install dali
-RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda120==1.26
+RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda120==1.30
 # install cassandra-dali plugin
 ENV CONDA_DALI_LIB /opt/conda/lib
 RUN pip3 install .
