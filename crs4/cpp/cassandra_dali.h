@@ -25,9 +25,9 @@
 
 namespace crs4 {
 
-class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
+class Cassandra : public dali::InputOperator<dali::CPUBackend> {
  public:
-  explicit Cassandra(const ::dali::OpSpec &spec);
+  explicit Cassandra(const dali::OpSpec &spec);
 
   Cassandra(const Cassandra&) = delete;
   Cassandra& operator=(const Cassandra&) = delete;
@@ -48,7 +48,7 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   }
 
 
-  const ::dali::TensorLayout& in_layout() const override {
+  const dali::TensorLayout& in_layout() const override {
     return in_layout_;
   }
 
@@ -58,21 +58,22 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   }
 
 
-  ::dali::DALIDataType in_dtype() const override {
-    return ::dali::DALIDataType::DALI_UINT64;
+  dali::DALIDataType in_dtype() const override {
+    return dali::DALIDataType::DALI_UINT64;
   }
 
  protected:
-  bool SetupImpl(std::vector<::dali::OutputDesc> &output_desc,
-                 const ::dali::Workspace &ws) override;
+  bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
+                 const dali::Workspace &ws) override;
 
-  void RunImpl(::dali::Workspace &ws) override;
+  void RunImpl(dali::Workspace &ws) override;
 
  private:
-  void prefetch_one(const dali::TensorList<dali::CPUBackend>&);
-  void fill_buffer(::dali::Workspace &ws);
-  void fill_buffers(::dali::Workspace &ws);
+  void prefetch_one();
+  void fill_buffer(dali::Workspace &ws);
+  void fill_buffers(dali::Workspace &ws);
   bool ok_to_fill();
+  void try_read_input(const dali::Workspace &ws);
   // variables
   dali::TensorList<dali::CPUBackend> uuids;
   std::string cloud_config;
@@ -101,9 +102,10 @@ class Cassandra : public ::dali::InputOperator<::dali::CPUBackend> {
   std::string ssl_own_certificate;
   std::string ssl_own_key;
   std::string ssl_own_key_pass;
-  bool buffers_not_full = true;
+  bool buffers_full = false;
+  bool input_read = false;
   std::optional<std::string> null_data_id = std::nullopt;
-  ::dali::TensorLayout in_layout_ = "B";  // Byte stream
+  dali::TensorLayout in_layout_ = "B";  // Byte stream
 };
 
 }  // namespace crs4

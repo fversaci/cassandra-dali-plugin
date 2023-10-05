@@ -30,15 +30,15 @@ namespace crs4 {
 enum lab_type {lab_int, lab_img, lab_none};
 
 using INT_LABEL_T = int32_t;
-using BatchRawImage = ::dali::TensorList<::dali::CPUBackend>;
-using BatchLabel = ::dali::TensorList<::dali::CPUBackend>;
+using BatchRawImage = dali::TensorList<dali::CPUBackend>;
+using BatchLabel = dali::TensorList<dali::CPUBackend>;
 using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 
 class BatchLoader {
  private:
   // dali types
-  dali::DALIDataType DALI_INT_TYPE = ::dali::DALI_INT32;
-  dali::DALIDataType DALI_IMG_TYPE = ::dali::DALI_UINT8;
+  dali::DALIDataType DALI_INT_TYPE = dali::DALI_INT32;
+  dali::DALIDataType DALI_IMG_TYPE = dali::DALI_UINT8;
   // parameters
   bool connected = false;
   bool ooo = false;  // enabling out-of-order?
