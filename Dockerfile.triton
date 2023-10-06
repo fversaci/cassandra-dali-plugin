@@ -187,11 +187,10 @@ RUN \
 
 # install cassandra dali plugin
 WORKDIR /home/triton-server/cassandra-dali-plugin
-# install dali in base and dalienv conda environments
+# install dali in base conda environments
 # RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda120==1.30
 RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
     --upgrade nvidia-dali-nightly-cuda120==1.31.0.dev20231005
-#RUN /opt/tritonserver/backends/dali/conda/envs/dalienv/bin/python3 -m pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly --upgrade nvidia-dali-nightly-cuda120
 
 # install cassandra-dali plugin
 ENV CONDA_DALI_LIB /opt/conda/lib
