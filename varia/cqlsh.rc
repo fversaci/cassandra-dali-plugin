@@ -1,0 +1,13 @@
+[authentication]
+username = cassandra
+password = cassandra
+ 
+[connection]
+hostname = 127.0.0.1
+port = 9042
+
+[ssl]
+validate = true
+certfile = /certs/rootca.crt
+userkey = /certs/client.key
+usercert = /certs/client.crt

@@ -27,6 +27,7 @@ RUN \
     libtool \
     libopencv-dev \
     mc \
+    netcat \
     nload \
     nmon \
     psutils \
@@ -123,13 +124,12 @@ RUN \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
     && chown -R user.user /apache-cassandra-$CASS_V*
 
+COPY ./varia/cqlsh.rc /cassandra/conf/
 COPY . /home/user/cassandra-dali-plugin
 
 # increase write timeout to 20 seconds, listen to all interfaces,
 # enable SSL and increase max direct memory available
-RUN \
-    cp /home/user/cassandra-dali-plugin/varia/keystore /cassandra/conf/ \
-    && python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_conf.py
+RUN python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_conf.py
 
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'
 RUN chown -R user.user "/spark/"
@@ -140,4 +140,5 @@ RUN chown user.user '/data'
 WORKDIR /home/user/cassandra-dali-plugin
 RUN pip3 install .
 USER user
-
+ENV EXT_UID 1000
+ENTRYPOINT ["/home/user/cassandra-dali-plugin/varia/entrypoint.sh"]
