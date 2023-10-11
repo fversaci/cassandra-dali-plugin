@@ -87,7 +87,7 @@ WORKDIR /dali
 # use dali nightly build?
 ARG DALI_DOWNLOAD_EXTRA_INDEX_URL=https://developer.download.nvidia.com/compute/redist/nightly
 ARG DALI_DOWNLOAD_PKG_NAME=nvidia-dali-nightly-cuda120
-ARG DALI_DOWNLOAD_VERSION=1.31.0.dev20231005
+ARG DALI_DOWNLOAD_VERSION=1.32.0.dev20231010
 ARG DALI_DOWNLOAD_EXTRA_OPTIONS
 
 ARG TRITON_BACKEND_API_VERSION="r22.07"
@@ -190,7 +190,7 @@ WORKDIR /home/triton-server/cassandra-dali-plugin
 # install dali in base conda environments
 # RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda120==1.30
 RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
-    --upgrade nvidia-dali-nightly-cuda120==1.31.0.dev20231005
+    --upgrade nvidia-dali-nightly-cuda120==$DALI_DOWNLOAD_VERSION
 
 # install cassandra-dali plugin
 ENV CONDA_DALI_LIB /opt/conda/lib
