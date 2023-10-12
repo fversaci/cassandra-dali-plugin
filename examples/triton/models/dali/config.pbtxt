@@ -1,11 +1,11 @@
 name: "dali"
 backend: "dali"
-max_batch_size: 256
+max_batch_size: 4
 input [
   {
     name: "Reader"
     data_type: TYPE_UINT64
-    dims: [ -1, 2 ]
+    dims: [ 2 ]
   }
 ]
 output [

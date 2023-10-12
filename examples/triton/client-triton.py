@@ -40,13 +40,14 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=16,
+        batch_size=4,
         shard_id=0,
         num_shards=1,
     )
+    raw_data = uuids[0]
     inputs = []
-    inputs.append(httpclient.InferInput("Reader", [2, 16, 2], "UINT64"))
-    inputs[0].set_data_from_numpy(uuids[0:2], binary_data=True)
+    inputs.append(httpclient.InferInput("Reader", raw_data.shape, "UINT64"))
+    inputs[0].set_data_from_numpy(raw_data, binary_data=True)
 
     outputs = []
     outputs.append(httpclient.InferRequestedOutput("DALI_OUTPUT_0", binary_data=True))

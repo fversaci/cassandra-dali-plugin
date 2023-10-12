@@ -32,11 +32,11 @@ from nvidia.dali.pipeline import pipeline_def
 
 
 @autoserialize
-@pipeline_def(batch_size=256, num_threads=1)
+@pipeline_def(batch_size=4, num_threads=1)
 def create_dali_pipeline(
     keyspace="imagenette",
     table_suffix="train_256_jpg",
-    bs=256,
+    bs=4,
     crop=224,
     size=256,
     dali_cpu=False,
