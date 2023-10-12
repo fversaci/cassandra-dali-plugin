@@ -54,7 +54,7 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
 
 
   int in_ndim() const override {
-    return 2;
+    return 1;
   }
 
 
