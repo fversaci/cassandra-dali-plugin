@@ -81,8 +81,10 @@ void Cassandra::convert_uuids(){
 }
 
 void Cassandra::prefetch_one() {
-  auto cass_uuids = std::vector<CassUuid>(batch_size);
-  for (auto i=0; i != batch_size; ++i) {
+  auto bs = uuids.num_samples();
+  // assert(batch_size == bs);
+  auto cass_uuids = std::vector<CassUuid>(bs);
+  for (auto i=0; i != bs; ++i) {
     auto d_ptr = uuids[i].data<dali::uint64>();
     auto c_uuid = &cass_uuids[i];
     c_uuid->time_and_version = *(d_ptr++);
