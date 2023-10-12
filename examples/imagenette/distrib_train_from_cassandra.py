@@ -453,7 +453,7 @@ def main():
         num_shards=world_size,
     )
     for u in uuids:
-        pipe.feed_input("Reader[0]", u)
+        pipe.feed_input("Reader", u)
     train_loader = DALIClassificationIterator(
         pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
@@ -488,7 +488,7 @@ def main():
         num_shards=world_size,
     )
     for u in uuids:
-        pipe.feed_input("Reader[0]", u)
+        pipe.feed_input("Reader", u)
     val_loader = DALIClassificationIterator(
         pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
     )
@@ -508,7 +508,7 @@ def main():
             num_shards=world_size,
         )
         for u in uuids:
-            train_loader._pipes[0].feed_input("Reader[0]", u)
+            train_loader._pipes[0].feed_input("Reader", u)
         # pre-feeding val  pipeline
         uuids, real_sz = get_shard(
             val_uuids,
@@ -518,7 +518,7 @@ def main():
             num_shards=world_size,
         )
         for u in uuids:
-            val_loader._pipes[0].feed_input("Reader[0]", u)
+            val_loader._pipes[0].feed_input("Reader", u)
 
         # train for one epoch
         avg_train_time = train(train_loader, model, criterion, optimizer, epoch)

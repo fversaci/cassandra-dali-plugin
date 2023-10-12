@@ -117,7 +117,7 @@ def read_data(
 
     # feed epoch 0 uuid to the pipeline
     for u in uuids:
-        pl.feed_input("Reader[0]", u)
+        pl.feed_input("Reader", u)
 
     ########################################################################
     # DALI iterator
@@ -127,7 +127,7 @@ def read_data(
     for _ in range(epochs):
         # feed next epoch to the pipeline
         for u in uuids:
-            pl.feed_input("Reader[0]", u)
+            pl.feed_input("Reader", u)
         # read data for current epoch
         for _ in trange(len(uuids)):
             pl.run()
@@ -148,7 +148,7 @@ def read_data(
     # for _ in range(epochs):
     #     # feed next epoch to the pipeline
     #     for u in uuids:
-    #         pl.feed_input("Reader[0]", u)
+    #         pl.feed_input("Reader", u)
     #     # consume data
     #     for data in tqdm(ddl):
     #         x, y = data[0]["data"], data[0]["label"]
