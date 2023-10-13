@@ -21,7 +21,6 @@ namespace crs4 {
 
 Cassandra::Cassandra(const dali::OpSpec &spec) :
   dali::InputOperator<dali::CPUBackend>(spec),
-  source_uuids(spec.GetArgument<crs4::StrUUIDs>("source_uuids")),
   batch_size(spec.GetArgument<int>("max_batch_size")),
   cloud_config(spec.GetArgument<std::string>("cloud_config")),
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
@@ -62,24 +61,6 @@ Cassandra::Cassandra(const dali::OpSpec &spec) :
                         wait_threads, comm_threads, ooo);
 }
 
-void Cassandra::convert_uuids(){
-  auto sz = source_uuids.size();
-  std::vector<int64_t> v_sz(sz, 2);
-  dali::TensorListShape t_sz(v_sz, sz, 1);
-  tl_uuids = TL_UUIDs();
-  tl_uuids.set_pinned(false);
-  tl_uuids.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
-  int num=0;
-  for (auto id = source_uuids.begin(); id != source_uuids.end(); ++id, ++num){
-    CassUuid cuid;
-    cass_uuid_from_string(id->c_str(), &cuid);
-    auto ten = (dali::uint64*) tl_uuids.raw_mutable_tensor(num);
-    ten[0] = cuid.time_and_version;
-    ten[1] = cuid.clock_seq_and_node;
-  }
-  SetDataSource(tl_uuids);
-}
-
 void Cassandra::prefetch_one() {
   auto bs = uuids.num_samples();
   // assert(batch_size == bs);
@@ -108,12 +89,6 @@ void Cassandra::try_read_input(const dali::Workspace &ws) {
   
 bool Cassandra::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                           const dali::Workspace &ws) {
-  convert_uuids();
-  // InputOperator<dali::CPUBackend>::HandleDataAvailability();
-  DALI_ENFORCE(InputOperator<dali::CPUBackend>::HasDataInQueue(),
-               "Not enough data for prefetching: feed more UUIDs or decrease prefetch_buffers.");
-  
-  // link input data to uuids tensorlist
   uuids.Reset();
   uuids.set_pinned(false);
   try_read_input(ws);
@@ -171,6 +146,48 @@ void Cassandra::RunImpl(dali::Workspace &ws) {
   --curr_prefetch;
 }
 
+Cassandra2::Cassandra2(const dali::OpSpec &spec) : Cassandra(spec),
+  source_uuids(spec.GetArgument<crs4::StrUUIDs>("source_uuids")),
+  shard_id(spec.GetArgument<int>("shard_id")),
+  num_shards(spec.GetArgument<int>("num_shards")) {
+  DALI_ENFORCE(num_shards > shard_id,
+               "num_shards needs to be greater than shard_id");
+  // self feeding uuids?
+  if (source_uuids.size()>0) {
+    auto_feed = true;
+    convert_uuids();
+    feed_epoch();
+  }
+}
+
+void Cassandra2::feed_epoch(){
+  for (auto i = 0; i < u64_uuids.size(); i += batch_size){
+    std::vector<int64_t> v_sz(batch_size, 2);
+    dali::TensorListShape t_sz(v_sz, batch_size, 1);
+    auto tl_batch = dali::TensorList<dali::CPUBackend>();
+    tl_batch.set_pinned(false);
+    tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
+    // FIXME: i -> i+num and handle last batch
+    for (auto num = 0; num != batch_size ; ++num){
+      auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);
+      ten[0] = u64_uuids[i].first;
+      ten[1] = u64_uuids[i].second;
+    }
+    SetDataSource(tl_batch);  // feed batch
+  }
+}
+
+void Cassandra2::convert_uuids(){
+  auto sz = source_uuids.size();
+  u64_uuids.resize(sz);
+  int num = 0;
+  for (auto id = source_uuids.begin(); id != source_uuids.end(); ++id, ++num){
+    CassUuid cuid;
+    cass_uuid_from_string(id->c_str(), &cuid);
+    u64_uuids[num] = std::make_pair(cuid.time_and_version, cuid.clock_seq_and_node);
+  }
+}
+
 }  // namespace crs4
 
 DALI_REGISTER_OPERATOR(crs4__cassandra, crs4::Cassandra, dali::CPU);
@@ -213,6 +230,18 @@ DALI_SCHEMA(crs4__cassandra)
 .AddOptionalArg("no_copy", R"(should DALI copy the buffer when ``feed_input`` is called?)", false)
 .AddOptionalArg("ooo", R"(Enable out-of-order batches)", false)
 .AddOptionalArg("slow_start", R"(How much to dilute prefetching)", 0)
-.AddOptionalArg("source_uuids", R"(Alternative list of uuids -- experimental)",
-   std::vector<std::string>())
 .AddParent("InputOperatorBase");
+
+DALI_REGISTER_OPERATOR(crs4__cassandra2, crs4::Cassandra2, dali::CPU);
+DALI_SCHEMA(crs4__cassandra2)
+.DocStr("Reads UUIDs via feed_input and returns images and labels/masks")
+.NumInput(0)
+.NumOutput(2)
+.AddOptionalArg("source_uuids", R"(Full list of uuids)",
+   std::vector<std::string>())
+.AddOptionalArg("num_shards",
+   R"code(Partitions the data into the specified number of parts (shards).
+This is typically used for multi-GPU or multi-node training.)code", 1)
+.AddOptionalArg("shard_id",
+   R"code(Index of the shard to read.)code", 0)
+.AddParent("crs4__cassandra");

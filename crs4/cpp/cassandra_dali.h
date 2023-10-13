@@ -25,9 +25,6 @@
 
 namespace crs4 {
 
-using StrUUIDs = std::vector<std::string>;
-using TL_UUIDs = dali::TensorList<dali::CPUBackend>;
-  
 class Cassandra : public dali::InputOperator<dali::CPUBackend> {
  public:
   explicit Cassandra(const dali::OpSpec &spec);
@@ -68,8 +65,8 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
  protected:
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                  const dali::Workspace &ws) override;
-
   void RunImpl(dali::Workspace &ws) override;
+  int batch_size;
 
  private:
   void prefetch_one();
@@ -79,9 +76,6 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   void try_read_input(const dali::Workspace &ws);
   // variables
   dali::TensorList<dali::CPUBackend> uuids;
-  StrUUIDs source_uuids;
-  TL_UUIDs tl_uuids;
-  void convert_uuids();
   std::string cloud_config;
   std::vector<std::string> cassandra_ips;
   int cassandra_port;
@@ -93,7 +87,6 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   std::string username;
   std::string password;
   BatchLoader* batch_ldr = nullptr;
-  int batch_size;
   int prefetch_buffers;
   int io_threads;
   int copy_threads;
@@ -112,6 +105,24 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   bool input_read = false;
   std::optional<std::string> null_data_id = std::nullopt;
   dali::TensorLayout in_layout_ = "B";  // Byte stream
+};
+
+using StrUUIDs = std::vector<std::string>;
+using U64_UUIDs = std::vector<std::pair<int64_t, int64_t>>;
+
+class Cassandra2 : public Cassandra {
+ public:
+  explicit Cassandra2(const dali::OpSpec &spec);
+ protected:
+  void Reset() {};
+ private:
+  StrUUIDs source_uuids;
+  U64_UUIDs u64_uuids;
+  void convert_uuids();
+  void feed_epoch();
+  bool auto_feed = false;
+  const int shard_id;
+  const int num_shards;
 };
 
 }  // namespace crs4
