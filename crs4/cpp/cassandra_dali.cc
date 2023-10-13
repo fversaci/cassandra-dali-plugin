@@ -14,7 +14,6 @@
 
 #include <iostream>
 #include <fstream>
-
 #include "./cassandra_dali.h"
 
 namespace crs4 {
@@ -81,12 +80,11 @@ void Cassandra::try_read_input(const dali::Workspace &ws) {
     auto &thread_pool = ws.GetThreadPool();
     ForwardCurrentData(uuids, null_data_id, thread_pool);
     input_read = true;
-  }
-  else {
+  } else {
     input_read = false;
   }
 }
-  
+
 bool Cassandra::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                           const dali::Workspace &ws) {
   uuids.Reset();
@@ -110,7 +108,7 @@ bool Cassandra::ok_to_fill() {
 
 void Cassandra::fill_buffer(dali::Workspace &ws) {
   // start prefetching
-  if (input_read) {  
+  if (input_read) {
     prefetch_one();
     try_read_input(ws);
   }
@@ -135,7 +133,7 @@ void Cassandra::RunImpl(dali::Workspace &ws) {
   // if possible prefetch one before getting one
   if (input_read) {
     prefetch_one();
-  } 
+  }
   BatchImgLab batch = batch_ldr->blocking_get_batch();
   // share features with output
   auto &features = ws.Output<dali::CPUBackend>(0);
@@ -153,22 +151,22 @@ Cassandra2::Cassandra2(const dali::OpSpec &spec) : Cassandra(spec),
   DALI_ENFORCE(num_shards > shard_id,
                "num_shards needs to be greater than shard_id");
   // self feeding uuids?
-  if (source_uuids.size()>0) {
+  if (source_uuids.size() > 0) {
     auto_feed = true;
     convert_uuids();
     feed_epoch();
   }
 }
 
-void Cassandra2::feed_epoch(){
-  for (auto i = 0; i < u64_uuids.size(); i += batch_size){
+void Cassandra2::feed_epoch() {
+  for (auto i = 0; i < u64_uuids.size(); i += batch_size) {
     std::vector<int64_t> v_sz(batch_size, 2);
     dali::TensorListShape t_sz(v_sz, batch_size, 1);
     auto tl_batch = dali::TensorList<dali::CPUBackend>();
     tl_batch.set_pinned(false);
     tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
     // FIXME: i -> i+num and handle last batch
-    for (auto num = 0; num != batch_size ; ++num){
+    for (auto num = 0; num != batch_size ; ++num) {
       auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);
       ten[0] = u64_uuids[i].first;
       ten[1] = u64_uuids[i].second;
@@ -177,11 +175,11 @@ void Cassandra2::feed_epoch(){
   }
 }
 
-void Cassandra2::convert_uuids(){
+void Cassandra2::convert_uuids() {
   auto sz = source_uuids.size();
   u64_uuids.resize(sz);
   int num = 0;
-  for (auto id = source_uuids.begin(); id != source_uuids.end(); ++id, ++num){
+  for (auto id = source_uuids.begin(); id != source_uuids.end(); ++id, ++num) {
     CassUuid cuid;
     cass_uuid_from_string(id->c_str(), &cuid);
     u64_uuids[num] = std::make_pair(cuid.time_and_version, cuid.clock_seq_and_node);

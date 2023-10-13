@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "./batch_loader.h"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <numeric>
+#include "./batch_loader.h"
 
 namespace crs4 {
 
@@ -94,7 +93,7 @@ void BatchLoader::load_own_key_file(std::string file, CassSsl* ssl, std::string 
 
   free(cert);
 }
-  
+
 void BatchLoader::load_trusted_cert_file(std::string file, CassSsl* ssl) {
   CassError rc;
   char* cert;
@@ -211,7 +210,7 @@ BatchLoader::BatchLoader(std::string table, std::string label_type,
   username(username), password(password), cassandra_ips(cassandra_ips),
   cloud_config(cloud_config), port(port), use_ssl(use_ssl),
   ssl_certificate(ssl_certificate), ssl_own_certificate(ssl_own_certificate),
-  ssl_own_key(ssl_own_key), ssl_own_key_pass(ssl_own_key_pass), 
+  ssl_own_key(ssl_own_key), ssl_own_key_pass(ssl_own_key_pass),
   io_threads(io_threads),
   prefetch_buffers(prefetch_buffers), copy_threads(copy_threads),
   wait_threads(wait_threads), comm_threads(comm_threads), ooo(ooo) {

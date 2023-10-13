@@ -18,6 +18,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <utility>
 #include <cmath>
 #include "dali/pipeline/operator/builtin/input_operator.h"
 #include "dali/operators/reader/reader_op.h"
@@ -114,7 +115,7 @@ class Cassandra2 : public Cassandra {
  public:
   explicit Cassandra2(const dali::OpSpec &spec);
  protected:
-  void Reset() {};
+  void Reset() {}
  private:
   StrUUIDs source_uuids;
   U64_UUIDs u64_uuids;
