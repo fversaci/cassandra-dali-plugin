@@ -134,6 +134,7 @@ void Cassandra::RunImpl(dali::Workspace &ws) {
   if (input_read) {
     prefetch_one();
   }
+  DALI_ENFORCE(curr_prefetch > 0, "No data ready to be retrieved. Have you prefetched?");
   BatchImgLab batch = batch_ldr->blocking_get_batch();
   // share features with output
   auto &features = ws.Output<dali::CPUBackend>(0);
@@ -148,14 +149,15 @@ Cassandra2::Cassandra2(const dali::OpSpec &spec) : Cassandra(spec),
   source_uuids(spec.GetArgument<crs4::StrUUIDs>("source_uuids")),
   shard_id(spec.GetArgument<int>("shard_id")),
   num_shards(spec.GetArgument<int>("num_shards")) {
+  DALI_ENFORCE(source_uuids.size() > 0,
+               "plese provide a non-empty list of source_uuids");
   DALI_ENFORCE(num_shards > shard_id,
                "num_shards needs to be greater than shard_id");
   // self feeding uuids?
-  if (source_uuids.size() > 0) {
-    auto_feed = true;
-    convert_uuids();
-    feed_epoch();
-  }
+  convert_uuids();
+  feed_epoch();
+  feed_epoch();
+  feed_epoch();
 }
 
 void Cassandra2::feed_epoch() {

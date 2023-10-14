@@ -121,7 +121,6 @@ class Cassandra2 : public Cassandra {
   U64_UUIDs u64_uuids;
   void convert_uuids();
   void feed_epoch();
-  bool auto_feed = false;
   const int shard_id;
   const int num_shards;
 };
