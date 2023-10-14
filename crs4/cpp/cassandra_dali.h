@@ -114,15 +114,55 @@ using U64_UUIDs = std::vector<std::pair<int64_t, int64_t>>;
 class Cassandra2 : public Cassandra {
  public:
   explicit Cassandra2(const dali::OpSpec &spec);
+  
+  /**** In case we need ReaderMeta
+  dali::ReaderMeta GetReaderMeta() const override {
+    dali::ReaderMeta ret;
+    ret.epoch_size = source_uuids.size();
+    ret.epoch_size_padded = num_shards
+      * std::ceil(ret.epoch_size / static_cast<double>(num_shards));
+    ret.number_of_shards = num_shards;
+    ret.shard_id = shard_id;
+    ret.pad_last_batch = true;
+    ret.stick_to_shard = true;
+    return ret;
+  }
+  *****/
+  
  protected:
-  void Reset() {}
+  inline void Reset() {
+    feed_epoch();
+    current_uuid = shard_begin;
+    current_epoch++;
+
+    if (shuffle_after_epoch) {
+      std::mt19937 g(kDaliDataloaderSeed + current_epoch);
+      std::shuffle(u64_uuids.begin(), u64_uuids.end(), g);
+    }
+  }
+
  private:
+  void set_shard_sizes() {
+    int dataset_size = u64_uuids.size();
+    shard_size = std::ceil(dataset_size / static_cast<double>(num_shards));
+    int pos_begin = std::floor(shard_id * dataset_size
+                               / static_cast<double>(num_shards));
+    shard_begin = u64_uuids.begin() + pos_begin;
+    shard_end = shard_begin + shard_size;
+  }
+
   StrUUIDs source_uuids;
   U64_UUIDs u64_uuids;
   void convert_uuids();
   void feed_epoch();
+  bool shuffle_after_epoch;
+  int current_epoch = -1;
   const int shard_id;
   const int num_shards;
+  U64_UUIDs::iterator shard_begin;
+  U64_UUIDs::iterator current_uuid;
+  U64_UUIDs::iterator shard_end;
+  int shard_size;
 };
 
 }  // namespace crs4

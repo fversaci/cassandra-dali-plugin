@@ -145,19 +145,19 @@ void Cassandra::RunImpl(dali::Workspace &ws) {
   --curr_prefetch;
 }
 
-Cassandra2::Cassandra2(const dali::OpSpec &spec) : Cassandra(spec),
+Cassandra2::Cassandra2(const dali::OpSpec &spec) :Cassandra(spec),
   source_uuids(spec.GetArgument<crs4::StrUUIDs>("source_uuids")),
   shard_id(spec.GetArgument<int>("shard_id")),
-  num_shards(spec.GetArgument<int>("num_shards")) {
+  num_shards(spec.GetArgument<int>("num_shards")),
+  shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")) {
   DALI_ENFORCE(source_uuids.size() > 0,
                "plese provide a non-empty list of source_uuids");
   DALI_ENFORCE(num_shards > shard_id,
                "num_shards needs to be greater than shard_id");
-  // self feeding uuids?
   convert_uuids();
-  feed_epoch();
-  feed_epoch();
-  feed_epoch();
+  set_shard_sizes();
+  Reset();
+  Reset();
 }
 
 void Cassandra2::feed_epoch() {
@@ -240,8 +240,10 @@ DALI_SCHEMA(crs4__cassandra2)
 .AddOptionalArg("source_uuids", R"(Full list of uuids)",
    std::vector<std::string>())
 .AddOptionalArg("num_shards",
-   R"code(Partitions the data into the specified number of parts (shards).
-This is typically used for multi-GPU or multi-node training.)code", 1)
+   R"code(Partitions the data into the specified number of shards.
+This is typically used for distributed training.)code", 1)
 .AddOptionalArg("shard_id",
    R"code(Index of the shard to read.)code", 0)
+.AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
+   false)
 .AddParent("crs4__cassandra");
