@@ -67,7 +67,7 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                  const dali::Workspace &ws) override;
   void RunImpl(dali::Workspace &ws) override;
-  int batch_size;
+  size_t batch_size;
 
  private:
   void prefetch_one();
@@ -88,20 +88,20 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
   std::string username;
   std::string password;
   BatchLoader* batch_ldr = nullptr;
-  int prefetch_buffers;
-  int io_threads;
-  int copy_threads;
-  int wait_threads;
-  int comm_threads;
   bool use_ssl;
-  bool ooo;
-  int slow_start;  // prefetch dilution
-  int cow_dilute;  // counter for prefetch dilution
-  int curr_prefetch = 0;
   std::string ssl_certificate;
   std::string ssl_own_certificate;
   std::string ssl_own_key;
   std::string ssl_own_key_pass;
+  size_t prefetch_buffers;
+  size_t io_threads;
+  size_t copy_threads;
+  size_t wait_threads;
+  size_t comm_threads;
+  bool ooo;
+  int slow_start;  // prefetch dilution
+  int cow_dilute;  // counter for prefetch dilution
+  size_t curr_prefetch = 0;
   bool buffers_full = false;
   bool input_read = false;
   std::optional<std::string> null_data_id = std::nullopt;
@@ -114,7 +114,7 @@ using U64_UUIDs = std::vector<std::pair<int64_t, int64_t>>;
 class Cassandra2 : public Cassandra {
  public:
   explicit Cassandra2(const dali::OpSpec &spec);
-  
+
   /**** In case we need ReaderMeta
   dali::ReaderMeta GetReaderMeta() const override {
     dali::ReaderMeta ret;
@@ -128,24 +128,24 @@ class Cassandra2 : public Cassandra {
     return ret;
   }
   *****/
-  
- protected:
-  inline void Reset() {
-    feed_epoch();
-    current_uuid = shard_begin;
-    current_epoch++;
 
+ protected:
+  void feed_new_epoch() {
+    current_epoch++;
     if (shuffle_after_epoch) {
       std::mt19937 g(kDaliDataloaderSeed + current_epoch);
       std::shuffle(u64_uuids.begin(), u64_uuids.end(), g);
     }
+    feed_epoch();
   }
 
  private:
   void set_shard_sizes() {
-    int dataset_size = u64_uuids.size();
+    size_t dataset_size = u64_uuids.size();
     shard_size = std::ceil(dataset_size / static_cast<double>(num_shards));
-    int pos_begin = std::floor(shard_id * dataset_size
+    pad_shard_size = std::ceil(shard_size / static_cast<double>(batch_size))
+      * batch_size;
+    size_t pos_begin = std::floor(shard_id * dataset_size
                                / static_cast<double>(num_shards));
     shard_begin = u64_uuids.begin() + pos_begin;
     shard_end = shard_begin + shard_size;
@@ -153,16 +153,16 @@ class Cassandra2 : public Cassandra {
 
   StrUUIDs source_uuids;
   U64_UUIDs u64_uuids;
-  void convert_uuids();
-  void feed_epoch();
-  bool shuffle_after_epoch;
   int current_epoch = -1;
   const int shard_id;
   const int num_shards;
+  bool shuffle_after_epoch;
   U64_UUIDs::iterator shard_begin;
-  U64_UUIDs::iterator current_uuid;
   U64_UUIDs::iterator shard_end;
-  int shard_size;
+  size_t shard_size;
+  size_t pad_shard_size;
+  void convert_uuids();
+  void feed_epoch();
 };
 
 }  // namespace crs4

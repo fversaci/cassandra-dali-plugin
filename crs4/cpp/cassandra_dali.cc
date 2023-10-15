@@ -156,25 +156,43 @@ Cassandra2::Cassandra2(const dali::OpSpec &spec) :Cassandra(spec),
                "num_shards needs to be greater than shard_id");
   convert_uuids();
   set_shard_sizes();
-  Reset();
-  Reset();
+  feed_new_epoch();
 }
 
 void Cassandra2::feed_epoch() {
-  for (auto i = 0; i < u64_uuids.size(); i += batch_size) {
-    std::vector<int64_t> v_sz(batch_size, 2);
-    dali::TensorListShape t_sz(v_sz, batch_size, 1);
-    auto tl_batch = dali::TensorList<dali::CPUBackend>();
-    tl_batch.set_pinned(false);
-    tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
-    // FIXME: i -> i+num and handle last batch
-    for (auto num = 0; num != batch_size ; ++num) {
+  // set up tensorlist buffer for batches
+  std::vector<int64_t> v_sz(batch_size, 2);
+  dali::TensorListShape t_sz(v_sz, batch_size, 1);
+  auto tl_batch = dali::TensorList<dali::CPUBackend>();
+  tl_batch.set_pinned(false);
+  tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
+  // feed batches
+  auto it = shard_begin;
+  size_t i = 0, num;
+  while (i < pad_shard_size - batch_size) {
+    for (num = 0; num != batch_size ; ++i, ++num, ++it) {
       auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);
-      ten[0] = u64_uuids[i].first;
-      ten[1] = u64_uuids[i].second;
+      ten[0] = it->first;
+      ten[1] = it->second;
     }
     SetDataSource(tl_batch);  // feed batch
   }
+  // handle last batch
+  // 1) fill what remains
+  auto last_elem = shard_begin;
+  for (num = 0; i < shard_size; ++i, ++num, ++it) {
+    auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);
+    ten[0] = it->first;
+    ten[1] = it->second;
+    last_elem = it;
+  }
+  // 2) pad using last element
+  for (; i < pad_shard_size; ++i, ++num) {
+    auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);
+    ten[0] = last_elem->first;
+    ten[1] = last_elem->second;
+  }
+  SetDataSource(tl_batch);  // feed last batch
 }
 
 void Cassandra2::convert_uuids() {
