@@ -26,16 +26,16 @@
 
 namespace crs4 {
 
-class Cassandra : public dali::InputOperator<dali::CPUBackend> {
+class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
  public:
-  explicit Cassandra(const dali::OpSpec &spec);
+  explicit CassandraInteractive(const dali::OpSpec &spec);
 
-  Cassandra(const Cassandra&) = delete;
-  Cassandra& operator=(const Cassandra&) = delete;
-  Cassandra(Cassandra&&) = delete;
-  Cassandra& operator=(Cassandra&&) = delete;
+  CassandraInteractive(const CassandraInteractive&) = delete;
+  CassandraInteractive& operator=(const CassandraInteractive&) = delete;
+  CassandraInteractive(CassandraInteractive&&) = delete;
+  CassandraInteractive& operator=(CassandraInteractive&&) = delete;
 
-  ~Cassandra() override {
+  ~CassandraInteractive() override {
     if (batch_ldr != nullptr) {
       delete batch_ldr;
     }
@@ -111,9 +111,9 @@ class Cassandra : public dali::InputOperator<dali::CPUBackend> {
 using StrUUIDs = std::vector<std::string>;
 using U64_UUIDs = std::vector<std::pair<int64_t, int64_t>>;
 
-class Cassandra2 : public Cassandra {
+class CassandraSelfFeed : public CassandraInteractive {
  public:
-  explicit Cassandra2(const dali::OpSpec &spec);
+  explicit CassandraSelfFeed(const dali::OpSpec &spec);
 
   /**** In case we need ReaderMeta
   dali::ReaderMeta GetReaderMeta() const override {
