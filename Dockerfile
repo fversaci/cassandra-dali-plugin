@@ -118,7 +118,7 @@ RUN \
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib:/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib"
 RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
-    --upgrade nvidia-dali-nightly-cuda120==1.32.0.dev20231010
+    --upgrade nvidia-dali-nightly-cuda120==1.32.0.dev20231012
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
