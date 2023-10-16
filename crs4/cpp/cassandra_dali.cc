@@ -157,6 +157,16 @@ Cassandra2::Cassandra2(const dali::OpSpec &spec) :Cassandra(spec),
   convert_uuids();
   set_shard_sizes();
   feed_new_epoch();
+  feed_new_epoch();
+}
+
+bool Cassandra2::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
+                           const dali::Workspace &ws) {
+  // refeed uuids at the end of the epoch
+  if (--left_batches == 0) {
+    feed_new_epoch();
+  }
+  Cassandra::SetupImpl(output_desc, ws);
 }
 
 void Cassandra2::feed_epoch() {
