@@ -57,7 +57,7 @@ def start_inferring():
         model_name,
         inputs=inputs,
     )
-    print(f'--> {results.as_numpy("DALI_OUTPUT_0").shape}')
+    print(f'--> Shape of received tensor: {results.as_numpy("DALI_OUTPUT_0").shape}')
 
 
 # parse arguments
