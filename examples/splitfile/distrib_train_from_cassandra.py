@@ -220,9 +220,12 @@ def create_dali_pipeline(
     bs,
     crop,
     size,
+    source_uuids,
     dali_cpu=False,
     is_training=True,
     prefetch_buffers=8,
+    shard_id=0,
+    num_shards=1,
     io_threads=1,
     comm_threads=2,
     copy_threads=2,
@@ -237,6 +240,9 @@ def create_dali_pipeline(
         data_col=data_col,
         batch_size=bs,
         prefetch_buffers=prefetch_buffers,
+        shard_id=shard_id,
+        num_shards=num_shards,
+        source_uuids=source_uuids,
         io_threads=io_threads,
         comm_threads=comm_threads,
         copy_threads=copy_threads,
@@ -520,6 +526,7 @@ def main():
 
     # train pipe
     train_uuids = row_keys[split[train_index]]
+    train_uuids = list(train_uuids)
 
     pipe = create_dali_pipeline(
         keyspace=keyspace,
@@ -531,6 +538,9 @@ def main():
         batch_size=args.batch_size,
         bs=args.batch_size,
         num_threads=args.workers,
+        shard_id=global_rank,
+        num_shards=world_size,
+        source_uuids=train_uuids,
         device_id=local_rank,
         seed=12 + local_rank,  # global_rank?
         crop=crop_size,
@@ -540,23 +550,14 @@ def main():
     )
     pipe.build()
 
-    # pre-feeding train pipeline
-    uuids, real_sz = get_shard(
-        train_uuids,
-        batch_size=args.batch_size,
-        epoch=0,
-        shard_id=local_rank,  # global_rank?
-        num_shards=world_size,
-    )
-    for u in uuids:
-        pipe.feed_input("Reader", u)
+    shard_size = math.ceil(len(train_uuids)/world_size)
     train_loader = DALIClassificationIterator(
-        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     # val pipe
     val_uuids = row_keys[split[val_index]]
-
+    val_uuids = list(val_uuids)
     pipe = create_dali_pipeline(
         keyspace=keyspace,
         table_suffix=table_suffix,
@@ -567,6 +568,9 @@ def main():
         batch_size=args.batch_size,
         bs=args.batch_size,
         num_threads=args.workers,
+        shard_id=global_rank,
+        num_shards=world_size,
+        source_uuids=val_uuids,
         device_id=local_rank,
         seed=12 + local_rank,  # global_rank?
         crop=crop_size,
@@ -576,18 +580,9 @@ def main():
     )
     pipe.build()
 
-    # pre-feeding val pipeline
-    uuids, real_sz = get_shard(
-        val_uuids,
-        batch_size=args.batch_size,
-        epoch=0,
-        shard_id=local_rank,  # global_rank?
-        num_shards=world_size,
-    )
-    for u in uuids:
-        pipe.feed_input("Reader", u)
+    shard_size = math.ceil(len(val_uuids)/world_size)
     val_loader = DALIClassificationIterator(
-        pipe, size=real_sz, last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     if args.evaluate:
@@ -596,27 +591,6 @@ def main():
 
     total_time = AverageMeter()
     for epoch in range(args.start_epoch, args.epochs):
-        # pre-feeding train pipeline
-        uuids, real_sz = get_shard(
-            train_uuids,
-            batch_size=args.batch_size,
-            epoch=1 + epoch,
-            shard_id=local_rank,  # global_rank?
-            num_shards=world_size,
-        )
-        for u in uuids:
-            train_loader._pipes[0].feed_input("Reader", u)
-        # pre-feeding val  pipeline
-        uuids, real_sz = get_shard(
-            val_uuids,
-            batch_size=args.batch_size,
-            epoch=1 + epoch,
-            shard_id=local_rank,  # global_rank?
-            num_shards=world_size,
-        )
-        for u in uuids:
-            val_loader._pipes[0].feed_input("Reader", u)
-
         # train for one epoch
         avg_train_time = train(train_loader, model, criterion, optimizer, epoch)
         total_time.update(avg_train_time)

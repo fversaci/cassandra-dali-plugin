@@ -41,7 +41,6 @@ class BatchLoader {
   dali::DALIDataType DALI_IMG_TYPE = dali::DALI_UINT8;
   // parameters
   bool connected = false;
-  bool ooo = false;  // enabling out-of-order?
   std::string table;
   lab_type label_t = lab_none;
   std::string label_col;
@@ -49,8 +48,8 @@ class BatchLoader {
   std::string id_col;
   std::string username;
   std::string password;
-  std::string cloud_config;
   std::vector<std::string> cassandra_ips;
+  std::string cloud_config;
   std::string s_cassandra_ips;
   int port = 9042;
   bool use_ssl = false;
@@ -66,17 +65,18 @@ class BatchLoader {
   ThreadPool* comm_pool;
   ThreadPool* copy_pool;
   ThreadPool* wait_pool;
-  int io_threads;
-  int copy_threads;  // copy parallelism
-  int wait_threads;
-  int comm_threads;  // number of communication threads
-  int prefetch_buffers;  // multi-buffering
+  size_t io_threads;
+  size_t copy_threads;  // copy parallelism
+  size_t wait_threads;
+  size_t comm_threads;  // number of communication threads
+  size_t prefetch_buffers;  // multi-buffering
+  bool ooo = false;  // enabling out-of-order?
   std::vector<std::mutex> alloc_mtx;
   std::vector<std::condition_variable> alloc_cv;
   std::vector<std::future<void>> comm_jobs;
   std::vector<std::vector<std::future<void>>> copy_jobs;
   // current batch
-  std::vector<int> bs;
+  std::vector<size_t> bs;
   std::vector<int> in_batch;  // how many images currently in batch
   std::vector<std::future<BatchImgLab>> batch;
   std::vector<BatchRawImage> v_feats;
@@ -117,8 +117,8 @@ class BatchLoader {
               int port, std::string cloud_config, bool use_ssl,
               std::string ssl_certificate, std::string ssl_own_certificate,
               std::string ssl_own_key, std::string ssl_own_key_pass,
-              int io_threads, int prefetch_buffers, int copy_threads,
-              int wait_threads, int comm_threads, bool ooo);
+              size_t io_threads, size_t prefetch_buffers, size_t copy_threads,
+              size_t wait_threads, size_t comm_threads, bool ooo);
   ~BatchLoader();
   void prefetch_batch(const std::vector<CassUuid>& keys);
   BatchImgLab blocking_get_batch();

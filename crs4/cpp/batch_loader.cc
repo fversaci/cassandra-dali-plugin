@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "./batch_loader.h"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <numeric>
+#include "./batch_loader.h"
 
 namespace crs4 {
 
@@ -94,7 +93,7 @@ void BatchLoader::load_own_key_file(std::string file, CassSsl* ssl, std::string 
 
   free(cert);
 }
-  
+
 void BatchLoader::load_trusted_cert_file(std::string file, CassSsl* ssl) {
   CassError rc;
   char* cert;
@@ -205,16 +204,16 @@ BatchLoader::BatchLoader(std::string table, std::string label_type,
                          std::string cloud_config, bool use_ssl,
                          std::string ssl_certificate, std::string ssl_own_certificate,
                          std::string ssl_own_key, std::string ssl_own_key_pass,
-                         int io_threads, int prefetch_buffers, int copy_threads,
-                         int wait_threads, int comm_threads, bool ooo) :
+                         size_t io_threads, size_t prefetch_buffers, size_t copy_threads,
+                         size_t wait_threads, size_t comm_threads, bool ooo) :
   table(table), label_col(label_col), data_col(data_col), id_col(id_col),
   username(username), password(password), cassandra_ips(cassandra_ips),
   cloud_config(cloud_config), port(port), use_ssl(use_ssl),
   ssl_certificate(ssl_certificate), ssl_own_certificate(ssl_own_certificate),
-  ssl_own_key(ssl_own_key), ssl_own_key_pass(ssl_own_key_pass), 
-  io_threads(io_threads),
-  prefetch_buffers(prefetch_buffers), copy_threads(copy_threads),
-  wait_threads(wait_threads), comm_threads(comm_threads), ooo(ooo) {
+  ssl_own_key(ssl_own_key), ssl_own_key_pass(ssl_own_key_pass),
+  io_threads(io_threads), copy_threads(copy_threads),
+  wait_threads(wait_threads), comm_threads(comm_threads),
+  prefetch_buffers(prefetch_buffers), ooo(ooo) {
   // setting label type, default is lab_none
   if (label_type == "int") {
     label_t = lab_int;
@@ -233,7 +232,7 @@ BatchLoader::BatchLoader(std::string table, std::string label_type,
   shapes.resize(prefetch_buffers);
   alloc_cv = std::vector<std::condition_variable>(prefetch_buffers);
   alloc_mtx = std::vector<std::mutex>(prefetch_buffers);
-  for (int i = 0; i < prefetch_buffers; ++i) {
+  for (size_t i = 0; i < prefetch_buffers; ++i) {
     write_buf.push(i);
   }
   // join cassandra ip's into comma seperated string

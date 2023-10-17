@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall")
 
 set(CMAKE_CUDA_STANDARD 17)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
@@ -31,4 +32,3 @@ link_directories("$ENV{CONDA_DALI_LIB}")
 
 add_library(crs4cassandra SHARED cassandra_dali.cc batch_loader.cc)
 target_link_libraries(crs4cassandra dali cudart cassandra)
-
