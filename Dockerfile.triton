@@ -199,7 +199,7 @@ RUN pip3 install .
 RUN rm -Rf build \
     && /opt/tritonserver/backends/dali/conda/envs/dalienv/bin/python3 -m pip install .
 # install triton client
-RUN pip3 install tritonclient[http] IPython
+RUN pip3 install tritonclient[all] IPython
 
 WORKDIR /home/triton-server/cassandra-dali-plugin/examples/triton
 USER triton-server
