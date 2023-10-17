@@ -219,9 +219,9 @@ void CassandraSelfFeed::convert_uuids() {
 
 }  // namespace crs4
 
-DALI_REGISTER_OPERATOR(crs4__cassandraInteractive, crs4::CassandraInteractive, dali::CPU);
+DALI_REGISTER_OPERATOR(crs4__cassandra_interactive, crs4::CassandraInteractive, dali::CPU);
 
-DALI_SCHEMA(crs4__cassandraInteractive)
+DALI_SCHEMA(crs4__cassandra_interactive)
 .DocStr("Reads UUIDs via feed_input and returns images and labels/masks")
 .NumInput(0)
 .NumOutput(2)
@@ -276,4 +276,4 @@ This is typically used for distributed training.)code", 1)
    R"code(Index of the shard to read.)code", 0)
 .AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
    false)
-.AddParent("crs4__cassandraInteractive");
+.AddParent("crs4__cassandra_interactive");
