@@ -142,6 +142,7 @@ void Cassandra::RunImpl(dali::Workspace &ws) {
   auto &labels = ws.Output<dali::CPUBackend>(1);
   labels.ShareData(batch.second);
   --curr_prefetch;
+  SetDepletedOperatorTrace(ws, !HasDataInQueue());
 }
 
 }  // namespace crs4

@@ -22,10 +22,12 @@ from cassandra_reader import read_uuids
 from crs4.cassandra_utils import get_shard
 from IPython import embed
 
+
 def start_inferring():
     try:
         triton_client = httpclient.InferenceServerClient(
-            url="127.0.0.1:8000", verbose=True,
+            url="127.0.0.1:8000",
+            verbose=True,
         )
     except Exception as e:
         print("channel creation failed: " + str(e))
@@ -40,34 +42,23 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=4,
+        batch_size=256,
         shard_id=0,
         num_shards=1,
     )
     raw_data = uuids[0]
     inputs = []
-    inputs.append(httpclient.InferInput("Reader", raw_data.shape, "UINT64"))
-    inputs[0].set_data_from_numpy(raw_data, binary_data=True)
-
-    outputs = []
-    outputs.append(httpclient.InferRequestedOutput("DALI_OUTPUT_0", binary_data=True))
-    outputs.append(httpclient.InferRequestedOutput("DALI_OUTPUT_1", binary_data=True))
+    infer = httpclient.InferInput("Reader", raw_data.shape, "UINT64")
+    infer.set_data_from_numpy(raw_data, binary_data=True)
+    inputs.append(infer)
 
     # Infer with requested Outputs
     results = triton_client.infer(
         model_name,
         inputs=inputs,
-        outputs=outputs,
     )
-    print(results.get_response())
+    print(f'--> {results.as_numpy("DALI_OUTPUT_0").shape}')
 
-    statistics = triton_client.get_inference_statistics(
-        model_name=model_name, headers=headers_dict
-    )
-    print(statistics)
-    if len(statistics["model_stats"]) != 1:
-        print("FAILED: Inference Statistics")
-        sys.exit(1)
 
 # parse arguments
 if __name__ == "__main__":

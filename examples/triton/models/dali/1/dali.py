@@ -3,6 +3,7 @@
 # (Apache License, Version 2.0)
 
 import sys
+
 print("Python Version:", sys.version)
 print("Python Executable Path:", sys.executable)
 
@@ -13,26 +14,9 @@ import nvidia.dali.types as types
 import nvidia.dali.fn as fn
 from nvidia.dali.pipeline import pipeline_def
 
-# from crs4.cassandra_utils import get_shard
-# import argparse
-# import os
-# import shutil
-# import time
-# import math
-# 
-# import torch
-# import torch.nn as nn
-# import torch.nn.parallel
-# import torch.backends.cudnn as cudnn
-# import torch.distributed as dist
-# import torch.optim
-# import torch.utils.data
-# import torch.utils.data.distributed
-# import torchvision.models as models
-
 
 @autoserialize
-@pipeline_def(batch_size=4, num_threads=1)
+@pipeline_def(batch_size=256, num_threads=1)
 def create_dali_pipeline(
     keyspace="imagenette",
     table_suffix="train_256_jpg",
@@ -40,7 +24,6 @@ def create_dali_pipeline(
     crop=224,
     size=256,
     dali_cpu=False,
-    is_training=False,
     prefetch_buffers=8,
     io_threads=1,
     comm_threads=2,
@@ -68,37 +51,15 @@ def create_dali_pipeline(
     # ask HW NVJPEG to allocate memory ahead for the biggest image in the data set to avoid reallocations in runtime
     preallocate_width_hint = 5980 if decoder_device == "mixed" else 0
     preallocate_height_hint = 6430 if decoder_device == "mixed" else 0
-    if is_training:
-        images = fn.decoders.image_random_crop(
-            images,
-            device=decoder_device,
-            output_type=types.RGB,
-            device_memory_padding=device_memory_padding,
-            host_memory_padding=host_memory_padding,
-            preallocate_width_hint=preallocate_width_hint,
-            preallocate_height_hint=preallocate_height_hint,
-            random_aspect_ratio=[0.8, 1.25],
-            random_area=[0.1, 1.0],
-            num_attempts=100,
-        )
-        images = fn.resize(
-            images,
-            device=dali_device,
-            resize_x=crop,
-            resize_y=crop,
-            interp_type=types.INTERP_TRIANGULAR,
-        )
-        mirror = fn.random.coin_flip(probability=0.5)
-    else:
-        images = fn.decoders.image(images, device=decoder_device, output_type=types.RGB)
-        images = fn.resize(
-            images,
-            device=dali_device,
-            size=size,
-            mode="not_smaller",
-            interp_type=types.INTERP_TRIANGULAR,
-        )
-        mirror = False
+    images = fn.decoders.image(images, device=decoder_device, output_type=types.RGB)
+    images = fn.resize(
+        images,
+        device=dali_device,
+        size=size,
+        mode="not_smaller",
+        interp_type=types.INTERP_TRIANGULAR,
+    )
+    mirror = False
 
     images = fn.crop_mirror_normalize(
         images.gpu(),

@@ -1,6 +1,6 @@
 name: "dali"
 backend: "dali"
-max_batch_size: 4
+max_batch_size: 256
 input [
   {
     name: "Reader"
