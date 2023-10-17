@@ -42,7 +42,7 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=256,
+        batch_size=128,
         shard_id=0,
         num_shards=1,
     )
@@ -58,7 +58,6 @@ def start_inferring():
         inputs=inputs,
     )
     print(f'--> Shape of received tensor: {results.as_numpy("DALI_OUTPUT_0").shape}')
-
 
 # parse arguments
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 name: "dali"
 backend: "dali"
-max_batch_size: 256
+max_batch_size: 128
 input [
   {
     name: "Reader"
@@ -20,3 +20,6 @@ output [
     dims: [ 1 ]
   }
 ]
+dynamic_batching {
+    max_queue_delay_microseconds: 1000
+}

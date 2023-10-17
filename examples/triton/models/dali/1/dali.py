@@ -14,13 +14,14 @@ import nvidia.dali.types as types
 import nvidia.dali.fn as fn
 from nvidia.dali.pipeline import pipeline_def
 
+max_batch_size=128
 
 @autoserialize
-@pipeline_def(batch_size=256, num_threads=1)
+@pipeline_def(batch_size=max_batch_size, num_threads=1)
 def create_dali_pipeline(
     keyspace="imagenette",
     table_suffix="train_256_jpg",
-    bs=4,
+    bs=max_batch_size,
     crop=224,
     size=256,
     dali_cpu=False,
