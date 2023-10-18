@@ -41,6 +41,22 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
     }
   }
 
+  /*
+  bool Setup(std::vector<dali::OutputDesc> &output_desc,
+             const dali::Workspace &ws) override {
+    EnforceUniformInputBatchSize<dali::CPUBackend>(ws);
+    CheckInputLayouts(ws, spec_);
+    return SetupImpl(output_desc, ws);
+  }
+  */
+
+  void Run(dali::Workspace &ws) override {
+    SetupSharedSampleParams(ws);
+    RunImpl(ws);
+    ws.GetThreadPool().WaitForWork();
+    // EnforceUniformOutputBatchSize<dali::CPUBackend>(ws);
+  }
+
   int NextBatchSize() override {
     return batch_size;
   }
