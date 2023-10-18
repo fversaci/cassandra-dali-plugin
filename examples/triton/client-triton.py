@@ -20,6 +20,7 @@ from tritonclient.utils import InferenceServerException
 import numpy as np
 from cassandra_reader import read_uuids
 from crs4.cassandra_utils import get_shard
+from tqdm import tqdm, trange
 from IPython import embed
 
 
@@ -27,7 +28,7 @@ def start_inferring():
     try:
         triton_client = httpclient.InferenceServerClient(
             url="127.0.0.1:8000",
-            verbose=True,
+            verbose=False,
         )
     except Exception as e:
         print("channel creation failed: " + str(e))
@@ -42,22 +43,29 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=128,
+        batch_size=512,
         shard_id=0,
         num_shards=1,
     )
-    raw_data = uuids[0]
-    inputs = []
-    infer = httpclient.InferInput("Reader", raw_data.shape, "UINT64")
-    infer.set_data_from_numpy(raw_data, binary_data=True)
-    inputs.append(infer)
 
-    # Infer with requested Outputs
-    results = triton_client.infer(
-        model_name,
-        inputs=inputs,
-    )
-    print(f'--> Shape of received tensor: {results.as_numpy("DALI_OUTPUT_0").shape}')
+    for _ in range(10):
+        async_requests = []
+        for raw_data in uuids:
+            inputs = []
+            infer = httpclient.InferInput("Reader", raw_data.shape, "UINT64")
+            infer.set_data_from_numpy(raw_data, binary_data=True)
+            inputs.append(infer)
+
+            # Infer with requested Outputs
+            async_requests.append(
+                triton_client.async_infer(
+                    model_name,
+                    inputs=inputs,
+                )
+            )
+
+        for req in tqdm(async_requests):
+            result = req.get_result()
 
 # parse arguments
 if __name__ == "__main__":
