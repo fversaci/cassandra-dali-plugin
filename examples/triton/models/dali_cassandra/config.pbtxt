@@ -1,6 +1,6 @@
-name: "dali"
+name: "dali_cassandra"
 backend: "dali"
-max_batch_size: 4096
+max_batch_size: 1024
 input [
   {
     name: "Reader"
@@ -20,6 +20,4 @@ output [
     dims: [ 1 ]
   }
 ]
-dynamic_batching {
-  # max_queue_delay_microseconds: 100000
-}
+# sequence_batching { }

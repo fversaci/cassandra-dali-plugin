@@ -34,7 +34,7 @@ def start_inferring():
         print("channel creation failed: " + str(e))
         sys.exit(1)
 
-    model_name = "dali"
+    model_name = "dali_cassandra"
 
     uuids = read_uuids(
         keyspace="imagenette",
@@ -43,12 +43,11 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=512,
+        batch_size=128,
         shard_id=0,
         num_shards=1,
     )
-
-    for _ in range(10):
+    for _ in range(3):
         async_requests = []
         for raw_data in uuids:
             inputs = []
@@ -63,7 +62,7 @@ def start_inferring():
                     inputs=inputs,
                 )
             )
-
+        print("Requests sent")
         for req in tqdm(async_requests):
             result = req.get_result()
 

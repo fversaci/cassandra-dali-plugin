@@ -14,7 +14,7 @@ import nvidia.dali.types as types
 import nvidia.dali.fn as fn
 from nvidia.dali.pipeline import pipeline_def
 
-max_batch_size = 128
+max_batch_size = 1024
 
 @autoserialize
 @pipeline_def(batch_size=max_batch_size, num_threads=1)
@@ -25,7 +25,7 @@ def create_dali_pipeline(
     crop=224,
     size=256,
     dali_cpu=False,
-    prefetch_buffers=2,
+    prefetch_buffers=4,
     io_threads=2,
     comm_threads=2,
     copy_threads=2,
@@ -34,14 +34,13 @@ def create_dali_pipeline(
     cass_reader = get_cassandra_reader(
         keyspace=keyspace,
         table_suffix=table_suffix,
-        batch_size=bs,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
-        ooo=True,
-        slow_start=4,
+        ooo=False,
+        slow_start=0,
     )
     images, labels = cass_reader
     dali_device = "cpu" if dali_cpu else "gpu"
