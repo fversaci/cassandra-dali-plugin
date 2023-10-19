@@ -61,8 +61,12 @@ CassandraInteractive::CassandraInteractive(const dali::OpSpec &spec) :
 }
 
 void CassandraInteractive::prefetch_one() {
+  // enforce max batch size
+  DALI_ENFORCE(uuids.num_samples() <= batch_size,
+       dali::make_string("batch_size must be <= ", batch_size, ", found ",
+                      uuids.num_samples(), " samples."));
+  // prepare and prefetch
   auto bs = uuids.num_samples();
-  // assert(batch_size == bs);
   auto cass_uuids = std::vector<CassUuid>(bs);
   for (auto i=0; i != bs; ++i) {
     auto d_ptr = uuids[i].data<dali::uint64>();
@@ -90,6 +94,7 @@ bool CassandraInteractive::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
   uuids.Reset();
   uuids.set_pinned(false);
   try_read_input(ws);
+  // std::cout << "--> Prefetch queue: " << curr_prefetch << std::endl;
   return false;
 }
 
