@@ -73,7 +73,6 @@ def read_data(
     chosen_reader = get_cassandra_reader(
         keyspace,
         table_suffix,
-        batch_size=bs,
         prefetch_buffers=4,
         io_threads=8,
         name="Reader",
