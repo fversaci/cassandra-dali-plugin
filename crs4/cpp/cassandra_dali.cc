@@ -62,6 +62,8 @@ CassandraInteractive::CassandraInteractive(const dali::OpSpec &spec) :
 
 void CassandraInteractive::prefetch_one() {
   // enforce max batch size
+  std::cout << "--> Prefetch queue: " << curr_prefetch
+            << " -- Batch size: " << uuids.num_samples() << std::endl;
   DALI_ENFORCE(uuids.num_samples() <= batch_size,
        dali::make_string("batch_size must be <= ", batch_size, ", found ",
                       uuids.num_samples(), " samples."));
@@ -94,7 +96,6 @@ bool CassandraInteractive::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
   uuids.Reset();
   uuids.set_pinned(false);
   try_read_input(ws);
-  // std::cout << "--> Prefetch queue: " << curr_prefetch << std::endl;
   return false;
 }
 
