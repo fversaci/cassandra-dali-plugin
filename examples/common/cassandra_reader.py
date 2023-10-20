@@ -47,7 +47,6 @@ def read_uuids(
 def get_cassandra_reader(
     keyspace,
     table_suffix,
-    batch_size,
     id_col="patch_id",
     label_type="int",
     label_col="label",

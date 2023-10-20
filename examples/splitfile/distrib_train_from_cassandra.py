@@ -238,7 +238,6 @@ def create_dali_pipeline(
         label_type=label_type,
         label_col=label_col,
         data_col=data_col,
-        batch_size=bs,
         prefetch_buffers=prefetch_buffers,
         shard_id=shard_id,
         num_shards=num_shards,

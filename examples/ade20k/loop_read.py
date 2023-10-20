@@ -80,7 +80,6 @@ def read_data(
         db_reader = get_cassandra_reader(
             keyspace,
             table_suffix,
-            batch_size=bs,
             prefetch_buffers=16,
             io_threads=8,
             label_type="image",
