@@ -43,7 +43,7 @@ def save_to_json(in_name="Reader"):
         l.append(b)
     # save as json
     with open("uuids.json", "w") as f:
-        json.dump(j, f)
+        json.dump(j, f, indent=2)
 
 
 # parse arguments
