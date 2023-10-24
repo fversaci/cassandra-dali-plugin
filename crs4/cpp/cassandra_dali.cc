@@ -21,6 +21,7 @@ namespace crs4 {
 CassandraInteractive::CassandraInteractive(const dali::OpSpec &spec) :
   dali::InputOperator<dali::CPUBackend>(spec),
   batch_size(spec.GetArgument<int>("max_batch_size")),
+  seed(spec.GetArgument<int64_t>("seed")),
   cloud_config(spec.GetArgument<std::string>("cloud_config")),
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
   cassandra_port(spec.GetArgument<int>("cassandra_port")),
