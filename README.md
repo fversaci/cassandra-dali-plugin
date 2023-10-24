@@ -98,7 +98,7 @@ them by using the following parameters:
 
 This plugin offers extensive internal parallelism that can be adjusted
 to enhance pipeline performance. Refer for example to this
-[discussion](conf/LFN.md) on how to improve the throughput over a
+[discussion](docs/LFN.md) on how to improve the throughput over a
 long fat network.
 
 ## Data model
@@ -108,10 +108,10 @@ efficiently stored and retrieved as BLOBs in a NoSQL DB. This enables
 scalability in data loading through prefetching and
 pipelining. Furthermore, it enables data to be stored in a separate
 location, potentially even at a significant distance from where it is
-processed, as discussed [here](conf/LFN.md). This capability also
+processed, as discussed [here](docs/LFN.md). This capability also
 facilitates storing data along with a comprehensive set of associated
 metadata, which can be more conveniently utilized during machine
-learning (ML).
+learning.
 
 For the sake of convenience and improved performance, we choose to
 store data and metadata in separate tables within the database. The
