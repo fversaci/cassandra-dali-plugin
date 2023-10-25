@@ -174,6 +174,7 @@ bool CassandraSelfFeed::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
     feed_new_epoch();
   }
   CassandraInteractive::SetupImpl(output_desc, ws);
+  return false;
 }
 
 void CassandraSelfFeed::feed_epoch() {
@@ -185,7 +186,8 @@ void CassandraSelfFeed::feed_epoch() {
   tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
   // feed batches
   auto it = shard_begin;
-  size_t i = 0, num;
+  size_t i = 0;
+  int num;
   while (i < pad_shard_size - batch_size) {
     for (num = 0; num != batch_size ; ++i, ++num, ++it) {
       auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);

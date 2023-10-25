@@ -64,16 +64,13 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   void Advance() override {
   }
 
-
   const dali::TensorLayout& in_layout() const override {
     return in_layout_;
   }
 
-
   int in_ndim() const override {
     return 1;
   }
-
 
   dali::DALIDataType in_dtype() const override {
     return dali::DALIDataType::DALI_UINT64;
@@ -83,7 +80,7 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                  const dali::Workspace &ws) override;
   void RunImpl(dali::Workspace &ws) override;
-  size_t batch_size;
+  int batch_size;
 
  private:
   void prefetch_one();
