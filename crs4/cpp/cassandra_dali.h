@@ -184,6 +184,13 @@ class CassandraSelfFeed : public CassandraInteractive {
   void feed_epoch();
 };
 
+class CassandraTriton : public CassandraInteractive {
+ public:
+  explicit CassandraTriton(const dali::OpSpec &spec);
+
+ private:
+};
+
 }  // namespace crs4
 
 #endif  // CRS4_CPP_CASSANDRA_DALI_H_

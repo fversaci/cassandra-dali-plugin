@@ -225,7 +225,12 @@ void CassandraSelfFeed::convert_uuids() {
   }
 }
 
+CassandraTriton::CassandraTriton(const dali::OpSpec &spec) : CassandraInteractive(spec) {
+}
+
 }  // namespace crs4
+
+// register CassandraInteractive class
 
 DALI_REGISTER_OPERATOR(crs4__cassandra_interactive, crs4::CassandraInteractive, dali::CPU);
 
@@ -269,10 +274,12 @@ DALI_SCHEMA(crs4__cassandra_interactive)
 .AddOptionalArg("slow_start", R"(How much to dilute prefetching)", 0)
 .AddParent("InputOperatorBase");
 
+// register CassandraSelfFeed class
+
 DALI_REGISTER_OPERATOR(crs4__cassandra, crs4::CassandraSelfFeed, dali::CPU);
 
 DALI_SCHEMA(crs4__cassandra)
-.DocStr("Reads UUIDs via feed_input and returns images and labels/masks")
+.DocStr("Reads UUIDs via source_uuids and returns images and labels/masks")
 .NumInput(0)
 .NumOutput(2)
 .AddOptionalArg("source_uuids", R"(Full list of uuids)",
@@ -284,4 +291,14 @@ This is typically used for distributed training.)code", 1)
    R"code(Index of the shard to read.)code", 0)
 .AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
    false)
+.AddParent("crs4__cassandra_interactive");
+
+// register CassandraTriton class
+
+DALI_REGISTER_OPERATOR(crs4__cassandra_triton, crs4::CassandraTriton, dali::CPU);
+
+DALI_SCHEMA(crs4__cassandra_triton)
+.DocStr("Reads UUIDs as a large batch and returns images and labels/masks")
+.NumInput(0)
+.NumOutput(2)
 .AddParent("crs4__cassandra_interactive");
