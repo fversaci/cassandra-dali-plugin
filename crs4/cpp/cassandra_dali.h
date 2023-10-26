@@ -81,6 +81,7 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
                  const dali::Workspace &ws) override;
   void RunImpl(dali::Workspace &ws) override;
   int batch_size;
+  std::optional<std::string> null_data_id = std::nullopt;
 
  private:
   void prefetch_one();
@@ -117,7 +118,6 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   size_t curr_prefetch = 0;
   bool buffers_full = false;
   bool input_read = false;
-  std::optional<std::string> null_data_id = std::nullopt;
   dali::TensorLayout in_layout_ = "B";  // Byte stream
 };
 
@@ -188,7 +188,14 @@ class CassandraTriton : public CassandraInteractive {
  public:
   explicit CassandraTriton(const dali::OpSpec &spec);
 
+ protected:
+  bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
+                 const dali::Workspace &ws) override;
  private:
+  int mini_batch_size;
+  void list_to_batches(const dali::Workspace &ws);
+  bool at_start = true;
+  dali::TensorList<dali::CPUBackend> all_uuids;
 };
 
 }  // namespace crs4

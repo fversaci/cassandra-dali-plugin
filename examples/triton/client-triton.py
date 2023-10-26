@@ -43,7 +43,7 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=128,
+        batch_size=256,
         shard_id=0,
         num_shards=1,
     )

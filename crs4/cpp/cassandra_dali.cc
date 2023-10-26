@@ -152,7 +152,8 @@ void CassandraInteractive::RunImpl(dali::Workspace &ws) {
   SetDepletedOperatorTrace(ws, !HasDataInQueue());
 }
 
-CassandraSelfFeed::CassandraSelfFeed(const dali::OpSpec &spec) :CassandraInteractive(spec),
+CassandraSelfFeed::CassandraSelfFeed(const dali::OpSpec &spec) :
+  CassandraInteractive(spec),
   source_uuids(spec.GetArgument<crs4::StrUUIDs>("source_uuids")),
   shard_id(spec.GetArgument<int>("shard_id")),
   num_shards(spec.GetArgument<int>("num_shards")),
@@ -225,7 +226,64 @@ void CassandraSelfFeed::convert_uuids() {
   }
 }
 
-CassandraTriton::CassandraTriton(const dali::OpSpec &spec) : CassandraInteractive(spec) {
+CassandraTriton::CassandraTriton(const dali::OpSpec &spec) :
+  CassandraInteractive(spec),
+  mini_batch_size(spec.GetArgument<int>("mini_batch_size"))
+{
+  if (mini_batch_size<=0) {
+    mini_batch_size = batch_size;
+  }      
+}
+
+bool CassandraTriton::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
+                           const dali::Workspace &ws) {
+  // at the start: create batches from list
+  if (at_start) {
+    list_to_batches(ws);
+    at_start = false;
+  }
+  CassandraInteractive::SetupImpl(output_desc, ws);
+  return false;
+}
+
+void CassandraTriton::list_to_batches(const dali::Workspace &ws) {
+  DALI_ENFORCE(HasDataInQueue(), "No UUIDs have been provided");    
+  // forward input data to all_uuids tensorlist
+  auto &thread_pool = ws.GetThreadPool();
+  ForwardCurrentData(all_uuids, null_data_id, thread_pool);  
+  // set up tensorlist buffer for batches
+  std::vector<int64_t> v_sz(mini_batch_size, 2);
+  dali::TensorListShape t_sz(v_sz, mini_batch_size, 1);
+  auto tl_batch = dali::TensorList<dali::CPUBackend>();
+  tl_batch.SetupLike(all_uuids);
+  // tl_batch.set_pinned(false);
+  tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
+  // split all_uuids in batches
+  size_t full_sz = all_uuids.num_samples();
+  size_t round_sz = mini_batch_size * (full_sz / mini_batch_size);
+  size_t i = 0;
+  int num;
+  while (i < round_sz) {
+    for (num = 0; num != mini_batch_size ; ++i, ++num) {
+      tl_batch.CopySample(num, all_uuids, i);
+    }
+    SetDataSource(tl_batch);  // feed batch
+  }
+  
+  // handle last batch
+  int last_sz = full_sz - round_sz;
+  if (last_sz > 0) {
+    v_sz = std::vector<int64_t>(last_sz, 2);
+    t_sz = dali::TensorListShape(v_sz, last_sz, 1);
+    tl_batch = dali::TensorList<dali::CPUBackend>();
+    tl_batch.SetupLike(all_uuids);
+    // tl_batch.set_pinned(false);
+    tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
+    for (num = 0; num < last_sz; ++i, ++num) {
+      tl_batch.CopySample(num, all_uuids, i);
+    }
+    SetDataSource(tl_batch);  // feed last batch
+  }
 }
 
 }  // namespace crs4
@@ -301,4 +359,6 @@ DALI_SCHEMA(crs4__cassandra_triton)
 .DocStr("Reads UUIDs as a large batch and returns images and labels/masks")
 .NumInput(0)
 .NumOutput(2)
+.AddOptionalArg("mini_batch_size",
+   R"code(Size of internal mini-batches.)code", -1)
 .AddParent("crs4__cassandra_interactive");

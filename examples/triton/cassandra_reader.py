@@ -47,6 +47,7 @@ def read_uuids(
 def get_cassandra_reader(
     keyspace,
     table_suffix,
+    mini_batch_size=-1,
     id_col="patch_id",
     label_type="int",
     label_col="label",
@@ -73,7 +74,7 @@ def get_cassandra_reader(
     else:
         connect_bundle = None
 
-    cassandra_reader = fn.crs4.cassandra_interactive(
+    cassandra_reader = fn.crs4.cassandra_triton(
         name=name,
         cloud_config=connect_bundle,
         cassandra_ips=CC.cassandra_ips,
@@ -85,6 +86,7 @@ def get_cassandra_reader(
         ssl_own_certificate=CC.ssl_own_certificate,
         ssl_own_key=CC.ssl_own_key,
         ssl_own_key_pass=CC.ssl_own_key_pass,
+        mini_batch_size=mini_batch_size,
         table=table,
         label_col=label_col,
         data_col=data_col,

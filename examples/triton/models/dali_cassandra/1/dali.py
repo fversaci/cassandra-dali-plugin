@@ -34,6 +34,7 @@ def create_dali_pipeline(
     cass_reader = get_cassandra_reader(
         keyspace=keyspace,
         table_suffix=table_suffix,
+        mini_batch_size=128,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
         comm_threads=comm_threads,
