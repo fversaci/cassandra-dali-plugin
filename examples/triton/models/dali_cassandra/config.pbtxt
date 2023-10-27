@@ -20,4 +20,7 @@ output [
     dims: [ 1 ]
   }
 ]
-# sequence_batching { }
+
+# model_transaction_policy {
+#   decoupled: True
+# }

@@ -62,7 +62,6 @@ def start_inferring():
                     inputs=inputs,
                 )
             )
-        print("Requests sent")
         for req in tqdm(async_requests):
             result = req.get_result()
 
