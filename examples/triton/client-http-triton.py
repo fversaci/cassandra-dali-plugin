@@ -47,7 +47,7 @@ def start_inferring():
         shard_id=0,
         num_shards=1,
     )
-    for _ in range(3):
+    for _ in range(100):
         async_requests = []
         for raw_data in uuids:
             inputs = []

@@ -72,6 +72,6 @@ def create_dali_pipeline(
         mirror=mirror,
     )
     labels = labels.gpu()
-    return (images, labels)
+    # return (images, labels)
     ## for testing with single output and reduced bw:
-    # return images[:][0][0][0]
+    return images[:][0][0][0]

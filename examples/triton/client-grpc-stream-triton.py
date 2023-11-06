@@ -64,7 +64,7 @@ def start_inferring():
     )
     user_data = UserData()
     triton_client.start_stream(callback=partial(callback, user_data))
-    for _ in range(30):
+    for _ in range(100):
         for raw_data in uuids:
             inputs = []
             infer = grpcclient.InferInput("Reader", raw_data.shape, "UINT64")
@@ -72,7 +72,7 @@ def start_inferring():
             inputs.append(infer)
             outputs = []
             outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
-            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
+            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
 
             # Infer with requested Outputs
             triton_client.async_stream_infer(

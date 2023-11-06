@@ -56,7 +56,7 @@ def start_inferring():
         shard_id=0,
         num_shards=1,
     )
-    for _ in range(3):
+    for _ in range(100):
         user_data = []
         for raw_data in uuids:
             inputs = []
@@ -65,7 +65,7 @@ def start_inferring():
             inputs.append(infer)
             outputs = []
             outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
-            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
+            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
 
             # Infer with requested Outputs
             triton_client.async_infer(
