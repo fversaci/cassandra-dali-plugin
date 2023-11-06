@@ -17,7 +17,7 @@ from nvidia.dali.pipeline import pipeline_def
 max_batch_size = 1024
 
 @autoserialize
-@pipeline_def(batch_size=max_batch_size, num_threads=1)
+@pipeline_def(batch_size=max_batch_size, num_threads=16)
 def create_dali_pipeline(
     keyspace="imagenette",
     table_suffix="train_256_jpg",
@@ -25,11 +25,11 @@ def create_dali_pipeline(
     crop=224,
     size=256,
     dali_cpu=False,
-    prefetch_buffers=4,
-    io_threads=2,
+    prefetch_buffers=2,
+    io_threads=4,
     comm_threads=2,
-    copy_threads=2,
-    wait_threads=2,
+    copy_threads=3,
+    wait_threads=4,
 ):
     cass_reader = get_cassandra_reader(
         keyspace=keyspace,
@@ -73,3 +73,5 @@ def create_dali_pipeline(
     )
     labels = labels.gpu()
     return (images, labels)
+    ## for testing with single output and reduced bw:
+    # return images[:][0][0][0]
