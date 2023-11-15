@@ -419,7 +419,7 @@ def main():
     if args.deterministic:
         cudnn.benchmark = False
         cudnn.deterministic = True
-        torch.manual_seed(local_rank)  # global_rank ?
+        torch.manual_seed(1234)
         torch.set_printoptions(precision=10)
 
     args.gpu = 0
@@ -541,7 +541,7 @@ def main():
         num_shards=world_size,
         source_uuids=train_uuids,
         device_id=local_rank,
-        seed=12 + local_rank,  # global_rank?
+        seed=1234,
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,
@@ -571,7 +571,7 @@ def main():
         num_shards=world_size,
         source_uuids=val_uuids,
         device_id=local_rank,
-        seed=12 + local_rank,  # global_rank?
+        seed=1234,
         crop=crop_size,
         size=val_size,
         dali_cpu=args.dali_cpu,

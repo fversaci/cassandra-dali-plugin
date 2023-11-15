@@ -80,8 +80,9 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                  const dali::Workspace &ws) override;
   void RunImpl(dali::Workspace &ws) override;
-  int batch_size;
   std::optional<std::string> null_data_id = std::nullopt;
+  int batch_size;
+  int64_t seed;
 
  private:
   void prefetch_one();
@@ -148,7 +149,7 @@ class CassandraSelfFeed : public CassandraInteractive {
   void feed_new_epoch() {
     current_epoch++;
     if (shuffle_after_epoch) {
-      std::mt19937 g(kDaliDataloaderSeed + current_epoch);
+      std::mt19937 g(seed + current_epoch);
       std::shuffle(u64_uuids.begin(), u64_uuids.end(), g);
     }
     feed_epoch();

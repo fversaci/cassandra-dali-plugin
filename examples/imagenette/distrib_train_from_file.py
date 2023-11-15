@@ -283,7 +283,7 @@ def main():
     if args.deterministic:
         cudnn.benchmark = False
         cudnn.deterministic = True
-        torch.manual_seed(local_rank)
+        torch.manual_seed(1234)
         torch.set_printoptions(precision=10)
 
     args.gpu = 0
@@ -398,7 +398,7 @@ def main():
         batch_size=args.batch_size,
         num_threads=args.workers,
         device_id=local_rank,
-        seed=12 + local_rank,
+        seed=1234,
         data_dir=traindir,
         crop=crop_size,
         size=val_size,
@@ -416,7 +416,7 @@ def main():
         batch_size=args.batch_size,
         num_threads=args.workers,
         device_id=local_rank,
-        seed=12 + local_rank,
+        seed=1234,
         data_dir=valdir,
         crop=crop_size,
         size=val_size,
