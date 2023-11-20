@@ -175,6 +175,7 @@ class CassandraSelfFeed : public CassandraInteractive {
   const int shard_id;
   const int num_shards;
   bool shuffle_after_epoch;
+  bool loop_forever;
   U64_UUIDs::iterator shard_begin;
   U64_UUIDs::iterator shard_end;
   size_t shard_size;
