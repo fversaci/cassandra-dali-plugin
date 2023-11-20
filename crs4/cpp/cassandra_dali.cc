@@ -144,30 +144,36 @@ void CassandraInteractive::RunImpl(dali::Workspace &ws) {
   auto &labels = ws.Output<dali::CPUBackend>(1);
   labels.ShareData(batch.second);
   --curr_prefetch;
+  SetDepletedOperatorTrace(ws, !HasDataInQueue());
 }
 
 CassandraSelfFeed::CassandraSelfFeed(const dali::OpSpec &spec) :CassandraInteractive(spec),
   source_uuids(spec.GetArgument<crs4::StrUUIDs>("source_uuids")),
   shard_id(spec.GetArgument<int>("shard_id")),
   num_shards(spec.GetArgument<int>("num_shards")),
-  shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")) {
+  shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")),
+  loop_forever(spec.GetArgument<bool>("loop_forever")) {
   DALI_ENFORCE(source_uuids.size() > 0,
                "plese provide a non-empty list of source_uuids");
   DALI_ENFORCE(num_shards > shard_id,
                "num_shards needs to be greater than shard_id");
   convert_uuids();
   set_shard_sizes();
+  // feed first epoch
   feed_new_epoch();
-  feed_new_epoch();
+  if (loop_forever) {
+    // feed also second epoch
+    feed_new_epoch();
+  }
 }
 
 bool CassandraSelfFeed::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                            const dali::Workspace &ws) {
   // refeed uuids at the end of the epoch
-  if (--left_batches == 0) {
+  if (--left_batches == 0 && loop_forever) {
     feed_new_epoch();
   }
-  CassandraInteractive::SetupImpl(output_desc, ws);
+  return CassandraInteractive::SetupImpl(output_desc, ws);
 }
 
 void CassandraSelfFeed::feed_epoch() {
@@ -276,4 +282,5 @@ This is typically used for distributed training.)code", 1)
    R"code(Index of the shard to read.)code", 0)
 .AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
    false)
+.AddOptionalArg("loop_forever", R"(Loop on souce_uuids)", true)
 .AddParent("crs4__cassandra_interactive");

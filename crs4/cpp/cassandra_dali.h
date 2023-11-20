@@ -48,16 +48,13 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   void Advance() override {
   }
 
-
   const dali::TensorLayout& in_layout() const override {
     return in_layout_;
   }
 
-
   int in_ndim() const override {
     return 1;
   }
-
 
   dali::DALIDataType in_dtype() const override {
     return dali::DALIDataType::DALI_UINT64;
@@ -162,6 +159,7 @@ class CassandraSelfFeed : public CassandraInteractive {
   const int shard_id;
   const int num_shards;
   bool shuffle_after_epoch;
+  bool loop_forever;
   U64_UUIDs::iterator shard_begin;
   U64_UUIDs::iterator shard_end;
   size_t shard_size;
