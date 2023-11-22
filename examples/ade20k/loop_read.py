@@ -14,7 +14,6 @@
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, read_uuids
-from crs4.cassandra_utils import get_shard
 
 # dali
 from nvidia.dali.pipeline import pipeline_def
@@ -72,22 +71,15 @@ def read_data(
         device_id = types.CPU_ONLY_DEVICE_ID
 
     bs = 128
+    source_uuids = read_uuids(
+        keyspace,
+        table_suffix,
+        ids_cache_dir=ids_cache_dir,
+    )
     if reader == "cassandra":
-        uuids = read_uuids(
-            keyspace,
-            table_suffix,
-            ids_cache_dir=ids_cache_dir,
-        )
-        uuids, real_sz = get_shard(
-            uuids,
-            batch_size=bs,
-            shard_id=global_rank,
-            num_shards=world_size,
-        )
         db_reader = get_cassandra_reader(
             keyspace,
             table_suffix,
-            batch_size=bs,
             prefetch_buffers=16,
             io_threads=8,
             label_type="image",
@@ -96,6 +88,9 @@ def read_data(
             # copy_threads=4,
             # ooo=True,
             slow_start=4,
+            source_uuids=source_uuids,
+            shard_id=global_rank,
+            num_shards=world_size,
         )
     elif reader == "file":
         # alternatively: use fn.readers.file
@@ -153,11 +148,8 @@ def read_data(
     pl = get_dali_pipeline()
     pl.build()
 
-    if reader == "cassandra":
-        # feed epoch 0 uuid to the pipeline
-        for u in uuids:
-            pl.feed_input("Reader[0]", u)
-
+    shard_size = math.ceil(len(source_uuids)/world_size)
+    steps = math.ceil(shard_size/bs)
     ########################################################################
     # DALI iterator
     ########################################################################
@@ -165,15 +157,11 @@ def read_data(
     if reader == "cassandra":
         # consume uuids to get images from DB
         for _ in range(epochs):
-            # feed next epoch to the pipeline
-            for u in uuids:
-                pl.feed_input("Reader[0]", u)
-            for _ in trange(len(uuids)):
+            # read data for current epoch
+            for _ in trange(steps):
                 pl.run()
             pl.reset()
     else:
-        steps = pl.epoch_size()["Reader"] / (bs * world_size)
-        steps = math.ceil(steps)
         for _ in range(epochs):
             for _ in trange(steps):
                 x, y = pl.run()
@@ -186,15 +174,11 @@ def read_data(
     #     [pl],
     #     ["data", "label"],
     #     # reader_name="Reader", # works only with file reader
-    #     size=real_sz,
+    #     size=shard_size,
     #     last_batch_padded=True,
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )
     # for _ in range(epochs):
-    #     # feed next epoch to the pipeline
-    #     if reader == "cassandra":
-    #         for u in uuids:
-    #             pl.feed_input("Reader[0]", u)
     #     # consume data
     #     for data in tqdm(ddl):
     #         x, y = data[0]["data"], data[0]["label"]

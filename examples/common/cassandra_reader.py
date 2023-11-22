@@ -47,11 +47,12 @@ def read_uuids(
 def get_cassandra_reader(
     keyspace,
     table_suffix,
-    batch_size,
     id_col="patch_id",
     label_type="int",
     label_col="label",
     data_col="data",
+    shard_id=0,
+    num_shards=1,
     io_threads=2,
     prefetch_buffers=2,
     name="Reader",
@@ -61,6 +62,8 @@ def get_cassandra_reader(
     wait_threads=2,
     ooo=False,
     slow_start=0,
+    source_uuids=None,
+    loop_forever=True,
 ):
     # Read Cassandra parameters
     from private_data import cass_conf as CC
@@ -89,11 +92,15 @@ def get_cassandra_reader(
         id_col=id_col,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
+        num_shards=num_shards,
+        shard_id=shard_id,
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
         label_type=label_type,
         ooo=ooo,
         slow_start=slow_start,
+        source_uuids=source_uuids,
+        loop_forever=loop_forever,
     )
     return cassandra_reader

@@ -50,7 +50,7 @@ class build_ext(build_ext_orig):
 
 setup(
     name="cassandra-dali-plugin",
-    version="0.3.0",
+    version="0.3.1",
     author="Francesco Versaci, Giovanni Busonera",
     author_email="francesco.versaci@gmail.com, giovanni.busonera@crs4.it",
     description="Cassandra data loader for ML pipelines",
@@ -69,6 +69,7 @@ setup(
     ],
     install_requires=[
         "cassandra-driver",
+        "pandas",
         "tqdm",
     ],
     python_requires=">=3.6",

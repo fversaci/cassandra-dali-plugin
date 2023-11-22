@@ -14,7 +14,6 @@
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, read_uuids
-from crs4.cassandra_utils import get_shard
 
 # dali
 from nvidia.dali.pipeline import pipeline_def
@@ -36,6 +35,7 @@ from fn_shortcuts import (
 from clize import run
 from tqdm import trange, tqdm
 import pickle
+import math
 
 # supporting torchrun
 import os
@@ -66,19 +66,13 @@ def read_data(
     table_suffix = data["table_suffix"]
     row_keys = data["row_keys"]
     split = data["split"]
-    uuids = row_keys[split[use_index]]
-
+    source_uuids = row_keys[split[use_index]]
+    source_uuids = list(source_uuids)
+    
     bs = 128
-    uuids, real_sz = get_shard(
-        uuids,
-        batch_size=bs,
-        shard_id=global_rank,
-        num_shards=world_size,
-    )
     chosen_reader = get_cassandra_reader(
         keyspace,
         table_suffix,
-        batch_size=bs,
         prefetch_buffers=4,
         io_threads=8,
         name="Reader",
@@ -86,6 +80,9 @@ def read_data(
         copy_threads=4,
         ooo=True,
         slow_start=4,
+        source_uuids=source_uuids,
+        shard_id=global_rank,
+        num_shards=world_size,
     )
 
     # create dali pipeline
@@ -115,21 +112,16 @@ def read_data(
     pl = get_dali_pipeline()
     pl.build()
 
-    # feed epoch 0 uuid to the pipeline
-    for u in uuids:
-        pl.feed_input("Reader[0]", u)
-
+    shard_size = math.ceil(len(source_uuids)/world_size)
+    steps = math.ceil(shard_size/bs)
     ########################################################################
     # DALI iterator
     ########################################################################
     # produce images
     # consume uuids to get images from DB
     for _ in range(epochs):
-        # feed next epoch to the pipeline
-        for u in uuids:
-            pl.feed_input("Reader[0]", u)
         # read data for current epoch
-        for _ in trange(len(uuids)):
+        for _ in trange(steps):
             pl.run()
         pl.reset()
 
@@ -141,14 +133,11 @@ def read_data(
     #     [pl],
     #     ["data", "label"],
     #     # reader_name="Reader", # works only with file reader
-    #     size=real_sz,
+    #     size=shard_size,
     #     last_batch_padded=True,
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )
     # for _ in range(epochs):
-    #     # feed next epoch to the pipeline
-    #     for u in uuids:
-    #         pl.feed_input("Reader[0]", u)
     #     # consume data
     #     for data in tqdm(ddl):
     #         x, y = data[0]["data"], data[0]["label"]
