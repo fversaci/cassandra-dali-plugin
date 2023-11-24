@@ -117,7 +117,6 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   int slow_start;  // prefetch dilution
   int cow_dilute;  // counter for prefetch dilution
   size_t curr_prefetch = 0;
-  bool buffers_full = false;
   bool input_read = false;
   dali::TensorLayout in_layout_ = "B";  // Byte stream
 };

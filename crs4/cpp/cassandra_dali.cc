@@ -127,14 +127,11 @@ void CassandraInteractive::fill_buffers(dali::Workspace &ws) {
   for (int i=0; i < num_buff && ok_to_fill(); ++i) {
     fill_buffer(ws);
   }
-  if (curr_prefetch == prefetch_buffers) {
-    buffers_full = true;
-  }
 }
 
 void CassandraInteractive::RunImpl(dali::Workspace &ws) {
   // fill prefetch buffers
-  if (!buffers_full) {
+  if (curr_prefetch < prefetch_buffers) {
     fill_buffers(ws);
   }
   // if possible prefetch one before getting one
