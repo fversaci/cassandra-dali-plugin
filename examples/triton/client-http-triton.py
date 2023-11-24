@@ -43,11 +43,11 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=1024,
+        batch_size=256,
         shard_id=0,
         num_shards=1,
     )
-    for _ in range(100):
+    for _ in trange(100):
         async_requests = []
         for raw_data in uuids:
             inputs = []
@@ -62,8 +62,9 @@ def start_inferring():
                     inputs=inputs,
                 )
             )
-        for req in tqdm(async_requests):
+        for req in async_requests:
             result = req.get_result()
+
 
 # parse arguments
 if __name__ == "__main__":

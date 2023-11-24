@@ -58,13 +58,13 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=1024,
+        batch_size=256,
         shard_id=0,
         num_shards=1,
     )
     user_data = UserData()
     triton_client.start_stream(callback=partial(callback, user_data))
-    for _ in range(100):
+    for _ in trange(100):
         for raw_data in uuids:
             inputs = []
             infer = grpcclient.InferInput("Reader", raw_data.shape, "UINT64")
@@ -80,7 +80,7 @@ def start_inferring():
                 inputs=inputs,
                 outputs=outputs,
             )
-        for raw_data in tqdm(uuids):
+        for raw_data in uuids:
             data_item = user_data._completed_requests.get()
             # ten = data_item.as_numpy("DALI_OUTPUT_0")
 

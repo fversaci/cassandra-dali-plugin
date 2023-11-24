@@ -63,8 +63,6 @@ CassandraInteractive::CassandraInteractive(const dali::OpSpec &spec) :
 
 void CassandraInteractive::prefetch_one() {
   // enforce max batch size
-  std::cout << "--> Prefetch queue: " << curr_prefetch
-            << " -- Batch size: " << uuids.num_samples() << std::endl;
   DALI_ENFORCE(uuids.num_samples() <= batch_size,
        dali::make_string("batch_size must be <= ", batch_size, ", found ",
                       uuids.num_samples(), " samples."));
@@ -130,6 +128,8 @@ void CassandraInteractive::fill_buffers(dali::Workspace &ws) {
 }
 
 void CassandraInteractive::RunImpl(dali::Workspace &ws) {
+  std::cout << "--> Prefetch: " << curr_prefetch
+            << "/" << prefetch_buffers << std::endl;
   // fill prefetch buffers
   if (curr_prefetch < prefetch_buffers) {
     fill_buffers(ws);
@@ -239,17 +239,19 @@ CassandraTriton::CassandraTriton(const dali::OpSpec &spec) :
 
 bool CassandraTriton::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                            const dali::Workspace &ws) {
-  // at the start: create batches from list
-  if (at_start) {
-    list_to_batches(ws);
-    at_start = false;
-  }
+  // create mini batches from list
+  list_to_batches(ws);
   CassandraInteractive::SetupImpl(output_desc, ws);
   return false;
 }
 
 void CassandraTriton::list_to_batches(const dali::Workspace &ws) {
-  DALI_ENFORCE(HasDataInQueue(), "No UUIDs have been provided");    
+  DALI_ENFORCE(HasDataInQueue(), "No UUIDs have been provided");
+  int ibs = NextBatchSize();
+  std::cout << "Input batch size: " << ibs << std::endl;
+  if (ibs <= mini_batch_size) {
+    return;
+  }
   // forward input data to all_uuids tensorlist
   auto &thread_pool = ws.GetThreadPool();
   ForwardCurrentData(all_uuids, null_data_id, thread_pool);  

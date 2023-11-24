@@ -63,7 +63,6 @@ def get_cassandra_reader(
     wait_threads=2,
     ooo=False,
     slow_start=0,
-    source_uuids=None,
 ):
     # Read Cassandra parameters
     from private_data import cass_conf as CC
