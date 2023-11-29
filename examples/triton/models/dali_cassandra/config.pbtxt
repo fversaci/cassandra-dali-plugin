@@ -12,8 +12,13 @@ output [
   {
     name: "DALI_OUTPUT_0"
     data_type: TYPE_UINT8
-    dims: [ 224, 224, 3 ]
+    dims: [ 1 ]
   }
+  # {
+  #   name: "DALI_OUTPUT_0"
+  #   data_type: TYPE_UINT8
+  #   dims: [ 224, 224, 3 ]
+  # }
   # ,
   # {
   #   name: "DALI_OUTPUT_1"
