@@ -141,7 +141,8 @@ void CassandraInteractive::RunImpl(dali::Workspace &ws) {
   auto &labels = ws.Output<dali::CPUBackend>(1);
   labels.ShareData(batch.second);
   --curr_prefetch;
-  SetDepletedOperatorTrace(ws, !HasDataInQueue());
+  // SetDepletedOperatorTrace(ws, !HasDataInQueue());
+  SetDepletedOperatorTrace(ws, !(curr_prefetch > 0 || HasDataInQueue()));
 }
 
 CassandraSelfFeed::CassandraSelfFeed(const dali::OpSpec &spec) :CassandraInteractive(spec),
