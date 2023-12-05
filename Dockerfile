@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
-FROM nvcr.io/nvidia/pytorch:23.09-py3
+FROM nvcr.io/nvidia/pytorch:23.11-py3
 
 # install some useful tools
 RUN \
@@ -117,8 +117,8 @@ RUN \
 # - https://forums.developer.nvidia.com/t/issues-building-docker-image-from-ngc-container-nvcr-io-nvidia-pytorch-22-py3/209034
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib:/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib"
-RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
-    --upgrade nvidia-dali-nightly-cuda120==1.32.0.dev20231016
+RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
+    --upgrade nvidia-dali-cuda120==1.32
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
