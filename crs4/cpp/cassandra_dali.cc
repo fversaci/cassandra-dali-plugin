@@ -128,8 +128,6 @@ void CassandraInteractive::fill_buffers(dali::Workspace &ws) {
 }
 
 void CassandraInteractive::RunImpl(dali::Workspace &ws) {
-  std::cout << "--> Prefetch: " << curr_prefetch
-            << "/" << prefetch_buffers << std::endl;
   // fill prefetch buffers
   if (curr_prefetch < prefetch_buffers) {
     fill_buffers(ws);
@@ -148,6 +146,8 @@ void CassandraInteractive::RunImpl(dali::Workspace &ws) {
   labels.ShareData(batch.second);
   --curr_prefetch;
   // SetDepletedOperatorTrace(ws, !HasDataInQueue());
+  std::cout << "--> Prefetch: " << curr_prefetch
+            << "/" << prefetch_buffers << std::endl;
   SetDepletedOperatorTrace(ws, !(curr_prefetch > 0 || HasDataInQueue()));
 }
 
