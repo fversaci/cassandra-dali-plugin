@@ -56,7 +56,7 @@ def start_inferring():
         shard_id=0,
         num_shards=1,
     )
-    for _ in trange(100):
+    for _ in range(1):
         user_data = []
         for raw_data in uuids:
             inputs = []
@@ -75,7 +75,7 @@ def start_inferring():
                 outputs=outputs,
                 client_timeout=10,
             )
-        for i in range(len(uuids)):
+        for i in trange(len(uuids)):
             while len(user_data) == i:
                 time.sleep(0.02)
         # print(user_data)

@@ -64,8 +64,8 @@ def start_inferring():
     )
     user_data = UserData()
     triton_client.start_stream(callback=partial(callback, user_data))
-    for _ in trange(100):
-        for raw_data in uuids:
+    for _ in range(1):
+        for raw_data in tqdm(uuids):
             inputs = []
             infer = grpcclient.InferInput("Reader", raw_data.shape, "UINT64")
             infer.set_data_from_numpy(raw_data)
