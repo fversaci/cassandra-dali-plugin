@@ -250,7 +250,7 @@ bool CassandraTriton::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
 
 void CassandraTriton::list_to_batches(const dali::Workspace &ws) {
   DALI_ENFORCE(HasDataInQueue(), "No UUIDs have been provided");
-  int ibs = NextBatchSize();
+  int ibs = PeekCurrentData().num_samples();
   std::cout << "Input batch size: " << ibs << std::endl;
   if (ibs <= mini_batch_size) {
     return;
@@ -258,6 +258,7 @@ void CassandraTriton::list_to_batches(const dali::Workspace &ws) {
   // forward input data to all_uuids tensorlist
   auto &thread_pool = ws.GetThreadPool();
   ForwardCurrentData(all_uuids, null_data_id, thread_pool);  
+  size_t full_sz = all_uuids.num_samples();
   // set up tensorlist buffer for batches
   std::vector<int64_t> v_sz(mini_batch_size, 2);
   dali::TensorListShape t_sz(v_sz, mini_batch_size, 1);
@@ -266,7 +267,6 @@ void CassandraTriton::list_to_batches(const dali::Workspace &ws) {
   // tl_batch.set_pinned(false);
   tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
   // split all_uuids in batches
-  size_t full_sz = all_uuids.num_samples();
   size_t round_sz = mini_batch_size * (full_sz / mini_batch_size);
   size_t i = 0;
   int num;
@@ -274,6 +274,7 @@ void CassandraTriton::list_to_batches(const dali::Workspace &ws) {
     for (num = 0; num != mini_batch_size ; ++i, ++num) {
       tl_batch.CopySample(num, all_uuids, i);
     }
+    std::cout << "New mini batch size: " << tl_batch.num_samples() << std::endl;
     SetDataSource(tl_batch);  // feed batch
   }
   
@@ -289,6 +290,7 @@ void CassandraTriton::list_to_batches(const dali::Workspace &ws) {
     for (num = 0; num < last_sz; ++i, ++num) {
       tl_batch.CopySample(num, all_uuids, i);
     }
+    std::cout << "New mini batch size: " << tl_batch.num_samples() << std::endl;
     SetDataSource(tl_batch);  // feed last batch
   }
 }
