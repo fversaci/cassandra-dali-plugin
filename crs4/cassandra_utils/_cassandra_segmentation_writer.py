@@ -31,9 +31,7 @@ class CassandraSegmentationWriter(CassandraWriter):
         data_col,
         cols,
         get_data,
-        masks=False,
     ):
-
         super().__init__(
             cass_conf=cass_conf,
             table_data=table_data,
@@ -43,7 +41,6 @@ class CassandraSegmentationWriter(CassandraWriter):
             data_col=data_col,
             cols=cols,
             get_data=get_data,
-            masks=masks,
         )
         self.queue_data = []
         self.queue_meta = []

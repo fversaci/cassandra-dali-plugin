@@ -26,10 +26,8 @@ class CassandraWriter:
         data_col,
         cols,
         get_data,
-        masks=False,
     ):
         self.get_data = get_data
-        self.masks = masks
         self.table_data = table_data
         self.table_metadata = table_metadata
         self.id_col = id_col
