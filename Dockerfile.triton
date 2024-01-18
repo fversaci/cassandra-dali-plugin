@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
-# https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
-FROM nvcr.io/nvidia/tritonserver:23.09-py3
+# https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
+FROM nvcr.io/nvidia/tritonserver:23.12-py3
 
 # install some useful tools
 RUN \
@@ -85,9 +85,9 @@ RUN git clone --recursive https://github.com/triton-inference-server/dali_backen
 WORKDIR /dali
 
 # use dali nightly build?
-ARG DALI_DOWNLOAD_EXTRA_INDEX_URL=https://developer.download.nvidia.com/compute/redist/nightly
-ARG DALI_DOWNLOAD_PKG_NAME=nvidia-dali-nightly-cuda120
-ARG DALI_DOWNLOAD_VERSION=1.32.0.dev20231024
+ARG DALI_DOWNLOAD_EXTRA_INDEX_URL #=https://developer.download.nvidia.com/compute/redist/nightly
+ARG DALI_DOWNLOAD_PKG_NAME #=nvidia-dali-nightly-cuda120
+ARG DALI_DOWNLOAD_VERSION=1.32.0
 ARG DALI_DOWNLOAD_EXTRA_OPTIONS
 
 ARG TRITON_BACKEND_API_VERSION="r22.07"
@@ -188,9 +188,10 @@ RUN \
 # install cassandra dali plugin
 WORKDIR /home/triton-server/cassandra-dali-plugin
 # install dali in base conda environments
-# RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist --upgrade nvidia-dali-cuda120==1.30
-RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
-    --upgrade nvidia-dali-nightly-cuda120==$DALI_DOWNLOAD_VERSION
+RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist \
+    --upgrade nvidia-dali-cuda120==$DALI_DOWNLOAD_VERSION
+# RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
+#     --upgrade nvidia-dali-nightly-cuda120==$DALI_DOWNLOAD_VERSION
 
 # install cassandra-dali plugin
 ENV CONDA_DALI_LIB /opt/conda/lib
