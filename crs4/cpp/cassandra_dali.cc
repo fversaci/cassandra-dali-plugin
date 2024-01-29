@@ -22,6 +22,8 @@ CassandraInteractive::CassandraInteractive(const dali::OpSpec &spec) :
   dali::InputOperator<dali::CPUBackend>(spec),
   batch_size(spec.GetArgument<int>("max_batch_size")),
   seed(spec.GetArgument<int64_t>("seed")),
+  prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
+  slow_start(spec.GetArgument<int>("slow_start")),
   cloud_config(spec.GetArgument<std::string>("cloud_config")),
   cassandra_ips(spec.GetArgument<std::vector<std::string>>("cassandra_ips")),
   cassandra_port(spec.GetArgument<int>("cassandra_port")),
@@ -37,13 +39,11 @@ CassandraInteractive::CassandraInteractive(const dali::OpSpec &spec) :
   ssl_own_certificate(spec.GetArgument<std::string>("ssl_own_certificate")),
   ssl_own_key(spec.GetArgument<std::string>("ssl_own_key")),
   ssl_own_key_pass(spec.GetArgument<std::string>("ssl_own_key_pass")),
-  prefetch_buffers(spec.GetArgument<int>("prefetch_buffers")),
   io_threads(spec.GetArgument<int>("io_threads")),
   copy_threads(spec.GetArgument<int>("copy_threads")),
   wait_threads(spec.GetArgument<int>("wait_threads")),
   comm_threads(spec.GetArgument<int>("comm_threads")),
   ooo(spec.GetArgument<bool>("ooo")),
-  slow_start(spec.GetArgument<int>("slow_start")),
   cow_dilute(slow_start -1) {
   DALI_ENFORCE(prefetch_buffers >= 0,
      "prefetch_buffers should be non-negative.");
@@ -145,9 +145,6 @@ void CassandraInteractive::RunImpl(dali::Workspace &ws) {
   auto &labels = ws.Output<dali::CPUBackend>(1);
   labels.ShareData(batch.second);
   --curr_prefetch;
-  // SetDepletedOperatorTrace(ws, !HasDataInQueue());
-  std::cout << "--> Prefetch: " << curr_prefetch
-            << "/" << prefetch_buffers << std::endl;
   SetDepletedOperatorTrace(ws, !(curr_prefetch > 0 || HasDataInQueue()));
 }
 
@@ -240,59 +237,113 @@ CassandraTriton::CassandraTriton(const dali::OpSpec &spec) :
 
 bool CassandraTriton::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                            const dali::Workspace &ws) {
+  uuids.Reset();
+  uuids.set_pinned(false);
   // create mini batches from list
   if (HasDataInQueue()) {
-    list_to_batches(ws);
+    list_to_minibatches(ws);
   }
-  CassandraInteractive::SetupImpl(output_desc, ws);
   return false;
 }
 
-void CassandraTriton::list_to_batches(const dali::Workspace &ws) {
-  DALI_ENFORCE(HasDataInQueue(), "No UUIDs have been provided");
-  int ibs = PeekCurrentData().num_samples();
-  std::cout << "Input batch size: " << ibs << std::endl;
-  if (ibs <= mini_batch_size) {
+void CassandraTriton::prefetch_one() {
+  // exit if no data to prefetch
+  if (input_interval >= intervals.size())
     return;
+  // prepare and prefetch
+  auto start = intervals[input_interval].first;
+  auto end = intervals[input_interval].second;
+  ++input_interval;
+  auto bs = end-start;
+  auto cass_uuids = std::vector<CassUuid>(bs);
+  size_t ci=0;
+  for (auto i=start; i != end; ++i, ++ci) {
+    auto d_ptr = uuids[i].data<dali::uint64>();
+    auto c_uuid = &cass_uuids[ci];
+    c_uuid->time_and_version = *(d_ptr++);
+    c_uuid->clock_seq_and_node = *d_ptr;
   }
-  // forward input data to all_uuids tensorlist
+  batch_ldr->prefetch_batch(cass_uuids);
+  ++curr_prefetch;
+}
+
+void CassandraTriton::fill_buffers(dali::Workspace &ws) {
+  // start prefetching
+  int num_buff = (slow_start > 0 && prefetch_buffers > 0) ? 1 : prefetch_buffers;
+  for (int i=0; i < num_buff && ok_to_fill(); ++i) {
+    prefetch_one();
+  }
+}
+
+void CassandraTriton::list_to_minibatches(const dali::Workspace &ws) {
+  DALI_ENFORCE(HasDataInQueue(), "No UUIDs have been provided");
+  // forward input data to uuids tensorlist
   auto &thread_pool = ws.GetThreadPool();
-  ForwardCurrentData(all_uuids, null_data_id, thread_pool);  
-  size_t full_sz = all_uuids.num_samples();
-  // set up tensorlist buffer for batches
-  std::vector<int64_t> v_sz(mini_batch_size, 2);
-  dali::TensorListShape t_sz(v_sz, mini_batch_size, 1);
-  auto tl_batch = dali::TensorList<dali::CPUBackend>();
-  tl_batch.SetupLike(all_uuids);
-  // tl_batch.set_pinned(false);
-  tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
-  // split all_uuids in batches
-  size_t round_sz = mini_batch_size * (full_sz / mini_batch_size);
-  size_t i = 0;
-  int num;
-  while (i < round_sz) {
-    for (num = 0; num != mini_batch_size ; ++i, ++num) {
-      tl_batch.CopySample(num, all_uuids, i);
-    }
-    std::cout << "New mini batch size: " << tl_batch.num_samples() << std::endl;
-    SetDataSource(tl_batch);  // feed batch
-  }
-  
+  ForwardCurrentData(uuids, null_data_id, thread_pool);  
+  size_t full_sz = uuids.num_samples();
+  std::cout << "Received batch size: " << full_sz << std::endl;
+  intervals.clear();
+  input_interval = 0;
+  output_interval = 0;
+  // prepare output tensorlist
+  output.first.Reset();
+  output.second.Reset();
+  output.first.SetSize(full_sz);
+  output.second.SetSize(full_sz);
+  // split uuids in minibatches
+  size_t floor_sz = mini_batch_size * (full_sz / mini_batch_size);
+  for (size_t i = 0; i < floor_sz; i += mini_batch_size) {
+    intervals.push_back(std::make_pair(i, i + mini_batch_size));
+  }  
   // handle last batch
-  int last_sz = full_sz - round_sz;
-  if (last_sz > 0) {
-    v_sz = std::vector<int64_t>(last_sz, 2);
-    t_sz = dali::TensorListShape(v_sz, last_sz, 1);
-    tl_batch = dali::TensorList<dali::CPUBackend>();
-    tl_batch.SetupLike(all_uuids);
-    // tl_batch.set_pinned(false);
-    tl_batch.Resize(t_sz, dali::DALIDataType::DALI_UINT64);
-    for (num = 0; num < last_sz; ++i, ++num) {
-      tl_batch.CopySample(num, all_uuids, i);
-    }
-    std::cout << "New mini batch size: " << tl_batch.num_samples() << std::endl;
-    SetDataSource(tl_batch);  // feed last batch
+  if (floor_sz != full_sz) {
+    intervals.push_back(std::make_pair(floor_sz, full_sz));
   }
+}
+
+void CassandraTriton::save_one() {
+  // exit if no data to prefetch
+  DALI_ENFORCE(output_interval < intervals.size(), "No more data to retrieve");
+  // get position in output tensorlist
+  auto start = intervals[output_interval].first;
+  auto end = intervals[output_interval].second;
+  ++output_interval;
+  auto bs = end-start;
+  // save minibatch in output tensorlist
+  const BatchImgLab batch = batch_ldr->blocking_get_batch();
+  // save features and label in output
+  if (start == 0) {
+    output.first.SetupLike(batch.first);
+    output.second.SetupLike(batch.second);
+  }
+  int j = start;
+  for(int i=0; i<bs; ++i, ++j){
+    output.first.SetSample(j, batch.first, i);
+    output.second.SetSample(j, batch.second, i);
+  }
+}
+
+void CassandraTriton::RunImpl(dali::Workspace &ws) {
+  // fill prefetch buffers
+  if (curr_prefetch < prefetch_buffers) {
+    fill_buffers(ws);
+  }
+  // try to prefetch one minibatch
+  prefetch_one();
+  while (curr_prefetch > 0){
+    // consume data
+    save_one();
+    --curr_prefetch;
+    // try to prefetch one minibatch
+    prefetch_one();
+  }
+  // share features with output
+  auto &features = ws.Output<dali::CPUBackend>(0);
+  features.ShareData(output.first);
+  // share labels with output
+  auto &labels = ws.Output<dali::CPUBackend>(1);
+  labels.ShareData(output.second);
+  SetDepletedOperatorTrace(ws, !HasDataInQueue());
 }
 
 }  // namespace crs4

@@ -1,6 +1,6 @@
 name: "dali_cassandra"
 backend: "dali"
-max_batch_size: 256
+max_batch_size: 4096
 input [
   {
     name: "Reader"
@@ -29,4 +29,8 @@ output [
 
 # model_transaction_policy {
 #   decoupled: True
+# }
+
+# dynamic_batching {
+#  max_queue_delay_microseconds: 100
 # }

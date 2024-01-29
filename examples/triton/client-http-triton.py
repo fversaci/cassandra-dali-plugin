@@ -47,9 +47,9 @@ def start_inferring():
         shard_id=0,
         num_shards=1,
     )
-    for _ in range(1):
+    for _ in trange(10):
         async_requests = []
-        for raw_data in tqdm(uuids):
+        for raw_data in uuids:
             inputs = []
             infer = httpclient.InferInput("Reader", raw_data.shape, "UINT64")
             infer.set_data_from_numpy(raw_data, binary_data=True)

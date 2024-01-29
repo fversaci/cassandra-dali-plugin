@@ -83,15 +83,19 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   std::optional<std::string> null_data_id = std::nullopt;
   int batch_size;
   int64_t seed;
+  BatchLoader* batch_ldr = nullptr;
+  dali::TensorList<dali::CPUBackend> uuids;
+  size_t curr_prefetch = 0;
+  size_t prefetch_buffers;
+  int slow_start;  // prefetch dilution
+  bool ok_to_fill();
 
  private:
   void prefetch_one();
   void fill_buffer(dali::Workspace &ws);
   void fill_buffers(dali::Workspace &ws);
-  bool ok_to_fill();
   void try_read_input(const dali::Workspace &ws);
   // variables
-  dali::TensorList<dali::CPUBackend> uuids;
   std::string cloud_config;
   std::vector<std::string> cassandra_ips;
   int cassandra_port;
@@ -102,21 +106,17 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   std::string id_col;
   std::string username;
   std::string password;
-  BatchLoader* batch_ldr = nullptr;
   bool use_ssl;
   std::string ssl_certificate;
   std::string ssl_own_certificate;
   std::string ssl_own_key;
   std::string ssl_own_key_pass;
-  size_t prefetch_buffers;
   size_t io_threads;
   size_t copy_threads;
   size_t wait_threads;
   size_t comm_threads;
   bool ooo;
-  int slow_start;  // prefetch dilution
   int cow_dilute;  // counter for prefetch dilution
-  size_t curr_prefetch = 0;
   bool input_read = false;
   dali::TensorLayout in_layout_ = "B";  // Byte stream
 };
@@ -192,11 +192,18 @@ class CassandraTriton : public CassandraInteractive {
  protected:
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                  const dali::Workspace &ws) override;
+  void RunImpl(dali::Workspace &ws) override;
+  
  private:
   int mini_batch_size;
-  void list_to_batches(const dali::Workspace &ws);
-  bool at_start = true;
-  dali::TensorList<dali::CPUBackend> all_uuids;
+  void prefetch_one();
+  void save_one();
+  void list_to_minibatches(const dali::Workspace &ws);
+  void fill_buffers(dali::Workspace &ws);
+  std::vector<std::pair<size_t, size_t>> intervals;
+  size_t input_interval = 0;
+  size_t output_interval = 0;
+  BatchImgLab output;
 };
 
 }  // namespace crs4
