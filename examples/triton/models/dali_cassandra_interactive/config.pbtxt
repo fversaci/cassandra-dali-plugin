@@ -1,6 +1,6 @@
 name: "dali_cassandra_interactive"
 backend: "dali"
-max_batch_size: 256
+max_batch_size: 4096
 input [
   {
     name: "Reader"
