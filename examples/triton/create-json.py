@@ -13,8 +13,9 @@
 # limitations under the License.
 
 
-from cassandra_reader import read_uuids
+from cassandra_reader_interactive import read_uuids
 from crs4.cassandra_utils import get_shard
+from IPython import embed
 import json
 
 
@@ -45,7 +46,34 @@ def save_to_json(in_name="Reader"):
     with open("uuids.json", "w") as f:
         json.dump(j, f, indent=2)
 
+def save_to_json_bs(in_name="Reader", bs=128):
+    uuids = read_uuids(
+        keyspace="imagenette",
+        table_suffix="train_256_jpg",
+        ids_cache_dir="ids_cache",
+    )
+    uuids, real_sz = get_shard(
+        uuids,
+        batch_size=bs,
+        shard_id=0,
+        num_shards=1,
+    )
+    # embed()
+    l = list()
+    j = dict()
+    j["data"] = l
+    for u in uuids:
+        b = list()
+        d = dict()
+        d[in_name] = u.flatten().tolist()
+        b.append(d)
+        l.append(b)
+    # save as json
+    # embed()
+    with open(f"uuids_{bs}.json", "w") as f:
+        json.dump(j, f, indent=2)
 
 # parse arguments
 if __name__ == "__main__":
     save_to_json()
+    save_to_json_bs(bs=2048)
