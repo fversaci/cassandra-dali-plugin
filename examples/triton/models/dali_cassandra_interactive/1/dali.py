@@ -8,7 +8,7 @@ print("Python Version:", sys.version)
 print("Python Executable Path:", sys.executable)
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, read_uuids
+from cassandra_reader_interactive import get_cassandra_reader, read_uuids
 from nvidia.dali.plugin.triton import autoserialize
 import nvidia.dali.types as types
 import nvidia.dali.fn as fn
@@ -25,7 +25,7 @@ def create_dali_pipeline(
     crop=224,
     size=256,
     dali_cpu=False,
-    prefetch_buffers=2,
+    prefetch_buffers=4,
     io_threads=4,
     comm_threads=2,
     copy_threads=3,
@@ -34,14 +34,13 @@ def create_dali_pipeline(
     cass_reader = get_cassandra_reader(
         keyspace=keyspace,
         table_suffix=table_suffix,
-        mini_batch_size=256,
         prefetch_buffers=prefetch_buffers,
         io_threads=io_threads,
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
         ooo=False,
-        slow_start=0,
+        slow_start=1,
     )
     images, labels = cass_reader
     dali_device = "cpu" if dali_cpu else "gpu"

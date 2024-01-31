@@ -1,0 +1,32 @@
+name: "dali_cassandra_uncoupled"
+backend: "dali"
+max_batch_size: 0
+input [
+  {
+    name: "Reader"
+    data_type: TYPE_UINT64
+    dims: [ -1, 2 ]
+  }
+]
+output [
+  {
+    name: "DALI_OUTPUT_0"
+    data_type: TYPE_UINT8
+    dims: [ 1 ]
+  }
+  # {
+  #   name: "DALI_OUTPUT_0"
+  #   data_type: TYPE_UINT8
+  #   dims: [ 224, 224, 3 ]
+  # }
+  # ,
+  # {
+  #   name: "DALI_OUTPUT_1"
+  #   data_type: TYPE_INT32
+  #   dims: [ 1 ]
+  # }
+]
+
+model_transaction_policy {
+  decoupled: True
+}

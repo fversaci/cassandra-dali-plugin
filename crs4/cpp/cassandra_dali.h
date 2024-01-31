@@ -185,9 +185,9 @@ class CassandraSelfFeed : public CassandraInteractive {
   void feed_epoch();
 };
 
-class CassandraTriton : public CassandraInteractive {
+class CassandraUncoupled : public CassandraInteractive {
  public:
-  explicit CassandraTriton(const dali::OpSpec &spec);
+  explicit CassandraUncoupled(const dali::OpSpec &spec);
 
  protected:
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
@@ -197,12 +197,10 @@ class CassandraTriton : public CassandraInteractive {
  private:
   int mini_batch_size;
   void prefetch_one();
-  void save_one();
   void list_to_minibatches(const dali::Workspace &ws);
   void fill_buffers(dali::Workspace &ws);
   std::vector<std::pair<size_t, size_t>> intervals;
   size_t input_interval = 0;
-  size_t output_interval = 0;
   BatchImgLab output;
 };
 

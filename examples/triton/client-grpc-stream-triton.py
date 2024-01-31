@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import math
 import sys
 import gevent.ssl
 import time
@@ -20,7 +21,7 @@ from functools import partial
 import tritonclient.grpc as grpcclient
 from tritonclient.utils import InferenceServerException
 import numpy as np
-from cassandra_reader import read_uuids
+from cassandra_reader_uncoupled import read_uuids
 from crs4.cassandra_utils import get_shard
 from tqdm import tqdm, trange
 import queue
@@ -49,19 +50,22 @@ def start_inferring():
         print("channel creation failed: " + str(e))
         sys.exit(1)
 
-    model_name = "dali_cassandra"
+    model_name = "dali_cassandra_uncoupled"
 
     uuids = read_uuids(
         keyspace="imagenette",
         table_suffix="train_256_jpg",
         ids_cache_dir="ids_cache",
     )
+    bs = 1024  # batch size
+    mbs = 64  # minibatch size
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=256,
+        batch_size=bs,
         shard_id=0,
         num_shards=1,
     )
+    num_minibatches = math.ceil(bs/mbs)
     user_data = UserData()
     triton_client.start_stream(callback=partial(callback, user_data))
     for _ in trange(10):
@@ -81,8 +85,10 @@ def start_inferring():
                 outputs=outputs,
             )
         for raw_data in uuids:
-            data_item = user_data._completed_requests.get()
-            # ten = data_item.as_numpy("DALI_OUTPUT_0")
+            for _ in range(num_minibatches):
+                data_item = user_data._completed_requests.get()
+                ten = data_item.as_numpy("DALI_OUTPUT_0")
+                # print(f"received bs: {ten.shape}")
 
 
 # parse arguments

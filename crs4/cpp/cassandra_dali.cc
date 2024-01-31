@@ -226,7 +226,7 @@ void CassandraSelfFeed::convert_uuids() {
   }
 }
 
-CassandraTriton::CassandraTriton(const dali::OpSpec &spec) :
+CassandraUncoupled::CassandraUncoupled(const dali::OpSpec &spec) :
   CassandraInteractive(spec),
   mini_batch_size(spec.GetArgument<int>("mini_batch_size"))
 {
@@ -235,18 +235,18 @@ CassandraTriton::CassandraTriton(const dali::OpSpec &spec) :
   }      
 }
 
-bool CassandraTriton::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
+bool CassandraUncoupled::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                            const dali::Workspace &ws) {
-  uuids.Reset();
-  uuids.set_pinned(false);
   // create mini batches from list
-  if (HasDataInQueue()) {
+  if (curr_prefetch == 0 && HasDataInQueue()) {
+    uuids.Reset();
+    uuids.set_pinned(false);
     list_to_minibatches(ws);
   }
   return false;
 }
 
-void CassandraTriton::prefetch_one() {
+void CassandraUncoupled::prefetch_one() {
   // exit if no data to prefetch
   if (input_interval >= intervals.size())
     return;
@@ -267,7 +267,7 @@ void CassandraTriton::prefetch_one() {
   ++curr_prefetch;
 }
 
-void CassandraTriton::fill_buffers(dali::Workspace &ws) {
+void CassandraUncoupled::fill_buffers(dali::Workspace &ws) {
   // start prefetching
   int num_buff = (slow_start > 0 && prefetch_buffers > 0) ? 1 : prefetch_buffers;
   for (int i=0; i < num_buff && ok_to_fill(); ++i) {
@@ -275,21 +275,14 @@ void CassandraTriton::fill_buffers(dali::Workspace &ws) {
   }
 }
 
-void CassandraTriton::list_to_minibatches(const dali::Workspace &ws) {
+void CassandraUncoupled::list_to_minibatches(const dali::Workspace &ws) {
   DALI_ENFORCE(HasDataInQueue(), "No UUIDs have been provided");
   // forward input data to uuids tensorlist
   auto &thread_pool = ws.GetThreadPool();
   ForwardCurrentData(uuids, null_data_id, thread_pool);  
   size_t full_sz = uuids.num_samples();
-  std::cout << "Received batch size: " << full_sz << std::endl;
   intervals.clear();
   input_interval = 0;
-  output_interval = 0;
-  // prepare output tensorlist
-  output.first.Reset();
-  output.second.Reset();
-  output.first.SetSize(full_sz);
-  output.second.SetSize(full_sz);
   // split uuids in minibatches
   size_t floor_sz = mini_batch_size * (full_sz / mini_batch_size);
   for (size_t i = 0; i < floor_sz; i += mini_batch_size) {
@@ -301,49 +294,23 @@ void CassandraTriton::list_to_minibatches(const dali::Workspace &ws) {
   }
 }
 
-void CassandraTriton::save_one() {
-  // exit if no data to prefetch
-  DALI_ENFORCE(output_interval < intervals.size(), "No more data to retrieve");
-  // get position in output tensorlist
-  auto start = intervals[output_interval].first;
-  auto end = intervals[output_interval].second;
-  ++output_interval;
-  auto bs = end-start;
-  // save minibatch in output tensorlist
-  const BatchImgLab batch = batch_ldr->blocking_get_batch();
-  // save features and label in output
-  if (start == 0) {
-    output.first.SetupLike(batch.first);
-    output.second.SetupLike(batch.second);
-  }
-  int j = start;
-  for(int i=0; i<bs; ++i, ++j){
-    output.first.SetSample(j, batch.first, i);
-    output.second.SetSample(j, batch.second, i);
-  }
-}
-
-void CassandraTriton::RunImpl(dali::Workspace &ws) {
+void CassandraUncoupled::RunImpl(dali::Workspace &ws) {
   // fill prefetch buffers
   if (curr_prefetch < prefetch_buffers) {
     fill_buffers(ws);
   }
   // try to prefetch one minibatch
   prefetch_one();
-  while (curr_prefetch > 0){
-    // consume data
-    save_one();
-    --curr_prefetch;
-    // try to prefetch one minibatch
-    prefetch_one();
-  }
+  // consume data
+  output = batch_ldr->blocking_get_batch();
+  --curr_prefetch;
   // share features with output
   auto &features = ws.Output<dali::CPUBackend>(0);
   features.ShareData(output.first);
   // share labels with output
   auto &labels = ws.Output<dali::CPUBackend>(1);
   labels.ShareData(output.second);
-  SetDepletedOperatorTrace(ws, !HasDataInQueue());
+  SetDepletedOperatorTrace(ws, !(curr_prefetch > 0 || HasDataInQueue()));
 }
 
 }  // namespace crs4
@@ -412,11 +379,11 @@ This is typically used for distributed training.)code", 1)
 .AddOptionalArg("loop_forever", R"(Loop on souce_uuids)", true)
 .AddParent("crs4__cassandra_interactive");
 
-// register CassandraTriton class
+// register CassandraUncoupled class
 
-DALI_REGISTER_OPERATOR(crs4__cassandra_triton, crs4::CassandraTriton, dali::CPU);
+DALI_REGISTER_OPERATOR(crs4__cassandra_uncoupled, crs4::CassandraUncoupled, dali::CPU);
 
-DALI_SCHEMA(crs4__cassandra_triton)
+DALI_SCHEMA(crs4__cassandra_uncoupled)
 .DocStr("Reads UUIDs as a large batch and returns images and labels/masks")
 .NumInput(0)
 .NumOutput(2)

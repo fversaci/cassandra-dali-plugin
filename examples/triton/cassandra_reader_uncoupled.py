@@ -73,7 +73,7 @@ def get_cassandra_reader(
     else:
         connect_bundle = None
 
-    cassandra_reader = fn.crs4.cassandra_triton(
+    cassandra_reader = fn.crs4.cassandra_uncoupled(
         name=name,
         cloud_config=connect_bundle,
         cassandra_ips=CC.cassandra_ips,

@@ -18,7 +18,7 @@ import gevent.ssl
 import tritonclient.http as httpclient
 from tritonclient.utils import InferenceServerException
 import numpy as np
-from cassandra_reader import read_uuids
+from cassandra_reader_interactive import read_uuids
 from crs4.cassandra_utils import get_shard
 from tqdm import tqdm, trange
 from IPython import embed
@@ -34,7 +34,7 @@ def start_inferring():
         print("channel creation failed: " + str(e))
         sys.exit(1)
 
-    model_name = "dali_cassandra"
+    model_name = "dali_cassandra_interactive"
 
     uuids = read_uuids(
         keyspace="imagenette",
