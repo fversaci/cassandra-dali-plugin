@@ -52,7 +52,7 @@ def start_inferring():
     )
     uuids, real_sz = get_shard(
         uuids,
-        batch_size=256,
+        batch_size=64,
         shard_id=0,
         num_shards=1,
     )
@@ -64,8 +64,8 @@ def start_inferring():
             infer.set_data_from_numpy(raw_data)
             inputs.append(infer)
             outputs = []
-            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
-            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
+            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
+            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
 
             # Infer with requested Outputs
             triton_client.async_infer(
@@ -73,7 +73,6 @@ def start_inferring():
                 inputs=inputs,
                 callback=partial(callback, user_data),
                 outputs=outputs,
-                client_timeout=10,
             )
         for i in range(len(uuids)):
             while len(user_data) == i:

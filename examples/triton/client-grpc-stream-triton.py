@@ -57,7 +57,7 @@ def start_inferring():
         table_suffix="train_256_jpg",
         ids_cache_dir="ids_cache",
     )
-    bs = 1024  # batch size
+    bs = 2048  # megabatch size
     mbs = 64  # minibatch size
     uuids, real_sz = get_shard(
         uuids,
@@ -75,8 +75,8 @@ def start_inferring():
             infer.set_data_from_numpy(raw_data)
             inputs.append(infer)
             outputs = []
-            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
-            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
+            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
+            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
 
             # Infer with requested Outputs
             triton_client.async_stream_infer(
@@ -87,10 +87,10 @@ def start_inferring():
         for raw_data in uuids:
             for _ in range(num_minibatches):
                 data_item = user_data._completed_requests.get()
-                ten = data_item.as_numpy("DALI_OUTPUT_0")
+                # ten = data_item.as_numpy("DALI_OUTPUT_0")
                 # print(f"received bs: {ten.shape}")
 
-
+                
 # parse arguments
 if __name__ == "__main__":
     start_inferring()

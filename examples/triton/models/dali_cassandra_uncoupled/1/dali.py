@@ -14,7 +14,7 @@ import nvidia.dali.types as types
 import nvidia.dali.fn as fn
 from nvidia.dali.pipeline import pipeline_def
 
-max_batch_size = 1024
+max_batch_size = 256
 
 @autoserialize
 @pipeline_def(batch_size=max_batch_size, num_threads=16)
@@ -71,7 +71,8 @@ def create_dali_pipeline(
         std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
         mirror=mirror,
     )
-    labels = labels.gpu()
+    # labels = labels.gpu()
     # return (images, labels)
+    
     ## for testing with single output and reduced bw:
-    return images[:][0][0][0]
+    return labels
