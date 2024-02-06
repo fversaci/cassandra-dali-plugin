@@ -144,7 +144,7 @@ split to feed the training application:
 
 This plugin also supports efficient inference via [NVIDIA Triton
 server](https://github.com/triton-inference-server/server):
--[Triton pipelines](examples/triton).
+- [Triton pipelines](examples/triton).
 
 ## Installation on a bare machine
 
