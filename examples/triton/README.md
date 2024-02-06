@@ -78,7 +78,7 @@ To run the clients, start a new shell in the container with following
 command:
 
 ```bash
-docker exec -ti cassandra-dali-triton fish
+docker exec -ti cass-dali fish
 ```
 
 Now, within the container, run the following commands to test the
