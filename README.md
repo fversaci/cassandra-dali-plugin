@@ -142,10 +142,9 @@ split to feed the training application:
 
 ### Inference with NVIDIA Triton
 
-This plugin also supports inference via [NVIDIA Triton
-server](https://github.com/triton-inference-server/server). Examples
-of efficient Triton pipelines leveraging our Cassandra plugin are
-available [here](examples/triton).
+This plugin also supports efficient inference via [NVIDIA Triton
+server](https://github.com/triton-inference-server/server):
+-[Triton pipelines](examples/triton).
 
 ## Installation on a bare machine
 
