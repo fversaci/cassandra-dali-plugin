@@ -140,6 +140,13 @@ An example of how to automatically create a single file with data
 split to feed the training application:
 - [Split-file](examples/splitfile)
 
+### Inference with NVIDIA Triton
+
+This plugin also supports inference via [NVIDIA Triton
+server](https://github.com/triton-inference-server/server). Examples
+of efficient Triton pipelines leveraging our Cassandra plugin are
+available [here](examples/triton).
+
 ## Installation on a bare machine
 
 cassandra-dali-plugin requires:
