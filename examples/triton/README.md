@@ -32,7 +32,7 @@ The directory [models](models) contains two subdirectories with
 examples of pipelines using both `cassandra_interactive` and
 `cassandra_uncoupled`.
 
-### Builind and running the docker container
+### Building and running the docker container
 
 The most convenient method to test the cassandra-dali-plugin with
 Triton is by utilizing the provided
