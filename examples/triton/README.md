@@ -91,7 +91,7 @@ python3 client-grpc-stream-triton.py
 ```
 
 You can also benchmark the inference performance using NVIDIA's
-`perf_analyzer`:
+[perf_analyzer](https://github.com/triton-inference-server/client/tree/main/src/c%2B%2B/perf_analyzer#readme):
 
 ```bash
 perf_analyzer -m dali_cassandra_interactive --input-data uuids.json -b 256 --concurrency-range 16 -p 10000
