@@ -37,7 +37,7 @@ examples of pipelines using both `cassandra_interactive` and
 The most convenient method to test the cassandra-dali-plugin with
 Triton is by utilizing the provided
 [Dockerfile.triton](../../Dockerfile.triton) (derived from [NVIDIA
-PyTorch
+Triton Inference Server
 NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver)),
 which contains our plugin, NVIDIA Triton, NVIDIA DALI, Cassandra C++
 and Python drivers, as well as a Cassandra server. To build and run
