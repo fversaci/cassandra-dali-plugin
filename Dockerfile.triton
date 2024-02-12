@@ -87,7 +87,7 @@ WORKDIR /dali
 # use dali nightly build?
 ARG DALI_DOWNLOAD_EXTRA_INDEX_URL #=https://developer.download.nvidia.com/compute/redist/nightly
 ARG DALI_DOWNLOAD_PKG_NAME #=nvidia-dali-nightly-cuda120
-ARG DALI_DOWNLOAD_VERSION=1.33.0
+ARG DALI_DOWNLOAD_VERSION=1.34.0
 ARG DALI_DOWNLOAD_EXTRA_OPTIONS
 
 ARG TRITON_BACKEND_API_VERSION="r22.07"
