@@ -14,7 +14,7 @@
 
 #include <iostream>
 #include <fstream>
-#include "./cassandra_dali_uncoupled.h"
+#include "./cassandra_dali_decoupled.h"
 
 namespace crs4 {
 
@@ -108,9 +108,9 @@ void CassandraUncoupled::RunImpl(dali::Workspace &ws) {
 
 // register CassandraUncoupled class
 
-DALI_REGISTER_OPERATOR(crs4__cassandra_uncoupled, crs4::CassandraUncoupled, dali::CPU);
+DALI_REGISTER_OPERATOR(crs4__cassandra_decoupled, crs4::CassandraUncoupled, dali::CPU);
 
-DALI_SCHEMA(crs4__cassandra_uncoupled)
+DALI_SCHEMA(crs4__cassandra_decoupled)
 .DocStr("Reads UUIDs as a large batch and returns images and labels/masks")
 .NumInput(0)
 .NumOutput(2)

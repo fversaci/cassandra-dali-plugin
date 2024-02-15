@@ -19,9 +19,9 @@ of uint64, and produces as output a batch containing the raw images
 which are stored as BLOBs in the database, possibly paired with the
 corresponding labels.
 
-### `fn.crs4.cassandra_uncoupled`
+### `fn.crs4.cassandra_decoupled`
 
-The uncoupled version of the operator splits the input UUIDs (which,
+The decoupled version of the operator splits the input UUIDs (which,
 in this case, can form a very long list) into mini-batches and
 proceeds to request the images from the database using prefetching to
 increase the throughput and hide the network latencies.
@@ -30,7 +30,7 @@ increase the throughput and hide the network latencies.
 
 The directory [models](models) contains two subdirectories with
 examples of pipelines using both `cassandra_interactive` and
-`cassandra_uncoupled`.
+`cassandra_decoupled`.
 
 ### Building and running the docker container
 
@@ -96,5 +96,5 @@ You can also benchmark the inference performance using NVIDIA's
 ```bash
 perf_analyzer -m dali_cassandra_interactive --input-data uuids.json -b 256 --concurrency-range 16 -p 10000
 perf_analyzer -m dali_cassandra_interactive --input-data uuids.json -b 256 --concurrency-range 16 -p 10000 -i grpc
-perf_analyzer -m dali_cassandra_uncoupled --input-data uuids_2048.json --shape Reader:2048,2 --concurrency-range 4 -i grpc --streaming -p 10000
+perf_analyzer -m dali_cassandra_decoupled --input-data uuids_2048.json --shape Reader:2048,2 --concurrency-range 4 -i grpc --streaming -p 10000
 ```

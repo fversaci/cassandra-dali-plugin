@@ -21,7 +21,7 @@ from functools import partial
 import tritonclient.grpc as grpcclient
 from tritonclient.utils import InferenceServerException
 import numpy as np
-from cassandra_reader_uncoupled import read_uuids
+from cassandra_reader_decoupled import read_uuids
 from crs4.cassandra_utils import get_shard
 from tqdm import tqdm, trange
 import queue
@@ -50,7 +50,7 @@ def start_inferring():
         print("channel creation failed: " + str(e))
         sys.exit(1)
 
-    model_name = "dali_cassandra_uncoupled"
+    model_name = "dali_cassandra_decoupled"
 
     uuids = read_uuids(
         keyspace="imagenette",

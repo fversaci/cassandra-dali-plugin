@@ -1,4 +1,4 @@
-name: "dali_cassandra_uncoupled"
+name: "dali_cassandra_decoupled"
 backend: "dali"
 max_batch_size: 0
 input [
