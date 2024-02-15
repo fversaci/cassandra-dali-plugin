@@ -75,4 +75,4 @@ def create_dali_pipeline(
     # return (images, labels)
     
     ## for testing with single output and reduced bw:
-    return labels
+    return images[:][0][0][0]
