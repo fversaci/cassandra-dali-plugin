@@ -50,7 +50,7 @@ def start_inferring():
         print("channel creation failed: " + str(e))
         sys.exit(1)
 
-    model_name = "dali_cassandra_decoupled"
+    model_name = "cass_to_inference_decoupled"
 
     uuids = read_uuids(
         keyspace="imagenette",
@@ -71,12 +71,11 @@ def start_inferring():
     for _ in trange(10):
         for raw_data in uuids:
             inputs = []
-            infer = grpcclient.InferInput("Reader", raw_data.shape, "UINT64")
+            infer = grpcclient.InferInput("UUID", raw_data.shape, "UINT64")
             infer.set_data_from_numpy(raw_data)
             inputs.append(infer)
             outputs = []
-            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
-            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
+            outputs.append(grpcclient.InferRequestedOutput("prediction"))
 
             # Infer with requested Outputs
             triton_client.async_stream_infer(
@@ -87,8 +86,9 @@ def start_inferring():
         for raw_data in uuids:
             for _ in range(num_minibatches):
                 data_item = user_data._completed_requests.get()
-                # ten = data_item.as_numpy("DALI_OUTPUT_0")
+                # ten = data_item.as_numpy("prediction")
                 # print(f"received bs: {ten.shape}")
+        # embed()
 
                 
 # parse arguments

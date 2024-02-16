@@ -64,8 +64,8 @@ def start_inferring():
             infer.set_data_from_numpy(raw_data)
             inputs.append(infer)
             outputs = []
-            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
-            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
+            outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_0"))
+            # outputs.append(grpcclient.InferRequestedOutput("DALI_OUTPUT_1"))
 
             # Infer with requested Outputs
             triton_client.async_infer(
