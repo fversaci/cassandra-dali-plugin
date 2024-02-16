@@ -85,9 +85,9 @@ Now, within the container, run the following commands to test the
 inference:
 
 ```bash
-python3 client-http-triton.py
-python3 client-grpc-triton.py
-python3 client-grpc-stream-triton.py
+python3 client-http.py
+python3 client-grpc.py
+python3 client-grpc-stream.py
 ```
 
 You can also benchmark the inference performance using NVIDIA's
