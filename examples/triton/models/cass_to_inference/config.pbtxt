@@ -21,7 +21,7 @@ ensemble_scheduling {
       model_name: "dali_cassandra_interactive"
       model_version: -1
       input_map {
-        key: "Reader"
+        key: "UUID"
         value: "UUID"
       }
       output_map {

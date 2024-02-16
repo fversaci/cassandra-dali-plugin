@@ -1,4 +1,4 @@
-name: "dali_cassandra_interactive"
+name: "dali_cassandra_interactive_stress"
 backend: "dali"
 max_batch_size: 256
 input [
@@ -11,15 +11,9 @@ input [
 output [
   {
     name: "DALI_OUTPUT_0"
-    data_type: TYPE_FP32
-    dims: [ 3, 224, 224]
+    data_type: TYPE_UINT8
+    dims: [ 1 ]
   }
-  # ,
-  # {
-  #   name: "DALI_OUTPUT_1"
-  #   data_type: TYPE_INT32
-  #   dims: [ 1 ]
-  # }
 ]
 
 dynamic_batching {

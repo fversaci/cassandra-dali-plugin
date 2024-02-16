@@ -50,7 +50,7 @@ def start_inferring():
         print("channel creation failed: " + str(e))
         sys.exit(1)
 
-    model_name = "dali_cassandra_decoupled"
+    model_name = "dali_cassandra_decoupled_stress"
 
     uuids = read_uuids(
         keyspace="imagenette",
@@ -71,7 +71,7 @@ def start_inferring():
     for _ in trange(10):
         for raw_data in uuids:
             inputs = []
-            infer = grpcclient.InferInput("Reader", raw_data.shape, "UINT64")
+            infer = grpcclient.InferInput("UUID", raw_data.shape, "UINT64")
             infer.set_data_from_numpy(raw_data)
             inputs.append(infer)
             outputs = []

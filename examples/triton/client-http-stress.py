@@ -34,7 +34,7 @@ def start_inferring():
         print("channel creation failed: " + str(e))
         sys.exit(1)
 
-    model_name = "dali_cassandra_interactive"
+    model_name = "dali_cassandra_interactive_stress"
 
     uuids = read_uuids(
         keyspace="imagenette",
@@ -51,7 +51,7 @@ def start_inferring():
         async_requests = []
         for raw_data in uuids:
             inputs = []
-            infer = httpclient.InferInput("Reader", raw_data.shape, "UINT64")
+            infer = httpclient.InferInput("UUID", raw_data.shape, "UINT64")
             infer.set_data_from_numpy(raw_data, binary_data=True)
             inputs.append(infer)
 

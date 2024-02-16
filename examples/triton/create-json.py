@@ -19,7 +19,7 @@ from IPython import embed
 import json
 
 
-def save_to_json(in_name="Reader"):
+def save_to_json(in_name="UUID"):
     uuids = read_uuids(
         keyspace="imagenette",
         table_suffix="train_256_jpg",
@@ -46,7 +46,7 @@ def save_to_json(in_name="Reader"):
     with open("uuids.json", "w") as f:
         json.dump(j, f, indent=2)
 
-def save_to_json_stream(in_name="Reader", bs=128):
+def save_to_json_stream(in_name="UUID", bs=128):
     uuids = read_uuids(
         keyspace="imagenette",
         table_suffix="train_256_jpg",

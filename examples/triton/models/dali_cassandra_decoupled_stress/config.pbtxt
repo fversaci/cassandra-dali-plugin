@@ -1,4 +1,4 @@
-name: "dali_cassandra_decoupled"
+name: "dali_cassandra_decoupled_stress"
 backend: "dali"
 max_batch_size: 0
 input [
@@ -12,14 +12,8 @@ output [
   {
     name: "DALI_OUTPUT_0"
     data_type: TYPE_FP32
-    dims: [ 3, 224, 224]
+    dims: [ 1 ]
   }
-  # ,
-  # {
-  #   name: "DALI_OUTPUT_1"
-  #   data_type: TYPE_INT32
-  #   dims: [ 1 ]
-  # }
 ]
 
 model_transaction_policy {
