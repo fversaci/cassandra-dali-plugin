@@ -217,7 +217,7 @@ BatchLoader::BatchLoader(std::string table, std::string label_type,
   // setting label type, default is lab_none
   if (label_type == "int") {
     label_t = lab_int;
-  } else if (label_type == "image") {
+  } else if (label_type == "blob") {
     label_t = lab_img;
     lab_shapes.resize(prefetch_buffers);
   }

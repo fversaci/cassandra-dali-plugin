@@ -47,7 +47,7 @@ CassandraInteractive::CassandraInteractive(const dali::OpSpec &spec) :
   cow_dilute(slow_start -1) {
   DALI_ENFORCE(prefetch_buffers >= 0,
      "prefetch_buffers should be non-negative.");
-  DALI_ENFORCE(label_type == "int" || label_type == "image" || label_type == "none",
+  DALI_ENFORCE(label_type == "int" || label_type == "blob" || label_type == "none",
      "label_type can only be int, image or none.");
   DALI_ENFORCE(slow_start >= 0,
      "slow_start should be either 0 (disabled) or >= 1 (prefetch dilution).");

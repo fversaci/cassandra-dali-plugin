@@ -82,7 +82,7 @@ def read_data(
             table_suffix,
             prefetch_buffers=16,
             io_threads=8,
-            label_type="image",
+            label_type="blob",
             name="Reader",
             # comm_threads=4,
             # copy_threads=4,
