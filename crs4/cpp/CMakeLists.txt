@@ -28,6 +28,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DALI_COMPILE_FLAGS} ")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${DALI_COMPILE_FLAGS} ")
 link_directories("${DALI_LIB_DIR}")
 link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}")
+link_directories("$ENV{CONDA_DALI_LIB}")
 
-add_library(crs4cassandra SHARED cassandra_dali.cc batch_loader.cc)
+add_library(crs4cassandra SHARED cassandra_dali_interactive.cc cassandra_dali_selffeed.cc cassandra_dali_decoupled.cc batch_loader.cc)
 target_link_libraries(crs4cassandra dali cudart cassandra)

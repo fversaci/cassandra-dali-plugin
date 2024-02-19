@@ -8,7 +8,7 @@ Library (DALI)](https://github.com/NVIDIA/DALI) (which can be used to
 load and preprocess images for PyTorch or TensorFlow).
 
 ### DALI compatibility
-The plugin has been tested and is compatible with DALI v1.32.
+The plugin has been tested and is compatible with DALI v1.34.
 
 ## Running the docker container
 
@@ -139,6 +139,12 @@ A (less) annotated example for segmentation can be found in:
 An example of how to automatically create a single file with data
 split to feed the training application:
 - [Split-file](examples/splitfile)
+
+### Inference with NVIDIA Triton
+
+This plugin also supports efficient inference via [NVIDIA Triton
+server](https://github.com/triton-inference-server/server):
+- [Triton pipelines](examples/triton)
 
 ## Installation on a bare machine
 

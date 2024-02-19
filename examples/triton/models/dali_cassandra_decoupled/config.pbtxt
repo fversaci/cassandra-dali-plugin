@@ -1,0 +1,27 @@
+name: "dali_cassandra_decoupled"
+backend: "dali"
+max_batch_size: 0
+input [
+  {
+    name: "UUID"
+    data_type: TYPE_UINT64
+    dims: [ -1, 2 ]
+  }
+]
+output [
+  {
+    name: "DALI_OUTPUT_0"
+    data_type: TYPE_FP32
+    dims: [ 3, 224, 224]
+  }
+  # ,
+  # {
+  #   name: "DALI_OUTPUT_1"
+  #   data_type: TYPE_INT32
+  #   dims: [ 1 ]
+  # }
+]
+
+model_transaction_policy {
+  decoupled: True
+}
