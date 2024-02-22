@@ -34,7 +34,6 @@ class CassandraSelfFeed : public CassandraInteractive {
  public:
   explicit CassandraSelfFeed(const dali::OpSpec &spec);
 
-  /**** In case we need ReaderMeta
   dali::ReaderMeta GetReaderMeta() const override {
     dali::ReaderMeta ret;
     ret.epoch_size = source_uuids.size();
@@ -46,7 +45,6 @@ class CassandraSelfFeed : public CassandraInteractive {
     ret.stick_to_shard = true;
     return ret;
   }
-  *****/
 
  protected:
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
