@@ -418,12 +418,10 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 out = super().__next__()
                 return out
 
-        train_pipeline, shard_size = self.GetPipeline(args, args.train_table_suffix, is_training=True, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
-        #self.train_loader = LightningWrapper(train_pipeline, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL, reader_name="Reader")
+        train_pipeline = self.GetPipeline(args, args.train_table_suffix, is_training=True, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
         self.train_loader = LightningWrapper(train_pipeline, last_batch_policy=LastBatchPolicy.PARTIAL, reader_name="Reader")
 
-        val_pipeline, shard_size = self.GetPipeline(args, args.val_table_suffix, is_training=False, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
-        #self.val_loader = LightningWrapper(val_pipeline, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL, reader_name="Reader")
+        val_pipeline = self.GetPipeline(args, args.val_table_suffix, is_training=False, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
         self.val_loader = LightningWrapper(val_pipeline, last_batch_policy=LastBatchPolicy.PARTIAL, reader_name="Reader")
     
     def train_dataloader(self):
@@ -457,10 +455,8 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
             is_training = is_training,
         )
         pipe.build()
-
-        shard_size = math.ceil(len(in_uuids)/num_shards)
         
-        return pipe, shard_size
+        return pipe
 
 
 def main():
