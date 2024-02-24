@@ -134,6 +134,12 @@ See the following annotated example for details on how to use this plugin:
 A (less) annotated example for segmentation can be found in:
 - [ADE20k](examples/ade20k/)
 
+### Multilabel
+
+An example showing how to save and decode multilabels as serialized
+numpy tensors can be found in:
+- [Corel-5k](examples/corel5k/)
+
 ### Split-file
 
 An example of how to automatically create a single file with data
