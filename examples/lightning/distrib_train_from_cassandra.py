@@ -27,6 +27,8 @@ import torch.utils.data
 import torch.utils.data.distributed
 import torchvision.models as models
 
+from lightning.pytorch.profilers import PyTorchProfiler
+
 try:
     from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
     from nvidia.dali.pipeline import pipeline_def
@@ -36,12 +38,6 @@ except ImportError:
     raise ImportError(
         "Please install DALI from https://www.github.com/NVIDIA/DALI to run this example."
     )
-
-
-# supporting torchrun
-global_rank = int(os.getenv("RANK", default=0))
-local_rank = int(os.getenv("LOCAL_RANK", default=0))
-world_size = int(os.getenv("WORLD_SIZE", default=1))
 
 
 def parse():
@@ -96,6 +92,14 @@ def parse():
         type=int,
         metavar="N",
         help="number of data loading workers (default: 4)",
+    )
+    parser.add_argument(
+        "-g",
+        "--num-gpu",
+        default=1,
+        type=int,
+        metavar="N_GPU",
+        help="number of gpu to be used (default: 1)",
     )
     parser.add_argument(
         "--epochs",
@@ -161,12 +165,19 @@ def parse():
         help="evaluate model on validation set",
     )
     parser.add_argument(
-        "--pretrained",
-        dest="pretrained",
-        action="store_true",
-        help="use pre-trained model",
+        "--weights",
+        dest="weights",
+        type=str,
+        metavar="WEIGHTS",
+        default=None,
+        help="specifies weights to be used. Default: None",
     )
-
+    parser.add_argument(
+        "--profile",
+        dest="profile",
+        action="store_true",
+        help="profile fit operations",
+    )
     parser.add_argument(
         "--dali_cpu",
         action="store_true",
@@ -299,7 +310,7 @@ class ImageNetLightningModel(L.LightningModule):
     def __init__(
         self,
         arch: str = "resnet_50",
-        pretrained: bool = False,
+        weights: str = None,
         lr: float = 0.1,
         momentum: float = 0.9,
         weight_decay: float = 1e-4,
@@ -311,7 +322,7 @@ class ImageNetLightningModel(L.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.arch = arch
-        self.pretrained = pretrained
+        self.weights = weights
         self.lr = lr
         self.momentum = momentum
         self.weight_decay = weight_decay
@@ -321,7 +332,7 @@ class ImageNetLightningModel(L.LightningModule):
         print('*' * 80)
         print(f'*************** Loading model {self.arch}')
         print('*' * 80)
-        self.model = models.__dict__[self.arch](pretrained=self.pretrained)
+        self.model = models.__dict__[self.arch](weights=self.weights)
 
     def forward(self, x):
         return self.model(x)
@@ -408,17 +419,19 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 return out
 
         train_pipeline, shard_size = self.GetPipeline(args, args.train_table_suffix, is_training=True, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
-        self.train_loader = LightningWrapper(train_pipeline, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL)
+        #self.train_loader = LightningWrapper(train_pipeline, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL, reader_name="Reader")
+        self.train_loader = LightningWrapper(train_pipeline, last_batch_policy=LastBatchPolicy.PARTIAL, reader_name="Reader")
 
         val_pipeline, shard_size = self.GetPipeline(args, args.val_table_suffix, is_training=False, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
-        self.val_loader = LightningWrapper(val_pipeline, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL)
+        #self.val_loader = LightningWrapper(val_pipeline, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL, reader_name="Reader")
+        self.val_loader = LightningWrapper(val_pipeline, last_batch_policy=LastBatchPolicy.PARTIAL, reader_name="Reader")
     
     def train_dataloader(self):
         return self.train_loader
     
     def val_dataloader(self):
         return self.val_loader
-    
+   
     @staticmethod
     def GetPipeline(args, table_suffix, is_training, device_id, shard_id, num_shards, num_threads):
         in_uuids = read_uuids(
@@ -426,14 +439,15 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
             table_suffix = table_suffix,
             ids_cache_dir = args.ids_cache_dir,
         )
+        
         pipe = create_dali_pipeline(
             keyspace = args.keyspace,
             table_suffix = table_suffix,
             batch_size = args.batch_size,
             bs = args.batch_size,
             num_threads = args.workers,
-            shard_id = global_rank,
-            num_shards = world_size,
+            shard_id = shard_id,
+            num_shards = num_shards,
             source_uuids = in_uuids,
             device_id = device_id,
             seed = 1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
@@ -444,7 +458,7 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         )
         pipe.build()
 
-        shard_size = math.ceil(len(in_uuids)/world_size)
+        shard_size = math.ceil(len(in_uuids)/num_shards)
         
         return pipe, shard_size
 
@@ -453,6 +467,11 @@ def main():
     global best_prec1, args
     best_prec1 = 0
     args = parse()
+
+    if args.profile:
+        profiler = PyTorchProfiler(filename="perf-logs")
+    else:
+        profiler = None
 
     # test mode, use default args for sanity test
     if args.test:
@@ -514,7 +533,11 @@ def main():
 
 
     ### Lightning Trainer
-    trainer = L.Trainer(max_epochs=args.epochs,  accelerator="gpu", devices=1, strategy='ddp')
+    if args.num_gpu > 1:
+        trainer = L.Trainer(max_epochs=args.epochs,  accelerator="gpu", devices=args.num_gpu, strategy='ddp', profiler=profiler)
+    else:
+        trainer = L.Trainer(max_epochs=args.epochs,  accelerator="gpu", devices=1, profiler=profiler)
+    
     trainer.fit(model)
 
 
