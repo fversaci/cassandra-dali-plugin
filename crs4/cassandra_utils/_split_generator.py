@@ -72,7 +72,7 @@ class split_generator:
             "table_suffix": self._table_suffix,
             "id_col": self._id_col,
             "data_col": self._data_col,
-            "label_type": self._label_type,  # String {int|image|none} to be defined in derived classes
+            "label_type": self._label_type,  # String {int|blob|none} to be defined in derived classes
             "label_col": self._label_col,
             "row_keys": np.empty(1),  # 1D Numpy array containing UUIDs.
             # Computed in derived classes.

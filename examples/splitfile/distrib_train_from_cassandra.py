@@ -549,9 +549,8 @@ def main():
     )
     pipe.build()
 
-    shard_size = math.ceil(len(train_uuids)/world_size)
     train_loader = DALIClassificationIterator(
-        pipe, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     # val pipe
@@ -579,9 +578,8 @@ def main():
     )
     pipe.build()
 
-    shard_size = math.ceil(len(val_uuids)/world_size)
     val_loader = DALIClassificationIterator(
-        pipe, size=shard_size, last_batch_policy=LastBatchPolicy.PARTIAL
+        pipe, reader_name="Reader", last_batch_policy=LastBatchPolicy.PARTIAL
     )
 
     if args.evaluate:

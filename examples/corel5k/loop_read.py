@@ -35,7 +35,6 @@ from fn_shortcuts import (
 from clize import run
 from tqdm import trange, tqdm
 import math
-import time
 
 # supporting torchrun
 import os
@@ -45,19 +44,12 @@ local_rank = int(os.getenv("LOCAL_RANK", default=0))
 world_size = int(os.getenv("WORLD_SIZE", default=1))
 
 
-def just_sleep(im1, im2):
-    time.sleep(2e-5 * world_size)
-    return im1, im2
-
-
 def read_data(
     *,
-    keyspace="imagenette",
-    table_suffix="train_256_jpg",
+    keyspace="corel5k",
+    table_suffix="orig",
     ids_cache_dir="ids_cache",
-    reader="cassandra",
     use_gpu=False,
-    file_root=None,
     epochs=10,
 ):
     """Read images from DB or filesystem, in a tight loop
@@ -66,7 +58,6 @@ def read_data(
     :param table_suffix: Suffix for table names
     :param reader: "cassandra" or "file" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
-    :param file_root: File root to be used (only when reading from the filesystem)
     :param ids_cache_dir: Directory containing the cached list of UUIDs (default: ./ids_cache)
     """
     if use_gpu:
@@ -80,37 +71,21 @@ def read_data(
         table_suffix,
         ids_cache_dir=ids_cache_dir,
     )
-    if reader == "cassandra":
-        chosen_reader = get_cassandra_reader(
-            keyspace,
-            table_suffix,
-            prefetch_buffers=4,
-            io_threads=8,
-            name="Reader",
-            comm_threads=1,
-            copy_threads=4,
-            ooo=True,
-            slow_start=4,
-            source_uuids=source_uuids,
-            shard_id=global_rank,
-            num_shards=world_size,
-        )
-    elif reader == "file":
-        # alternatively: use fn.readers.file
-        file_reader = fn.readers.file(
-            file_root=file_root,
-            name="Reader",
-            shard_id=global_rank,
-            num_shards=world_size,
-            pad_last_batch=True,
-            # speed up reading
-            prefetch_queue_depth=2,
-            dont_use_mmap=True,
-            read_ahead=True,
-        )
-        chosen_reader = file_reader
-    else:
-        raise ('--reader: expecting either "cassandra" or "file"')
+    db_reader = get_cassandra_reader(
+        keyspace,
+        table_suffix,
+        prefetch_buffers=16,
+        io_threads=8,
+        label_type="blob",
+        name="Reader",
+        # comm_threads=4,
+        # copy_threads=4,
+        # ooo=True,
+        slow_start=4,
+        source_uuids=source_uuids,
+        shard_id=global_rank,
+        num_shards=world_size,
+    )
 
     # create dali pipeline
     @pipeline_def(
@@ -118,27 +93,16 @@ def read_data(
         num_threads=4,
         device_id=device_id,
         prefetch_queue_depth=2,
-        #########################
-        # - uncomment to enable delay via just_sleep
-        # exec_async=False,
-        # exec_pipelined=False,
-        #########################
         # py_start_method="spawn",
         # enable_memory_stats=True,
     )
     def get_dali_pipeline():
-        images, labels = chosen_reader
-        ####################################################################
-        # - add a delay proportional to the number of ranks
-        # images, labels = fn.python_function(
-        #     images, labels, function=just_sleep, num_outputs=2
-        # )
-        ####################################################################
-        # - decode, resize and crop, must use GPU (e.g., --use-gpu)
-        # images = fn_image_random_crop(images)
-        # images = fn_resize(images)
-        # images = fn_crop_normalize(images)
-        ####################################################################
+        images, labels = db_reader
+        # decode and resize images
+        images = fn_decode(images)
+        images = fn_resize(images)
+        # decode labels
+        labels = fn.crs4.numpy_decoder(labels)
         if device_id != types.CPU_ONLY_DEVICE_ID:
             images = images.gpu()
             labels = labels.gpu()
@@ -152,18 +116,12 @@ def read_data(
     ########################################################################
     # DALI iterator
     ########################################################################
-    # produce images
-    if reader == "cassandra":
-        # consume uuids to get images from DB
-        for _ in range(epochs):
-            # read data for current epoch
-            for _ in trange(steps):
-                pl.run()
-            pl.reset()
-    else:
-        for _ in range(epochs):
-            for _ in trange(steps):
-                x, y = pl.run()
+    # consume uuids to get images and npy labels from DB
+    for _ in range(epochs):
+        # read data for current epoch
+        for _ in trange(steps):
+            x, y = pl.run()
+        pl.reset()
 
     ########################################################################
     # alternatively: use pytorch iterator

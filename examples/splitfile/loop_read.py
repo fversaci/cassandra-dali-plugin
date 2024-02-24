@@ -132,9 +132,7 @@ def read_data(
     # ddl = DALIGenericIterator(
     #     [pl],
     #     ["data", "label"],
-    #     # reader_name="Reader", # works only with file reader
-    #     size=shard_size,
-    #     last_batch_padded=True,
+    #     reader_name="Reader",
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )
     # for _ in range(epochs):

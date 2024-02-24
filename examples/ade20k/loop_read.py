@@ -82,7 +82,7 @@ def read_data(
             table_suffix,
             prefetch_buffers=16,
             io_threads=8,
-            label_type="image",
+            label_type="blob",
             name="Reader",
             # comm_threads=4,
             # copy_threads=4,
@@ -173,9 +173,7 @@ def read_data(
     # ddl = DALIGenericIterator(
     #     [pl],
     #     ["data", "label"],
-    #     # reader_name="Reader", # works only with file reader
-    #     size=shard_size,
-    #     last_batch_padded=True,
+    #     reader_name="Reader",
     #     last_batch_policy=LastBatchPolicy.PARTIAL #FILL, PARTIAL, DROP
     # )
     # for _ in range(epochs):

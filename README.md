@@ -73,8 +73,8 @@ examples](README.md#examples).
 - `cassandra_port`: Cassandra TCP port (default: `9042`)
 - `table`: data table (e.g., `imagenet.train_data`)
 - `label_col`: name of the label column (e.g., `label`)
-- `label_type`: type of label: "int", "image" or "none" ("int" is
-  typically used for classification, "image" for segmentation)
+- `label_type`: type of label: "int", "blob" or "none" ("int" is
+  typically used for classification, "blob" for segmentation)
 - `data_col`: name of the data column (e.g., `data`)
 - `id_col`: name of the UUID column (e.g., `img_id`)
 - `source_uuids`: full list of UUIDs, as strings, to be retrieved
@@ -133,6 +133,12 @@ See the following annotated example for details on how to use this plugin:
 
 A (less) annotated example for segmentation can be found in:
 - [ADE20k](examples/ade20k/)
+
+### Multilabel
+
+An example showing how to save and decode multilabels as serialized
+numpy tensors can be found in:
+- [Corel-5k](examples/corel5k/)
 
 ### Split-file
 
