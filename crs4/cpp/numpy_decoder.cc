@@ -1,4 +1,4 @@
-// Copyright 2022 CRS4 (http://www.crs4.it/)
+// Copyright 2024 CRS4 (http://www.crs4.it/)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ bool NumpyDecoder::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
 void NumpyDecoder::RunImpl(dali::Workspace &ws) {
   const auto &input = ws.Input<::dali::CPUBackend>(0);
   auto &output = ws.Output<::dali::CPUBackend>(0);
-  auto &tp = ws.GetThreadPool();
   const auto &in_shape = input.shape();
   bool pinned = output.is_pinned();
   for (int sample_id = 0; sample_id < in_shape.num_samples(); sample_id++) {
@@ -36,7 +35,6 @@ void NumpyDecoder::RunImpl(dali::Workspace &ws) {
     output.set_type(npy_ten.type());
     output.CopySample(sample_id, npy_ten);
   }
-  tp.RunAll();
 }
 
 }  // namespace crs4
@@ -46,7 +44,7 @@ void NumpyDecoder::RunImpl(dali::Workspace &ws) {
 DALI_REGISTER_OPERATOR(crs4__numpy_decoder, crs4::NumpyDecoder, dali::CPU);
 
 DALI_SCHEMA(crs4__numpy_decoder)
-.DocStr("Decodes NumPy .npy files, that are already loaded in memory, into tensors.")
+.DocStr("Decodes NumPy .npy files, that have already been loaded into memory, into tensors.")
 .NumInput(1)
 .NumOutput(1);
 
