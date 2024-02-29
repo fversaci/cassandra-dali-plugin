@@ -130,7 +130,7 @@ The [original script](distrib_train_from_file.py) can be run with:
 ```bash
 # Original script, reading from filesystem:
 $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
-  -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
+  -a resnet50 --dali_cpu --b 64 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   /tmp/imagenette2-320/train /tmp/imagenette2-320/val
 ```
 
@@ -141,7 +141,7 @@ $ python3 cache_uuids.py --table-suffix=train_orig
 $ python3 cache_uuids.py --table-suffix=val_orig
 
 # Modified script, reading from Cassandra:
-$ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
-  -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
+$ python3 --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
+  -a resnet50 --dali_cpu --b 64 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
 ```
