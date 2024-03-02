@@ -25,6 +25,8 @@ import lightning as L
 from lightning.pytorch.profilers import PyTorchProfiler
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.loggers import CSVLogger
+from lightning.pytorch.callbacks import EarlyStopping
+from lightning.pytorch.callbacks import ModelCheckpoint
 
 try:
     from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
@@ -136,12 +138,12 @@ def parse():
         help="weight decay (default: 1e-4)",
     )
     parser.add_argument(
-        "--print-freq",
+        "--patience",
         "-p",
         default=10,
         type=int,
-        metavar="N",
-        help="print frequency (default: 10)",
+        metavar="PATIENCE_EPOCHS",
+        help="number of epochs without validation loss improvment that enalbles early stopping (default: 10)",
     )
     parser.add_argument(
         "--resume",
@@ -158,12 +160,30 @@ def parse():
         help="evaluate model on validation set",
     )
     parser.add_argument(
-        "--weights",
+        "--no-checkpoints",
+        dest="no_checkpoints",
+        action="store_true",
+        help="Disable storing the best and last epoch model as checkpoint",
+    )
+    parser.add_argument(
+            "--log-tensorboard",
+        dest="tensorboard",
+        action="store_true",
+        help="Log metrics to tensorboard format",
+    )
+    parser.add_argument(
+            "--log-csv",
+        dest="csv",
+        action="store_true",
+        help="Log metrics to csv file",
+    )
+    parser.add_argument(
+        "--pretrained-weights",
         dest="weights",
         type=str,
         metavar="WEIGHTS",
         default=None,
-        help="specifies weights to be used. Default: None",
+        help="model pretrained weights. Default: None",
     )
     parser.add_argument(
         "--profile",
@@ -232,6 +252,7 @@ class ImageNetLightningModel(L.LightningModule):
         print('*' * 80)
         print(f'*************** Loading model {self.arch}')
         print('*' * 80)
+    
         self.model = models.__dict__[self.arch](weights=self.weights)
 
     def forward(self, x):
@@ -400,47 +421,65 @@ def main():
 
     # Optionally resume from a checkpoint
     if args.resume:
-        pass # FIXME: TBD
-        """
-        # Use a local scope to avoid dangling references
-        def resume():
-            if os.path.isfile(args.resume):
-                print("=> loading checkpoint '{}'".format(args.resume))
-                checkpoint = torch.load(
-                    args.resume,
-                    map_location=lambda storage, loc: storage.cuda(args.gpu),
-                )
-                args.start_epoch = checkpoint["epoch"]
-                global best_prec1
-                best_prec1 = checkpoint["best_prec1"]
-                model.load_state_dict(checkpoint["state_dict"])
-                optimizer.load_state_dict(checkpoint["optimizer"])
-                print(
-                    "=> loaded checkpoint '{}' (epoch {})".format(
-                        args.resume, checkpoint["epoch"]
-                    )
-                )
-            else:
-                print("=> no checkpoint found at '{}'".format(args.resume))
-        
-        resume()
-        """
+        ckpt_path = args.resume
+    else:
+        ckpt_path = None
 
     #if args.evaluate:
     #    validate(val_loader, model, criterion)
     #    return
 
-    tensorboard_logger = TensorBoardLogger("tb_logs", name="my_model")
-    csv_logger = logger = CSVLogger("logs_csv", name="my_model")
-    logger = csv_logger
+    ### Callbacks 
+    callbacks_l = []
+
+    if args.patience:
+        print (f"-- Early stopping enabled with patience={args.patience}")
+        early_stopping = EarlyStopping(monitor='val_loss', mode='min', patience=args.patience)
+        callbacks_l.append(early_stopping)
+
+    if not args.no_checkpoints:
+        print ("-- Enabling checkpointing for last epoch and best model")
+        checkpoint = ModelCheckpoint(monitor='val_acc1', mode='max', dirpath='checkpoints', save_last=True, save_top_k=1)
+        callbacks_l.append(checkpoint)
+        
+    ### Loggers
+    loggers_l = []
+
+    if args.tensorboard:
+        tensorboard_logger = TensorBoardLogger("tb_logs", name="my_model")
+        loggers_l.append(tensorboard_logger)
+
+    if args.csv:
+        csv_logger = logger = CSVLogger("logs_csv", name="my_model")
+        loggers_l.append(csv_logger)
+    
+    if not loggers_l:
+        loggers_l=None # To prevent warnings in the case metrics are logged only to the progress bar
 
     ### Lightning Trainer
     if args.num_gpu > 1:
-        trainer = L.Trainer(max_epochs=args.epochs,  accelerator="gpu", devices=args.num_gpu, strategy='ddp', profiler=profiler, num_sanity_val_steps=0, logger=logger)
+        trainer = L.Trainer(max_epochs=args.epochs,  
+                accelerator="gpu", 
+                devices=args.num_gpu, 
+                strategy='ddp', 
+                profiler=profiler, 
+                enable_checkpointing=True,
+                logger=loggers_l, 
+                callbacks=callbacks_l,
+                num_sanity_val_steps=0  
+                )
     else:
-        trainer = L.Trainer(max_epochs=args.epochs,  accelerator="gpu", devices=1, profiler=profiler, num_sanity_val_steps=0, logger=logger)
+        trainer = L.Trainer(max_epochs=args.epochs,  
+                accelerator="gpu", 
+                devices=1, 
+                profiler=profiler, 
+                enable_checkpointing=True,
+                logger=loggers_l, 
+                callbacks=callbacks_l,
+                num_sanity_val_steps=0 
+                )
     
-    trainer.fit(model)
+    trainer.fit(model, ckpt_path=ckpt_path)
 
 
 if __name__ == "__main__":
