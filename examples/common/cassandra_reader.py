@@ -102,5 +102,6 @@ def get_cassandra_reader(
         slow_start=slow_start,
         source_uuids=source_uuids,
         loop_forever=loop_forever,
+        shuffle_after_epoch=shuffle_after_epoch,
     )
     return cassandra_reader
