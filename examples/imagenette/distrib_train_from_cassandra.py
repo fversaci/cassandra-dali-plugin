@@ -199,7 +199,6 @@ def to_python_float(t):
 def create_dali_pipeline(
     keyspace,
     table_suffix,
-    bs,
     crop,
     size,
     source_uuids,
@@ -437,7 +436,6 @@ def main():
         keyspace=args.keyspace,
         table_suffix=args.train_table_suffix,
         batch_size=args.batch_size,
-        bs=args.batch_size,
         num_threads=args.workers,
         shard_id=global_rank,
         num_shards=world_size,
@@ -465,7 +463,6 @@ def main():
         keyspace=args.keyspace,
         table_suffix=args.val_table_suffix,
         batch_size=args.batch_size,
-        bs=args.batch_size,
         num_threads=args.workers,
         shard_id=global_rank,
         num_shards=world_size,
