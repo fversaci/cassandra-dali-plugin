@@ -23,10 +23,10 @@ except ImportError:
 def create_dali_pipeline(
     keyspace,
     table_suffix,
-    bs,
     crop,
     size,
     source_uuids,
+    shuffle_after_epoch=True,
     dali_cpu=False,
     is_training=True,
     prefetch_buffers=8,
@@ -48,6 +48,7 @@ def create_dali_pipeline(
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
+        shuffle_after_epoch=shuffle_after_epoch,
         ooo=True,
         slow_start=4,
     )

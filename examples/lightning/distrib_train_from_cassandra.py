@@ -375,7 +375,7 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
             keyspace = args.keyspace,
             table_suffix = table_suffix,
             batch_size = args.batch_size,
-            bs = args.batch_size,
+            shuffle_after_epoch = True,
             num_threads = args.workers,
             shard_id = shard_id,
             num_shards = num_shards,
