@@ -141,7 +141,6 @@ $ python3 cache_uuids.py --table-suffix=train_orig
 $ python3 cache_uuids.py --table-suffix=val_orig
 
 # Modified script, reading from Cassandra:
-$ python3 --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
+$ python3 distrib_train_from_cassandra.py --num-gpu NUM_GPUS \
   -a resnet50 --dali_cpu --b 64 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
-  --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
-```
+  --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig 
