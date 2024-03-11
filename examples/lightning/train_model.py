@@ -124,7 +124,7 @@ def parse():
         default=0.1,
         type=float,
         metavar="LR",
-        help="Initial learning rate.  Will be scaled by <global batch size>/256: args.lr = args.lr*float(args.batch_size*world_size)/256.  A warmup schedule will also be applied over the first 5 epochs.",
+        help="Learning rate.  Will be scaled by the number of workers",
     )
     parser.add_argument(
         "--momentum", default=0.9, type=float, metavar="M", help="momentum"
@@ -203,9 +203,7 @@ def parse():
 
     parser.add_argument("--sync_bn", action="store_true", help="enabling apex sync BN.")
 
-    parser.add_argument("--opt-level", type=str, default=None)
     parser.add_argument("--keep-batchnorm-fp32", type=str, default=None)
-    parser.add_argument("--loss-scale", type=str, default=None)
     parser.add_argument("--channels-last", type=bool, default=False)
     
     args = parser.parse_args()
@@ -265,9 +263,8 @@ class ImageNetLightningModel(L.LightningModule):
         # Get output from the model
         output = self(images)
 
-        #print (f"output_shape: {output.shape}, target_shape: {target.shape}")
-
         loss_train = F.cross_entropy(output, target)
+        
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
         self.log("train_loss", loss_train, prog_bar=True, on_step=False, on_epoch=True, logger=True, sync_dist=True)
         self.log("train_acc1", acc1, prog_bar=True, on_step=False, on_epoch=True, logger=True, sync_dist=True)
@@ -310,8 +307,9 @@ class ImageNetLightningModel(L.LightningModule):
         # Using the linear Scaling Rule (When scaling the batch size by k, scale the learning rate also by k)
         self.lr = self.lr * self.trainer.world_size
         optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
-        scheduler = lr_scheduler.LambdaLR(optimizer, lambda epoch: 0.1 ** (epoch // 30))
-        return [optimizer], [scheduler]
+        #scheduler = lr_scheduler.LambdaLR(optimizer, lambda epoch: 0.1 ** (epoch // 30))
+        #return [optimizer], [scheduler]
+        return [optimizer]
 
 
 ## Derived class to add the Cassandra DALI pipeline 
@@ -402,10 +400,7 @@ def main():
     else:
         profiler = None
 
-    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
-
     print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
-
     
     if args.arch == "inception_v3":
         raise RuntimeError("Currently, inception_v3 is not supported by this example.")
