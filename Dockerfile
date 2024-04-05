@@ -70,7 +70,7 @@ RUN \
 # SPARK installation, to test examples
 ########################################################################
 # download and install spark
-ARG SPARK_V=3.3
+ARG SPARK_V=3.5
 RUN \
     export SPARK_VER=$(curl 'https://downloads.apache.org/spark/' | grep -o "$SPARK_V\.[[:digit:]]\+" | tail -n 1) \
     && cd /tmp && wget -nv "https://downloads.apache.org/spark/spark-$SPARK_VER/spark-$SPARK_VER-bin-hadoop3.tgz" \
