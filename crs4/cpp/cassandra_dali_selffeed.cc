@@ -26,7 +26,7 @@ CassandraSelfFeed::CassandraSelfFeed(const dali::OpSpec &spec) :
   shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")),
   loop_forever(spec.GetArgument<bool>("loop_forever")) {
   DALI_ENFORCE(source_uuids.size() > 0,
-               "plese provide a non-empty list of source_uuids");
+               "please provide a non-empty list of source_uuids");
   DALI_ENFORCE(num_shards > shard_id,
                "num_shards needs to be greater than shard_id");
   convert_uuids();
