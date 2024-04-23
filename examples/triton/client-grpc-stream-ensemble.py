@@ -68,7 +68,7 @@ def start_inferring():
     num_minibatches = math.ceil(bs/mbs)
     user_data = UserData()
     triton_client.start_stream(callback=partial(callback, user_data))
-    for _ in trange(10):
+    for _ in trange(3):
         for raw_data in uuids:
             inputs = []
             infer = grpcclient.InferInput("UUID", raw_data.shape, "UINT64")
