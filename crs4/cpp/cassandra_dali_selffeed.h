@@ -51,7 +51,7 @@ class CassandraSelfFeed : public CassandraInteractive {
                  const dali::Workspace &ws) override;
   void feed_new_epoch() {
     current_epoch++;
-    if (shuffle_after_epoch) {
+    if (shuffle_every_epoch) {
       std::mt19937 g(seed + current_epoch);
       std::shuffle(u64_uuids.begin(), u64_uuids.end(), g);
     }
@@ -77,7 +77,7 @@ class CassandraSelfFeed : public CassandraInteractive {
   int current_epoch = -1;
   const int shard_id;
   const int num_shards;
-  bool shuffle_after_epoch;
+  bool shuffle_every_epoch;
   bool loop_forever;
   U64_UUIDs::iterator shard_begin;
   U64_UUIDs::iterator shard_end;

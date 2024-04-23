@@ -57,7 +57,7 @@ def get_cassandra_reader(
     io_threads=2,
     prefetch_buffers=2,
     name="UUID",
-    shuffle_after_epoch=True,
+    shuffle_every_epoch=True,
     comm_threads=2,
     copy_threads=2,
     wait_threads=2,

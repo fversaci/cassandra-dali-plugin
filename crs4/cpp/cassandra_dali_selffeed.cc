@@ -23,7 +23,7 @@ CassandraSelfFeed::CassandraSelfFeed(const dali::OpSpec &spec) :
   source_uuids(spec.GetArgument<crs4::StrUUIDs>("source_uuids")),
   shard_id(spec.GetArgument<int>("shard_id")),
   num_shards(spec.GetArgument<int>("num_shards")),
-  shuffle_after_epoch(spec.GetArgument<bool>("shuffle_after_epoch")),
+  shuffle_every_epoch(spec.GetArgument<bool>("shuffle_every_epoch")),
   loop_forever(spec.GetArgument<bool>("loop_forever")) {
   DALI_ENFORCE(source_uuids.size() > 0,
                "please provide a non-empty list of source_uuids");
@@ -113,7 +113,7 @@ DALI_SCHEMA(crs4__cassandra)
 This is typically used for distributed training.)code", 1)
 .AddOptionalArg("shard_id",
    R"code(Index of the shard to read.)code", 0)
-.AddOptionalArg("shuffle_after_epoch", R"(Reshuffling uuids at each epoch)",
+.AddOptionalArg("shuffle_every_epoch", R"(Reshuffling uuids at each epoch)",
    false)
 .AddOptionalArg("loop_forever", R"(Loop on souce_uuids)", true)
 .AddParent("crs4__cassandra_interactive");
