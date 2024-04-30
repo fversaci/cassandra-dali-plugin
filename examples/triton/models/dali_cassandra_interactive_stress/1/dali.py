@@ -21,7 +21,6 @@ max_batch_size = 256
 def create_dali_pipeline(
     keyspace="imagenette",
     table_suffix="train_256_jpg",
-    bs=max_batch_size,
     crop=224,
     size=256,
     dali_cpu=False,

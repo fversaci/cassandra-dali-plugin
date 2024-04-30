@@ -56,7 +56,7 @@ def get_cassandra_reader(
     io_threads=2,
     prefetch_buffers=2,
     name="Reader",
-    shuffle_after_epoch=True,
+    shuffle_every_epoch=True,
     comm_threads=2,
     copy_threads=2,
     wait_threads=2,
@@ -102,6 +102,6 @@ def get_cassandra_reader(
         slow_start=slow_start,
         source_uuids=source_uuids,
         loop_forever=loop_forever,
-        shuffle_after_epoch=shuffle_after_epoch,
+        shuffle_every_epoch=shuffle_every_epoch,
     )
     return cassandra_reader

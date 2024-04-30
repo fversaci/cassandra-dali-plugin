@@ -31,7 +31,7 @@ pgrep -f cassandra || /cassandra/bin/cassandra 2>&1 | grep "state jump to NORMAL
     python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --target-dir=/tmp/imagenette_256_jpg/train 
     python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --target-dir=/tmp/imagenette_256_jpg/val 
     python3 loop_read.py --reader=file --file-root=/tmp/imagenette_256_jpg/train 
-    torchrun --nproc_per_node=1 distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
+    torchrun --nproc_per_node=1 distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --keyspace=imagenette --train-table-suffix=train_256_jpg --val-table-suffix=val_256_jpg --epochs 1
    `### BEGIN COMMENT \
     ### END COMMENT`
     echo "--- OK ---"

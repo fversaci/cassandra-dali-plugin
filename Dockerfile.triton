@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
-FROM nvcr.io/nvidia/tritonserver:24.01-py3
+FROM nvcr.io/nvidia/tritonserver:24.03-py3
 
 # install some useful tools
 RUN \
@@ -87,7 +87,7 @@ WORKDIR /dali
 # use dali nightly build?
 ARG DALI_DOWNLOAD_EXTRA_INDEX_URL #=https://developer.download.nvidia.com/compute/redist/nightly
 ARG DALI_DOWNLOAD_PKG_NAME #=nvidia-dali-nightly-cuda120
-ARG DALI_DOWNLOAD_VERSION=1.34.0
+ARG DALI_DOWNLOAD_VERSION=1.36.0
 ARG DALI_DOWNLOAD_EXTRA_OPTIONS
 
 ARG TRITON_BACKEND_API_VERSION="r22.07"
@@ -137,8 +137,6 @@ RUN \
       opencv-python cassandra-driver pybind11 tqdm tifffile pyyaml torch
 
 ########################################################################
-# install plugin and run as user
-########################################################################
 # Fix for error given by "from nvidia.dali.plugin.pytorch import DALIGenericIterator"
 # - https://forums.developer.nvidia.com/t/issues-building-docker-image-from-ngc-container-nvcr-io-nvidia-pytorch-22-py3/209034
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
@@ -187,16 +185,21 @@ RUN \
 
 # install cassandra dali plugin
 WORKDIR /home/triton-server/cassandra-dali-plugin
-# install dali in base conda environments
-RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist \
+# install dali in conda environments
+RUN /opt/conda/bin/pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist \
+    --upgrade nvidia-dali-cuda120==$DALI_DOWNLOAD_VERSION
+RUN /opt/tritonserver/backends/dali/conda/envs/dalienv/bin/python3 -m pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
     --upgrade nvidia-dali-cuda120==$DALI_DOWNLOAD_VERSION
 # RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
 #     --upgrade nvidia-dali-nightly-cuda120==$DALI_DOWNLOAD_VERSION
 
-# install cassandra-dali plugin
+# install cassandra-dali plugin in all environments
+## install cassandra-dali plugin in system
+# RUN /usr/bin/pip3 install .
+## install cassandra-dali plugin in conda environments
 ENV CONDA_DALI_LIB /opt/conda/lib
-RUN pip3 install .
-# install cassandra-dali plugin in dalienv
+RUN /opt/conda/bin/pip3 install .
+## install cassandra-dali plugin in dalienv
 RUN rm -Rf build \
     && /opt/tritonserver/backends/dali/conda/envs/dalienv/bin/python3 -m pip install .
 # install triton client
