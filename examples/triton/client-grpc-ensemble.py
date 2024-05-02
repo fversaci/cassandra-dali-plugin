@@ -56,7 +56,7 @@ def start_inferring():
         shard_id=0,
         num_shards=1,
     )
-    for _ in trange(10):
+    for _ in trange(3):
         user_data = []
         for raw_data in uuids:
             inputs = []

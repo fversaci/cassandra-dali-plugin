@@ -26,7 +26,7 @@ def create_dali_pipeline(
     crop,
     size,
     source_uuids,
-    shuffle_after_epoch=True,
+    shuffle_every_epoch=True,
     dali_cpu=False,
     is_training=True,
     prefetch_buffers=8,
@@ -48,8 +48,8 @@ def create_dali_pipeline(
         comm_threads=comm_threads,
         copy_threads=copy_threads,
         wait_threads=wait_threads,
-        shuffle_after_epoch=shuffle_after_epoch,
-        ooo=True,
+        shuffle_every_epoch=shuffle_every_epoch,
+        ooo=False,
         slow_start=4,
     )
     images, labels = cass_reader

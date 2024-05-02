@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
-FROM nvcr.io/nvidia/pytorch:24.01-py3
+FROM nvcr.io/nvidia/pytorch:24.03-py3
 
 # install some useful tools
 RUN \
@@ -70,7 +70,7 @@ RUN \
 # SPARK installation, to test examples
 ########################################################################
 # download and install spark
-ARG SPARK_V=3.3
+ARG SPARK_V=3.5
 RUN \
     export SPARK_VER=$(curl 'https://downloads.apache.org/spark/' | grep -o "$SPARK_V\.[[:digit:]]\+" | tail -n 1) \
     && cd /tmp && wget -nv "https://downloads.apache.org/spark/spark-$SPARK_VER/spark-$SPARK_VER-bin-hadoop3.tgz" \
@@ -118,7 +118,7 @@ RUN \
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib:/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib"
 RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
-    --upgrade nvidia-dali-cuda120==1.34
+    --upgrade nvidia-dali-cuda120==1.36
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
@@ -139,6 +139,6 @@ RUN mkdir /data
 RUN chown user.user '/data'
 # install plugin
 WORKDIR /home/user/cassandra-dali-plugin
+RUN pip3 install IPython
 RUN pip3 install .
 USER user
-
