@@ -373,7 +373,7 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
             keyspace = args.keyspace,
             table_suffix = table_suffix,
             batch_size = args.batch_size,
-            shuffle_after_epoch = True,
+            shuffle_every_epoch = True,
             num_threads = args.workers,
             shard_id = shard_id,
             num_shards = num_shards,
@@ -461,7 +461,8 @@ def main():
                 enable_checkpointing=True,
                 logger=loggers_l, 
                 callbacks=callbacks_l,
-                num_sanity_val_steps=0  
+                num_sanity_val_steps=0,
+                precision="16-mixed"
                 )
     else:
         trainer = L.Trainer(max_epochs=args.epochs,  
@@ -471,7 +472,8 @@ def main():
                 enable_checkpointing=True,
                 logger=loggers_l, 
                 callbacks=callbacks_l,
-                num_sanity_val_steps=0 
+                num_sanity_val_steps=0,
+                precision="16-mixed"
                 )
     
     trainer.fit(model, ckpt_path=ckpt_path)
