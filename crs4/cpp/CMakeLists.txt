@@ -30,5 +30,5 @@ link_directories("${DALI_LIB_DIR}")
 link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}")
 link_directories("$ENV{CONDA_DALI_LIB}")
 
-add_library(crs4cassandra SHARED cassandra_dali_interactive.cc cassandra_dali_selffeed.cc cassandra_dali_decoupled.cc batch_loader.cc numpy_decoder.cc numpy.cc)
+add_library(crs4cassandra SHARED cassandra_dali_interactive.cc cassandra_dali_selffeed.cc cassandra_dali_decoupled.cc batch_loader.cc numpy_decoder.cc)
 target_link_libraries(crs4cassandra dali cudart cassandra)
