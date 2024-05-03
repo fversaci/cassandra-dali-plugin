@@ -64,7 +64,7 @@ RUN \
 #install cassandra python driver + some python libraries
 RUN \
     pip3 install --upgrade --no-cache matplotlib pandas clize \
-      opencv-python cassandra-driver pybind11 tqdm tifffile pyyaml ligthning
+      opencv-python cassandra-driver pybind11 tqdm tifffile pyyaml lightning
 
 ########################################################################
 # SPARK installation, to test examples
