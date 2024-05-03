@@ -31,7 +31,7 @@ void NumpyDecoder::RunImpl(dali::Workspace &ws) {
     auto in_ptr = input.raw_tensor(sample_id);
     auto sz = in_shape.tensor_size(sample_id);
     auto mis = ::dali::MemInputStream(in_ptr, sz);
-    auto npy_ten = NewReadTensor(&mis, pinned);
+    auto npy_ten = dali::numpy::ReadTensor(&mis, pinned);
     output.set_type(npy_ten.type());
     output.CopySample(sample_id, npy_ten);
   }

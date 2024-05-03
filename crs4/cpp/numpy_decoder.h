@@ -17,7 +17,7 @@
 
 #include <vector>
 #include "dali/pipeline/operator/operator.h"
-#include "./numpy.h"
+#include "dali/util/numpy.h"
 
 namespace crs4 {
 
