@@ -52,8 +52,8 @@ def just_sleep(im1, im2):
 
 def read_data(
     *,
-    keyspace="imagenette",
-    table_suffix="train_256_jpg",
+    data_table="imagenette.data_train_256_jpg",
+    metadata_table="imagenette.metadata_train_256_jpg",
     ids_cache_dir="ids_cache",
     reader="cassandra",
     use_gpu=False,
@@ -62,8 +62,8 @@ def read_data(
 ):
     """Read images from DB or filesystem, in a tight loop
 
-    :param keyspace: Cassandra keyspace (i.e., name of the dataset)
-    :param table_suffix: Suffix for table names
+    :param data_table: Name of the data table (in the form: keyspace.tablename)
+    :param metadata_table: Name of the data metadata table (in the form: keyspace.tablename)
     :param reader: "cassandra" or "file" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
     :param file_root: File root to be used (only when reading from the filesystem)
@@ -76,14 +76,12 @@ def read_data(
 
     bs = 128
     source_uuids = read_uuids(
-        keyspace,
-        table_suffix,
+        metadata_table,
         ids_cache_dir=ids_cache_dir,
     )
     if reader == "cassandra":
         chosen_reader = get_cassandra_reader(
-            keyspace,
-            table_suffix,
+            data_table=data_table,
             prefetch_buffers=4,
             io_threads=8,
             name="Reader",

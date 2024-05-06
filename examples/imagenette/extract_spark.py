@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # To insert in DB, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split-subdir=train --table-suffix=train_256_jpg
+# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --data-table=imagenette.data_train_256_jpg --metadata-table=imagenette.metadata_train_256_jpg --split-subdir=train
 
 # To save files in a directory, run with, e.g.,
 # /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
@@ -29,8 +29,8 @@ def save_images(
     src_dir,
     *,
     img_format="JPEG",
-    keyspace="imagenette",
-    table_suffix="256_jpg",
+    data_table="imagenette.data_256_jpg",
+    metadata_table="imagenette.metadata_256_jpg",
     split_subdir="train",
     target_dir=None,
     img_size=256,
@@ -39,8 +39,8 @@ def save_images(
 
     :param src_dir: Input directory for Imagenette
     :param img_format: Format of output images
-    :param keyspace: Name of dataset (for the Cassandra table)
-    :param table_suffix: Suffix for table names
+    :param data_table: Name of data table data in the format keyspace.tablename
+    :param metadata_table: Name of data table data in the format keyspace.tablename
     :param target_dir: Output directory (when saving to filesystem)
     :param split_subdir: Subdir to be processed
     :param img_size: Target image size
@@ -61,8 +61,8 @@ def save_images(
             extract_common.send_images_to_db(
                 cass_conf=cass_conf,
                 img_format=img_format,
-                keyspace=keyspace,
-                table_suffix=table_suffix,
+                data_table=data_table,
+                metadata_table=metadata_table,
                 img_size=img_size,
             )
         )

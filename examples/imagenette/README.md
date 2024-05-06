@@ -32,20 +32,20 @@ $ cd examples/imagenette/
 $ /cassandra/bin/cqlsh -f create_tables.cql
 
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --table-suffix=train_256_jpg
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --table-suffix=val_256_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg 
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table imagenette.data_val_256_jpg --metadata-table imagenette.metadata_val_256_jpg
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --table-suffix=train_256_jpg
+$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train_256_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --table-suffix=train_256_jpg
+$ python3 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --table-suffix=train_256_jpg --use-gpu
+$ python3 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg --use-gpu
 
 # - Sharded, tight loop data loading test, using 2 processes via torchrun
-$ torchrun --nproc_per_node=2 loop_read.py --table-suffix=train_256_jpg
+$ torchrun --nproc_per_node=2 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
 ```
 
 ## Compare with DALI fn.readers.file
@@ -72,17 +72,17 @@ We can also store the original, unchanged files in the DB:
 
 ```bash
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=train --table-suffix=train_orig
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --table-suffix=val_orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=train --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --table-suffix=train_orig
+$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train_256_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --table-suffix=train_orig
+$ python3 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --table-suffix=train_orig --use-gpu
+$ python3 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg --use-gpu
 ```
 
 ## Insert Imagenet dataset in parallel (with Apache Spark)
@@ -107,17 +107,16 @@ $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 # - Fill the tables in parallel (10 jobs) with Spark
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --keyspace=imagenet --split-subdir=train --table-suffix=train_256_jpg
+  --split-subdir=train --data-table imagenet.data_train_256_jpg --metadata-table imagenet.metadata_train_256_jpg
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --keyspace=imagenet --split-subdir=val --table-suffix=val_256_jpg
+  --split-subdir=val --data-table imagenet.data_val_256_jpg --metadata-table imagenet.metadata_val_256_jpg
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --keyspace=imagenet --table-suffix=train_256_jpg
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train_256_jpg
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --keyspace=imagenet --table-suffix=train_256_jpg
-
+$ python3 loop_read.py --data-table imagenet.data_train_256_jpg --metadata-table imagenet.metadata_train_256_jpg
 ```
 
 ## Multi-GPU training
@@ -137,11 +136,11 @@ $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
 while [our modified version](distrib_train_from_cassandra.py) with:
 ```bash
 # Read the lists of UUIDs and cache them to disk
-$ python3 cache_uuids.py --table-suffix=train_orig
-$ python3 cache_uuids.py --table-suffix=val_orig
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train_256_jpg 
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_val_256_jpg
 
 # Modified script, reading from Cassandra:
 $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
-  --keyspace=imagenette --train-table-suffix=train_orig --val-table-suffix=val_orig
-```
+  --train-data-table imagenette.data_train_256_jpg --train-metadata-table imagenette.metadata_train_256_jpg \
+  --val-data-table imagenette.data_val_256_jpg --val-metadata-table imagenette.metadata_val_256_jpg

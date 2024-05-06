@@ -49,25 +49,28 @@ def parse():
 
     parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
     parser.add_argument(
-        "--keyspace",
-        "-k",
-        metavar="KEYSP",
-        default="imagenette",
-        help="cassandra keyspace, i.e., dataset name (default: imagenette)",
+        "--train-data-table",
+        metavar="DATA TABLE (training)",
+        default="imagenette.data_train_256_jpg",
+        help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train_256_jpg)",
     )
     parser.add_argument(
-        "--train-table-suffix",
-        metavar="SUFF",
-        default="train_orig",
-        choices=["train_orig", "train_256_jpg", "train_512_jpg"],
-        help="Suffix for table names (default: orig)",
+        "--train-metadata-table",
+        metavar="METADATA TABLE (training)",
+        default="imagenette.metadata_train_256_jpg",
+        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_train_256_jpg)",
     )
     parser.add_argument(
-        "--val-table-suffix",
-        metavar="SUFF",
-        default="val_orig",
-        choices=["val_orig", "val_256_jpg", "val_512_jpg"],
-        help="Suffix for table names (default: orig)",
+        "--val-data-table",
+        metavar="DATA TABLE (validation)",
+        default="imagenette.data_val_256_jpg",
+        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò_256_jpg)",
+    )
+    parser.add_argument(
+        "--val-metadata-table",
+        metavar="METADATA TABLE (validation)",
+        default="imagenette.metadata_val_256_jpg",
+        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_val_256_jpg)",
     )
     parser.add_argument(
         "--ids-cache-dir",
@@ -197,8 +200,7 @@ def to_python_float(t):
 
 @pipeline_def
 def create_dali_pipeline(
-    keyspace,
-    table_suffix,
+    data_table,
     crop,
     size,
     source_uuids,
@@ -213,8 +215,7 @@ def create_dali_pipeline(
     wait_threads=2,
 ):
     cass_reader = get_cassandra_reader(
-        keyspace=keyspace,
-        table_suffix=table_suffix,
+        data_table=data_table,
         prefetch_buffers=prefetch_buffers,
         shard_id=shard_id,
         num_shards=num_shards,
@@ -428,13 +429,11 @@ def main():
 
     # train pipe
     train_uuids = read_uuids(
-        keyspace=args.keyspace,
-        table_suffix=args.train_table_suffix,
+        metadata_table=args.train_metadata_table,
         ids_cache_dir=args.ids_cache_dir,
     )
     pipe = create_dali_pipeline(
-        keyspace=args.keyspace,
-        table_suffix=args.train_table_suffix,
+        data_table=args.train_data_table,
         batch_size=args.batch_size,
         num_threads=args.workers,
         shard_id=global_rank,
@@ -455,13 +454,11 @@ def main():
 
     # val pipe
     val_uuids = read_uuids(
-        keyspace=args.keyspace,
-        table_suffix=args.val_table_suffix,
+        metadata_table=args.val_metadata_table,
         ids_cache_dir=args.ids_cache_dir,
     )
     pipe = create_dali_pipeline(
-        keyspace=args.keyspace,
-        table_suffix=args.val_table_suffix,
+        data_table=args.val_data_table,
         batch_size=args.batch_size,
         num_threads=args.workers,
         shard_id=global_rank,
