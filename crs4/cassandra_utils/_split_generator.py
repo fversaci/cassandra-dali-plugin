@@ -31,19 +31,15 @@ class split_generator:
         self._data_table = None
         self._metadata_table = None
 
-    def load_from_db(self, cass_conf, keyspace, table_suffix):
-        self._keyspace = keyspace
-        self._table_suffix = table_suffix
-        self._data_table = f"{keyspace}.data_{table_suffix}"
-        self._metadata_table = f"{keyspace}.metadata_{table_suffix}"
+    def load_from_db(self, cass_conf, data_table, metadata_table):
+        self._data_table = data_table
+        self._metadata_table = metadata_table
         self.cass_conf = cass_conf
         self._df = self.get_df_from_metadata()
         self.setup()
 
     def load_from_file(self, fn):
         dict_tmp = pickle.load(open(fn, "rb"))
-        self._keyspace = dict_tmp["keyspace"]
-        self._table_suffix = dict_tmp["table_suffix"]
         self._data_table = dict_tmp["data_table"]
         self._metadata_table = dict_tmp["metadata_table"]
         self._df = dict_tmp["df"]
@@ -57,8 +53,6 @@ class split_generator:
         ):
             raise Exception("No dataframe defined yet.")
         dict_tmp = {
-            "keyspace": self._keyspace,
-            "table_suffix": self._table_suffix,
             "data_table": self._data_table,
             "metadata_table": self._metadata_table,
             "df": self._df,
@@ -68,8 +62,8 @@ class split_generator:
 
     def setup(self):
         self.split_metadata = {
-            "keyspace": self._keyspace,
-            "table_suffix": self._table_suffix,
+            "data_table": self._data_table,
+            "metadata_table": self._metadata_table,
             "id_col": self._id_col,
             "data_col": self._data_col,
             "label_type": self._label_type,  # String {int|blob|none} to be defined in derived classes

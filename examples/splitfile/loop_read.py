@@ -62,8 +62,7 @@ def read_data(
         device_id = types.CPU_ONLY_DEVICE_ID
 
     data = pickle.load(open(split_fn, "rb"))
-    keyspace = data["keyspace"]
-    table_suffix = data["table_suffix"]
+    data_table = data["data_table"]
     row_keys = data["row_keys"]
     split = data["split"]
     source_uuids = row_keys[split[use_index]]
@@ -71,8 +70,7 @@ def read_data(
     
     bs = 128
     chosen_reader = get_cassandra_reader(
-        keyspace,
-        table_suffix,
+        data_table,
         prefetch_buffers=4,
         io_threads=8,
         name="Reader",

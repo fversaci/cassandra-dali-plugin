@@ -211,8 +211,7 @@ def to_python_float(t):
 
 @pipeline_def
 def create_dali_pipeline(
-    keyspace,
-    table_suffix,
+    data_table,
     id_col,
     label_type,
     label_col,
@@ -231,8 +230,7 @@ def create_dali_pipeline(
     wait_threads=2,
 ):
     cass_reader = get_cassandra_reader(
-        keyspace=keyspace,
-        table_suffix=table_suffix,
+        data_table=data_table,
         id_col=id_col,
         label_type=label_type,
         label_col=label_col,
@@ -302,8 +300,7 @@ def create_dali_pipeline(
 
 def read_split_file(split_fn):
     data = pickle.load(open(split_fn, "rb"))
-    keyspace = data["keyspace"]
-    table_suffix = data["table_suffix"]
+    data_table = data["data_table"]
     id_col = data["id_col"]
     data_col = data["data_col"]  # Name of the table column with actual data
     label_type = data["label_type"]
@@ -315,8 +312,7 @@ def read_split_file(split_fn):
     num_classes = data["num_classes"]
 
     return (
-        keyspace,
-        table_suffix,
+        data_table,
         id_col,
         data_col,
         label_type,
@@ -365,8 +361,7 @@ def main():
 
     ## Read split file to get data for training
     (
-        keyspace,
-        table_suffix,
+        data_table,
         id_col,
         data_col,
         label_type,
@@ -527,8 +522,7 @@ def main():
     train_uuids = list(train_uuids)
 
     pipe = create_dali_pipeline(
-        keyspace=keyspace,
-        table_suffix=table_suffix,
+        data_table=data_table,
         id_col=id_col,
         label_type=label_type,
         label_col=label_col,
@@ -555,8 +549,7 @@ def main():
     val_uuids = row_keys[split[val_index]]
     val_uuids = list(val_uuids)
     pipe = create_dali_pipeline(
-        keyspace=keyspace,
-        table_suffix=table_suffix,
+        data_table=data_table,
         id_col=id_col,
         label_type=label_type,
         label_col=label_col,

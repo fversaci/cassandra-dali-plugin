@@ -34,8 +34,8 @@ def parse_balance(arg):
 
 def main(
     *,
-    keyspace: "k" = None,
-    table_suffix: "s" = None,
+    data_table: "d" = None,
+    metadata_table: "m" = None,
     metadata_ifn=None,
     metadata_ofn=None,
     split_ofn: "o" = None,
@@ -45,8 +45,8 @@ def main(
     """
     Create Split: a splitfile generator starting from data stored on a Cassandra db.
 
-    :param keyspace: Specify the Cassandra keyspace
-    :param table_suffix: Specify the table_suffix (e.g. test is the suffix for data_test and metadata_test tables)
+    :param data_table: Specify the Cassandra datatable (i.e.: keyspace.tablename)
+    :param metadata_table: Specify the metadata table (i.e.: keyspace.tablename)
     :param metadata_ifn: The input filename of previous cached metadata
     :param metadata_ofn: The filename to cache  metadata read from db
     :param split_ofn: The name of the output splitfile
@@ -61,7 +61,7 @@ def main(
         print("Loading metadata from database")
         from private_data import cass_conf as CC
 
-        isg.load_from_db(CC, keyspace, table_suffix)
+        isg.load_from_db(CC, data_table, metadata_table)
     else:
         print("Loading metadata from file")
         isg.load_from_file(metadata_ifn)
