@@ -24,16 +24,16 @@ def save_images(
     mask_dir,
     *,
     img_format="UNCHANGED",
-    keyspace="ade20k",
-    table_suffix="orig",
+    data_table="ade20k.data_orig",
+    metadata_table="ade20k.metadata_orig",
 ):
     """Save center-cropped images to Cassandra DB or directory
 
     :param src_dir: Input directory of images
     :param mask_dir: Input directory of masks
-    :param keyspace: Name of dataset (for the Cassandra table)
-    :param table_suffix: Suffix for table names
     :param img_format: Format of output images
+    :param data_table: Name of the data table (in the form: keyspace.tablename)
+    :param metadata_table: Name of the data metadata table (in the form: keyspace.tablename)
     """
     jobs = extract_common.get_jobs(src_dir, mask_dir)
     # run spark
@@ -50,8 +50,8 @@ def save_images(
         extract_common.send_images_to_db(
             cass_conf=cass_conf,
             img_format=img_format,
-            keyspace=keyspace,
-            table_suffix=table_suffix,
+            data_table=data_table,
+            metadata_table=metadata_table,
         )
     )
 

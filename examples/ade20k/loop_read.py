@@ -46,8 +46,8 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 
 def read_data(
     *,
-    keyspace="ade20k",
-    table_suffix="orig",
+    data_table="ade20k.data_orig",
+    metadata_table="ade20k.metadata_orig",
     ids_cache_dir="ids_cache",
     reader="cassandra",
     use_gpu=False,
@@ -57,8 +57,8 @@ def read_data(
 ):
     """Read images from DB or filesystem, in a tight loop
 
-    :param keyspace: Cassandra keyspace (i.e., name of the dataset)
-    :param table_suffix: Suffix for table names
+    :param data_table: Name of the data table (in the form: keyspace.tablename)
+    :param metadata_table: Name of the data metadata table (in the form: keyspace.tablename)
     :param reader: "cassandra" or "file" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
     :param image_root: File root for images (only when reading from the filesystem)
@@ -72,14 +72,12 @@ def read_data(
 
     bs = 128
     source_uuids = read_uuids(
-        keyspace,
-        table_suffix,
+        metadata_table,
         ids_cache_dir=ids_cache_dir,
     )
     if reader == "cassandra":
         db_reader = get_cassandra_reader(
-            keyspace,
-            table_suffix,
+            data_table=data_table,
             prefetch_buffers=16,
             io_threads=8,
             label_type="blob",
