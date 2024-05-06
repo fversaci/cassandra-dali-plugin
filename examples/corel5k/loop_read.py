@@ -46,16 +46,16 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 
 def read_data(
     *,
-    keyspace="corel5k",
-    table_suffix="orig",
+    data_table="corel5k.data_orig",
+    metadata_table="corel5k.metadata_orig",
     ids_cache_dir="ids_cache",
     use_gpu=False,
     epochs=10,
 ):
     """Read images from DB or filesystem, in a tight loop
 
-    :param keyspace: Cassandra keyspace (i.e., name of the dataset)
-    :param table_suffix: Suffix for table names
+    :param data_table: Name of datatable (i.e.: keyspace.tablename)
+    :param metadata_table: Name of metadatatable (i.e.: keyspace.tablename)
     :param reader: "cassandra" or "file" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
     :param ids_cache_dir: Directory containing the cached list of UUIDs (default: ./ids_cache)
@@ -67,13 +67,11 @@ def read_data(
 
     bs = 128
     source_uuids = read_uuids(
-        keyspace,
-        table_suffix,
+        metadata_table,
         ids_cache_dir=ids_cache_dir,
     )
     db_reader = get_cassandra_reader(
-        keyspace,
-        table_suffix,
+        data_table=data_table,
         prefetch_buffers=16,
         io_threads=8,
         label_type="blob",

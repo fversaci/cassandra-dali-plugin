@@ -24,14 +24,12 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 
 def cache_uuids(
     *,
-    keyspace="corel5k",
-    table_suffix,
+    metadata_table,
     id_col="patch_id",
 ):
     """Cache uuids from DB to local file (via pickle)
 
-    :param keyspace: Cassandra keyspace (i.e., name of the dataset)
-    :param table_suffix: Suffix for table names
+    :param metadata_table: Cassandra metadata table (i.e., keyspace.name_of_the_metadata_table)
     :param id_col: Column containing the UUIDs
     """
     # only one process per node should write the data
@@ -40,14 +38,14 @@ def cache_uuids(
 
     # set uuids cache directory
     ids_cache = "ids_cache"
-    rows_fn = os.path.join(ids_cache, f"{keyspace}_{table_suffix}.rows")
+    rows_fn = os.path.join(ids_cache, f"{metadata_table}.rows")
 
     # Load list of uuids from Cassandra DB...
     lm = MiniListManager(
         cass_conf=CC,
     )
     conf = {
-        "table": f"{keyspace}.metadata_{table_suffix}",
+        "table": metadata_table,
         "id_col": id_col,
     }
     lm.set_config(conf)

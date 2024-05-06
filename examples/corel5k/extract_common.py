@@ -92,14 +92,14 @@ def get_jobs(src_dir, npy_dir, label_file):
 def send_images_to_db(
     cass_conf,
     img_format,
-    keyspace,
-    table_suffix,
+    data_table,
+    metadata_table,
 ):
     def ret(jobs):
         cw = CassandraSegmentationWriter(
             cass_conf=cass_conf,
-            table_data=f"{keyspace}.data_{table_suffix}",
-            table_metadata=f"{keyspace}.metadata_{table_suffix}",
+            data_table=data_table,
+            metadata_table=metadata_table,
             id_col="patch_id",
             label_col="label",
             data_col="data",

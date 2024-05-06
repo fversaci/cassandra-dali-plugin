@@ -22,8 +22,8 @@ def save_images(
     label_file,
     *,
     img_format="UNCHANGED",
-    keyspace="corel5k",
-    table_suffix="orig",
+    data_table="corel5k.data_orig",
+    metadata_table="corel5k.metadata_orig",
 ):
     """Save center-cropped images to Cassandra DB or directory
 
@@ -31,8 +31,8 @@ def save_images(
     :param npy_dir: Directory which will contain the labels as npy files
     :param label_file: JSON with the labels
     :param img_format: Format of output images
-    :param keyspace: Name of dataset (for the Cassandra table)
-    :param table_suffix: Suffix for table names
+    :param data_table: Name of datatable (i.e.: keyspace.tablename)
+    :param metadata_table: Name of metadatatable (i.e.: keyspace.tablename)
     """
     jobs = extract_common.get_jobs(src_dir, npy_dir, label_file)
     # Read Cassandra parameters
@@ -41,8 +41,8 @@ def save_images(
     extract_common.send_images_to_db(
         cass_conf=cass_conf,
         img_format=img_format,
-        keyspace=keyspace,
-        table_suffix=table_suffix,
+        data_table=data_table,
+        metadata_table=metadata_table,
     )(jobs)
 
 
