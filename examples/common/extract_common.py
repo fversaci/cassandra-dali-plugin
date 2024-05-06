@@ -88,7 +88,7 @@ def send_images_to_db(
     cass_conf,
     img_format,
     data_table,
-    metadata_table
+    metadata_table,
     img_size=def_size,
 ):
     def ret(jobs):

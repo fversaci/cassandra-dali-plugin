@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # To insert in DB, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --keyspace=imagenette --split-subdir=train --table-suffix=train_256_jpg
+# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --data-table=imagenette.data_train_256_jpg --metadata-table=imagenette.metadatadata_train_256_jpg --split-subdir=train
 
 # To save files in a directory, run with, e.g.,
 # python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
@@ -53,7 +53,7 @@ def save_images(
             cass_conf=cass_conf,
             img_format=img_format,
             data_table=data_table,
-            metadata_table=table_metadata,
+            metadata_table=metadata_table,
             img_size=img_size,
         )(jobs)
     else:
