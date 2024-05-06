@@ -87,15 +87,15 @@ def get_jobs(src_dir, splits=["train", "val"]):
 def send_images_to_db(
     cass_conf,
     img_format,
-    keyspace,
-    table_suffix,
+    data_table,
+    metadata_table
     img_size=def_size,
 ):
     def ret(jobs):
         cw = CassandraClassificationWriter(
             cass_conf=cass_conf,
-            table_data=f"{keyspace}.data_{table_suffix}",
-            table_metadata=f"{keyspace}.metadata_{table_suffix}",
+            data_table=data_table,
+            metadata_table=metadata_table,
             id_col="patch_id",
             label_col="label",
             data_col="data",

@@ -27,8 +27,8 @@ def save_images(
     src_dir,
     *,
     img_format="JPEG",
-    keyspace="imagenette",
-    table_suffix="train_256_jpg",
+    data_table="imagenette.data_train_256_jpg",
+    metadata_table="imagenette.metadatadata_train_256_jpg",
     split_subdir="train",
     target_dir=None,
     img_size=256,
@@ -37,8 +37,8 @@ def save_images(
 
     :param src_dir: Input directory for Imagenette
     :param img_format: Format of output images
-    :param keyspace: Name of dataset (for the Cassandra table)
-    :param table_suffix: Suffix for table names
+    :param data_table: Name of data table data in the format keyspace.tablename
+    :param metadata_table: Name of data table data in the format keyspace.tablename
     :param target_dir: Output directory (when saving to filesystem)
     :param split_subdir: Subdir to be processed
     :param img_size: Target image size
@@ -52,8 +52,8 @@ def save_images(
         extract_common.send_images_to_db(
             cass_conf=cass_conf,
             img_format=img_format,
-            keyspace=keyspace,
-            table_suffix=table_suffix,
+            data_table=data_table,
+            metadata_table=table_metadata,
             img_size=img_size,
         )(jobs)
     else:
