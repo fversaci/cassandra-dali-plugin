@@ -28,7 +28,7 @@ def save_images(
     *,
     img_format="JPEG",
     data_table="imagenette.data_train_256_jpg",
-    metadata_table="imagenette.metadatadata_train_256_jpg",
+    metadata_table="imagenette.metadata_train_256_jpg",
     split_subdir="train",
     target_dir=None,
     img_size=256,
