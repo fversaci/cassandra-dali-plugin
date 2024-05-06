@@ -24,8 +24,8 @@ class CassandraSegmentationWriter(CassandraWriter):
     def __init__(
         self,
         cass_conf,
-        table_data,
-        table_metadata,
+        data_table,
+        metadata_table,
         id_col,
         label_col,
         data_col,
@@ -34,8 +34,8 @@ class CassandraSegmentationWriter(CassandraWriter):
     ):
         super().__init__(
             cass_conf=cass_conf,
-            table_data=table_data,
-            table_metadata=table_metadata,
+            data_table=data_table,
+            metadata_table=metadata_table,
             id_col=id_col,
             label_col=label_col,
             data_col=data_col,
@@ -47,11 +47,11 @@ class CassandraSegmentationWriter(CassandraWriter):
         self.concurrency = 32
 
     def set_query(self):
-        query_data = f"INSERT INTO {self.table_data} ("
+        query_data = f"INSERT INTO {self.data_table} ("
         query_data += (
             f"{self.id_col}, {self.label_col}, {self.data_col}) VALUES (?,?,?)"
         )
-        query_meta = f"INSERT INTO {self.table_metadata} ("
+        query_meta = f"INSERT INTO {self.metadata_table} ("
         query_meta += f"{self.id_col}, {', '.join(self.cols)}) "
         query_meta += f"VALUES ({', '.join(['?']*(len(self.cols)+1))})"
 

@@ -19,8 +19,8 @@ class CassandraWriter:
     def __init__(
         self,
         cass_conf,
-        table_data,
-        table_metadata,
+        data_table,
+        metadata_table,
         id_col,
         label_col,
         data_col,
@@ -28,8 +28,8 @@ class CassandraWriter:
         get_data,
     ):
         self.get_data = get_data
-        self.table_data = table_data
-        self.table_metadata = table_metadata
+        self.data_table = data_table
+        self.metadata_table = metadata_table
         self.id_col = id_col
         self.label_col = label_col
         self.data_col = data_col
