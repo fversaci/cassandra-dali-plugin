@@ -21,8 +21,7 @@ except ImportError:
 
 @pipeline_def
 def create_dali_pipeline(
-    keyspace,
-    table_suffix,
+    data_table,
     crop,
     size,
     source_uuids,
@@ -38,8 +37,7 @@ def create_dali_pipeline(
     wait_threads=2,
 ):
     cass_reader = get_cassandra_reader(
-        keyspace=keyspace,
-        table_suffix=table_suffix,
+        data_table=data_table,
         prefetch_buffers=prefetch_buffers,
         shard_id=shard_id,
         num_shards=num_shards,

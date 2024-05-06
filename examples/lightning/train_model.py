@@ -46,25 +46,28 @@ def parse():
 
     parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
     parser.add_argument(
-        "--keyspace",
-        "-k",
-        metavar="KEYSP",
-        default="imagenette",
-        help="cassandra keyspace, i.e., dataset name (default: imagenette)",
+        "--train-data-table",
+        metavar="DATA TABLE (training)",
+        default="imagenette.data_train_256_jpg",
+        help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train_256_jpg)",
     )
     parser.add_argument(
-        "--train-table-suffix",
-        metavar="SUFF",
-        default="train_orig",
-        choices=["train_orig", "train_256_jpg", "train_512_jpg"],
-        help="Suffix for table names (default: orig)",
+        "--train-metadata-table",
+        metavar="METADATA TABLE (training)",
+        default="imagenette.metadata_train_256_jpg",
+        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_train_256_jpg)",
     )
     parser.add_argument(
-        "--val-table-suffix",
-        metavar="SUFF",
-        default="val_orig",
-        choices=["val_orig", "val_256_jpg", "val_512_jpg"],
-        help="Suffix for table names (default: orig)",
+        "--val-data-table",
+        metavar="DATA TABLE (validation)",
+        default="imagenette.data_val_256_jpg",
+        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò_256_jpg)",
+    )
+    parser.add_argument(
+        "--val-metadata-table",
+        metavar="METADATA TABLE (validation)",
+        default="imagenette.metadata_val_256_jpg",
+        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_val_256_jpg)",
     )
     parser.add_argument(
         "--ids-cache-dir",
@@ -166,13 +169,13 @@ def parse():
         help="Disable storing the best and last epoch model as checkpoint",
     )
     parser.add_argument(
-            "--log-tensorboard",
+        "--log-tensorboard",
         dest="tensorboard",
         action="store_true",
         help="Log metrics to tensorboard format",
     )
     parser.add_argument(
-            "--log-csv",
+        "--log-csv",
         dest="csv",
         action="store_true",
         help="Log metrics to csv file",
@@ -333,8 +336,8 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         
 
         # Create DALI pipelines (with cassandra plugins)
-        train_pipeline = self.GetPipeline(args, args.train_table_suffix, is_training=True, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
-        val_pipeline = self.GetPipeline(args, args.val_table_suffix, is_training=False, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
+        train_pipeline = self.GetPipeline(args, args.train_data_table, args.train_metadata_table, is_training=True, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
+        val_pipeline = self.GetPipeline(args, args.val_data_table, args.val_metadata_table, is_training=False, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
 
         # Wrapper class to allow for adding code to the methods
         class LightningWrapper(DALIClassificationIterator):
@@ -362,16 +365,14 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
     #     self.val_loader.reset()
 
     @staticmethod
-    def GetPipeline(args, table_suffix, is_training, device_id, shard_id, num_shards, num_threads):
+    def GetPipeline(args, data_table, metadata_table, is_training, device_id, shard_id, num_shards, num_threads):
         in_uuids = read_uuids(
-            keyspace = args.keyspace,
-            table_suffix = table_suffix,
+            metadata_table = metadata_table,
             ids_cache_dir = args.ids_cache_dir,
         )
         
         pipe = create_dali_pipeline(
-            keyspace = args.keyspace,
-            table_suffix = table_suffix,
+            data_table = data_table,
             batch_size = args.batch_size,
             shuffle_every_epoch = True,
             num_threads = args.workers,
