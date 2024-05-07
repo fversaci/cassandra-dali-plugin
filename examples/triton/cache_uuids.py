@@ -1,1 +1,1 @@
-../imagenette/cache_uuids.py
+../common/cache_uuids.py
