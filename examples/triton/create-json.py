@@ -21,8 +21,7 @@ import json
 
 def save_to_json(in_name="UUID"):
     uuids = read_uuids(
-        keyspace="imagenette",
-        table_suffix="train_256_jpg",
+        metadata_table="imagenette.metadata_train_256_jpg",
         ids_cache_dir="ids_cache",
     )
     uuids, real_sz = get_shard(
@@ -48,8 +47,7 @@ def save_to_json(in_name="UUID"):
 
 def save_to_json_stream(in_name="UUID", bs=128):
     uuids = read_uuids(
-        keyspace="imagenette",
-        table_suffix="train_256_jpg",
+        metadata_table="imagenette.metadata_train_256_jpg",
         ids_cache_dir="ids_cache",
     )
     uuids, real_sz = get_shard(

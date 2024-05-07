@@ -29,11 +29,10 @@ plugin_manager.load_library(plugin_path)
 
 
 def read_uuids(
-    keyspace,
-    table_suffix,
+    metadata_table,
     ids_cache_dir,
 ):
-    rows_fn = os.path.join(ids_cache_dir, f"{keyspace}_{table_suffix}.rows")
+    rows_fn = os.path.join(ids_cache_dir, f"{metadata_table}.rows")
     print("Loading list of uuids from cached file... ", end="", flush=True)
     with open(rows_fn, "rb") as f:
         stuff = pickle.load(f)
@@ -45,8 +44,7 @@ def read_uuids(
 
 
 def get_cassandra_reader(
-    keyspace,
-    table_suffix,
+    data_table,
     mini_batch_size=-1,
     id_col="patch_id",
     label_type="int",
@@ -67,7 +65,6 @@ def get_cassandra_reader(
     # Read Cassandra parameters
     from private_data import cass_conf as CC
 
-    table = f"{keyspace}.data_{table_suffix}"
     if CC.cloud_config:
         connect_bundle = CC.cloud_config["secure_connect_bundle"]
     else:
@@ -86,7 +83,7 @@ def get_cassandra_reader(
         ssl_own_key=CC.ssl_own_key,
         ssl_own_key_pass=CC.ssl_own_key_pass,
         mini_batch_size=mini_batch_size,
-        table=table,
+        table=data_table,
         label_col=label_col,
         data_col=data_col,
         id_col=id_col,

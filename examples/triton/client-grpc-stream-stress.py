@@ -53,8 +53,7 @@ def start_inferring():
     model_name = "dali_cassandra_decoupled_stress"
 
     uuids = read_uuids(
-        keyspace="imagenette",
-        table_suffix="train_256_jpg",
+        metadata_table="imagenette.metadata_train_256_jpg",
         ids_cache_dir="ids_cache",
     )
     bs = 2048  # megabatch size

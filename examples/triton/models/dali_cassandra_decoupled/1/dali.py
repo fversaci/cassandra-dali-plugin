@@ -19,8 +19,7 @@ max_batch_size = 256
 @autoserialize
 @pipeline_def(batch_size=max_batch_size, num_threads=16)
 def create_dali_pipeline(
-    keyspace="imagenette",
-    table_suffix="train_256_jpg",
+    data_table="imagenette.data_train_256_jpg",
     crop=224,
     size=256,
     dali_cpu=False,
@@ -31,8 +30,7 @@ def create_dali_pipeline(
     wait_threads=4,
 ):
     cass_reader = get_cassandra_reader(
-        keyspace=keyspace,
-        table_suffix=table_suffix,
+        data_table=data_table,
         prefetch_buffers=prefetch_buffers,
         mini_batch_size=64,
         io_threads=io_threads,
