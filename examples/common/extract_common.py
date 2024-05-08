@@ -109,30 +109,30 @@ def send_images_to_db(
     return ret
 
 
-def save_image_to_dir(target_dir, path, label, raw_data, table_suffix):
+def save_image_to_dir(target_dir, path, label, raw_data, file_ext):
     out_dir = os.path.join(target_dir, str(label))
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
-    out_name = os.path.join(out_dir, str(uuid.uuid4()) + table_suffix)
+    out_name = os.path.join(out_dir, str(uuid.uuid4()) + file_ext)
     with open(out_name, "wb") as fd:
         fd.write(raw_data)
 
 
 def save_images_to_dir(target_dir, img_format, img_size=def_size):
     if img_format == "JPEG":
-        table_suffix = ".jpg"
+        file_ext = ".jpg"
     elif img_format == "PNG":
-        table_suffix = ".png"
+        file_ext = ".png"
     elif img_format == "TIFF":
-        table_suffix = ".tiff"
+        file_ext = ".tiff"
     elif img_format == "UNCHANGED":
-        table_suffix = ".jpg"
+        file_ext = ".jpg"
     else:
         raise ("Supporting only JPEG, PNG, TIFF, and UNCHANGED")
 
     def ret(jobs):
         for path, label, _ in tqdm(jobs):
             raw_data = get_data(img_format, img_size=img_size)(path)
-            save_image_to_dir(target_dir, path, label, raw_data, table_suffix)
+            save_image_to_dir(target_dir, path, label, raw_data, file_ext)
 
     return ret
