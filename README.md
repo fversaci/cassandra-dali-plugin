@@ -129,10 +129,9 @@ in the database.
 See the following annotated example for details on how to use this plugin:
 - [Imagenette](examples/imagenette/)
 
-#### Lightning
-
-A variant of the same example implemented with PyTorch Lightning is available in:
-- [Lightning](examples/lightning)
+A variant of the same example implemented with [PyTorch Lightning](https://github.com/Lightning-AI/pytorch-lightning)
+is available in:
+- [Imagenette (Lightning)](examples/lightning)
 
 ### Segmentation
 
