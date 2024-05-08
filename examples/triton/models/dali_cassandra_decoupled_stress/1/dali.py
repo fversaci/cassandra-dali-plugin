@@ -16,6 +16,7 @@ from nvidia.dali.pipeline import pipeline_def
 
 max_batch_size = 256
 
+
 @autoserialize
 @pipeline_def(batch_size=max_batch_size, num_threads=16)
 def create_dali_pipeline(

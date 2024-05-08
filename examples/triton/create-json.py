@@ -45,6 +45,7 @@ def save_to_json(in_name="UUID"):
     with open("uuids.json", "w") as f:
         json.dump(j, f, indent=2)
 
+
 def save_to_json_stream(in_name="UUID", bs=128):
     uuids = read_uuids(
         metadata_table="imagenette.metadata_train_256_jpg",
@@ -69,6 +70,7 @@ def save_to_json_stream(in_name="UUID", bs=128):
     # save as json
     with open(f"uuids_{bs}.json", "w") as f:
         json.dump(j, f, indent=2)
+
 
 # parse arguments
 if __name__ == "__main__":

@@ -67,7 +67,7 @@ def read_data(
     split = data["split"]
     source_uuids = row_keys[split[use_index]]
     source_uuids = list(source_uuids)
-    
+
     bs = 128
     chosen_reader = get_cassandra_reader(
         data_table,
@@ -110,8 +110,8 @@ def read_data(
     pl = get_dali_pipeline()
     pl.build()
 
-    shard_size = math.ceil(len(source_uuids)/world_size)
-    steps = math.ceil(shard_size/bs)
+    shard_size = math.ceil(len(source_uuids) / world_size)
+    steps = math.ceil(shard_size / bs)
     ########################################################################
     # DALI iterator
     ########################################################################

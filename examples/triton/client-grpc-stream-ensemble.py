@@ -64,7 +64,7 @@ def start_inferring():
         shard_id=0,
         num_shards=1,
     )
-    num_minibatches = math.ceil(bs/mbs)
+    num_minibatches = math.ceil(bs / mbs)
     user_data = UserData()
     triton_client.start_stream(callback=partial(callback, user_data))
     for _ in trange(3):
@@ -89,7 +89,7 @@ def start_inferring():
                 # print(f"received bs: {ten.shape}")
         # embed()
 
-                
+
 # parse arguments
 if __name__ == "__main__":
     start_inferring()

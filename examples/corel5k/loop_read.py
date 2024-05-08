@@ -109,8 +109,8 @@ def read_data(
     pl = get_dali_pipeline()
     pl.build()
 
-    shard_size = math.ceil(len(source_uuids)/world_size)
-    steps = math.ceil(shard_size/bs)
+    shard_size = math.ceil(len(source_uuids) / world_size)
+    steps = math.ceil(shard_size / bs)
     ########################################################################
     # DALI iterator
     ########################################################################

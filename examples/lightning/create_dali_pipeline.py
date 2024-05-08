@@ -19,6 +19,7 @@ except ImportError:
 ### DALI PIPELINE CRATION CODE ###
 ##################################
 
+
 @pipeline_def
 def create_dali_pipeline(
     data_table,
@@ -102,5 +103,3 @@ def create_dali_pipeline(
     )
     labels = labels.gpu()
     return (images, labels)
-
-

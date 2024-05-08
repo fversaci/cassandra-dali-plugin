@@ -822,7 +822,7 @@ def adjust_learning_rate(optimizer, epoch, step, len_epoch):
     if epoch >= 80:
         factor = factor + 1
 
-    lr = args.lr * (0.1 ** factor)
+    lr = args.lr * (0.1**factor)
 
     """Warmup"""
     if epoch < 5:

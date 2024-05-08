@@ -35,6 +35,7 @@ except ImportError:
         "Please install DALI from https://www.github.com/NVIDIA/DALI to run this example."
     )
 
+
 def parse():
     model_names = sorted(
         name
@@ -208,7 +209,7 @@ def parse():
 
     parser.add_argument("--keep-batchnorm-fp32", type=str, default=None)
     parser.add_argument("--channels-last", type=bool, default=False)
-    
+
     args = parser.parse_args()
     return args
 
@@ -217,15 +218,18 @@ def parse():
 ### LIGHTNING MODELS ###
 ########################
 
-## Base class: no DALI 
+## Base class: no DALI
+
 
 class ImageNetLightningModel(L.LightningModule):
     MODEL_NAMES = sorted(
         name
         for name in models.__dict__
-        if name.islower() and not name.startswith("__") and callable(models.__dict__[name])
+        if name.islower()
+        and not name.startswith("__")
+        and callable(models.__dict__[name])
     )
-    
+
     ## LightningModule has two methods to return global_rank and local_rank taking them from self.trainer.
 
     def __init__(
@@ -238,8 +242,7 @@ class ImageNetLightningModel(L.LightningModule):
         batch_size: int = 4,
         workers: int = 0,
         **kwargs,
-        ):
-        
+    ):
         super().__init__()
         self.save_hyperparameters()
         self.arch = arch
@@ -250,10 +253,10 @@ class ImageNetLightningModel(L.LightningModule):
         self.batch_size = batch_size
         self.workers = workers
 
-        print('*' * 80)
-        print(f'*************** Loading model {self.arch}')
-        print('*' * 80)
-    
+        print("*" * 80)
+        print(f"*************** Loading model {self.arch}")
+        print("*" * 80)
+
         self.model = models.__dict__[self.arch](weights=self.weights)
 
     def forward(self, x):
@@ -262,16 +265,40 @@ class ImageNetLightningModel(L.LightningModule):
     def training_step(self, batch, batch_idx):
         images = batch[0]["data"]
         target = batch[0]["label"].squeeze(-1).long()
-        
+
         # Get output from the model
         output = self(images)
 
         loss_train = F.cross_entropy(output, target)
-        
+
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
-        self.log("train_loss", loss_train, prog_bar=True, on_step=False, on_epoch=True, logger=True, sync_dist=True)
-        self.log("train_acc1", acc1, prog_bar=True, on_step=False, on_epoch=True, logger=True, sync_dist=True)
-        self.log("train_acc5", acc5, prog_bar=False, on_step=False, on_epoch=True, logger=True, sync_dist=True)
+        self.log(
+            "train_loss",
+            loss_train,
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "train_acc1",
+            acc1,
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
+        self.log(
+            "train_acc5",
+            acc5,
+            prog_bar=False,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
         return loss_train
 
     def eval_step(self, batch, batch_idx, prefix: str):
@@ -280,13 +307,37 @@ class ImageNetLightningModel(L.LightningModule):
         output = self(images)
         loss_val = F.cross_entropy(output, target)
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
-        self.log(f"{prefix}_loss", loss_val, prog_bar=True, on_step=False, on_epoch=True, sync_dist=True, logger=True)
-        self.log(f"{prefix}_acc1", acc1,  prog_bar=True, on_step=False, on_epoch=True, sync_dist=True, logger=True)
-        self.log(f"{prefix}_acc5", acc5, prog_bar=False, on_step=False, on_epoch=True, sync_dist=True, logger=True)
+        self.log(
+            f"{prefix}_loss",
+            loss_val,
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+            logger=True,
+        )
+        self.log(
+            f"{prefix}_acc1",
+            acc1,
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+            logger=True,
+        )
+        self.log(
+            f"{prefix}_acc5",
+            acc5,
+            prog_bar=False,
+            on_step=False,
+            on_epoch=True,
+            sync_dist=True,
+            logger=True,
+        )
 
     def validation_step(self, batch, batch_idx):
         return self.eval_step(batch, batch_idx, "val")
-    
+
     @staticmethod
     def __accuracy(output, target, topk=(1,)):
         """Computes the accuracy over the k top predictions for the specified values of k."""
@@ -305,22 +356,29 @@ class ImageNetLightningModel(L.LightningModule):
             return res
 
     def configure_optimizers(self):
-        # Scale learning rate based on global batch size. 
+        # Scale learning rate based on global batch size.
         # The Actual batch size in a distributed training setup is muliplied by the number of workers k
         # Using the linear Scaling Rule (When scaling the batch size by k, scale the learning rate also by k)
         self.lr = self.lr * self.trainer.world_size
-        optimizer = optim.SGD(self.parameters(), lr=self.lr, momentum=self.momentum, weight_decay=self.weight_decay)
-        #scheduler = lr_scheduler.LambdaLR(optimizer, lambda epoch: 0.1 ** (epoch // 30))
-        #return [optimizer], [scheduler]
+        optimizer = optim.SGD(
+            self.parameters(),
+            lr=self.lr,
+            momentum=self.momentum,
+            weight_decay=self.weight_decay,
+        )
+        # scheduler = lr_scheduler.LambdaLR(optimizer, lambda epoch: 0.1 ** (epoch // 30))
+        # return [optimizer], [scheduler]
         return [optimizer]
 
 
-## Derived class to add the Cassandra DALI pipeline 
+## Derived class to add the Cassandra DALI pipeline
+
 
 class DALI_ImageNetLightningModel(ImageNetLightningModel):
-    def __init__(self, 
-            args,
-        ):
+    def __init__(
+        self,
+        args,
+    ):
         super().__init__(**vars(args))
 
     def prepare_data(self):
@@ -333,11 +391,28 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         device_id = self.local_rank
         shard_id = self.global_rank
         num_shards = self.trainer.world_size
-        
 
         # Create DALI pipelines (with cassandra plugins)
-        train_pipeline = self.GetPipeline(args, args.train_data_table, args.train_metadata_table, is_training=True, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
-        val_pipeline = self.GetPipeline(args, args.val_data_table, args.val_metadata_table, is_training=False, device_id=device_id, shard_id=shard_id, num_shards=num_shards, num_threads=8)
+        train_pipeline = self.GetPipeline(
+            args,
+            args.train_data_table,
+            args.train_metadata_table,
+            is_training=True,
+            device_id=device_id,
+            shard_id=shard_id,
+            num_shards=num_shards,
+            num_threads=8,
+        )
+        val_pipeline = self.GetPipeline(
+            args,
+            args.val_data_table,
+            args.val_metadata_table,
+            is_training=False,
+            device_id=device_id,
+            shard_id=shard_id,
+            num_shards=num_shards,
+            num_threads=8,
+        )
 
         # Wrapper class to allow for adding code to the methods
         class LightningWrapper(DALIClassificationIterator):
@@ -349,45 +424,64 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 return out
 
         # Creatind actual loaders used by the lightning module to get data (train_dataloader and val_dataloader methods)
-        self.train_loader = LightningWrapper(train_pipeline, last_batch_policy=LastBatchPolicy.PARTIAL, auto_reset=True, reader_name="Reader")
-        self.val_loader = LightningWrapper(val_pipeline, last_batch_policy=LastBatchPolicy.PARTIAL, auto_reset=True, reader_name="Reader")
-    
+        self.train_loader = LightningWrapper(
+            train_pipeline,
+            last_batch_policy=LastBatchPolicy.PARTIAL,
+            auto_reset=True,
+            reader_name="Reader",
+        )
+        self.val_loader = LightningWrapper(
+            val_pipeline,
+            last_batch_policy=LastBatchPolicy.PARTIAL,
+            auto_reset=True,
+            reader_name="Reader",
+        )
+
     def train_dataloader(self):
         return self.train_loader
-    
+
     def val_dataloader(self):
         return self.val_loader
-   
+
     # def on_train_epoch_end(self):
     #     self.train_loader.reset()
-    # 
+    #
     # def on_validation_epoch_end(self):
     #     self.val_loader.reset()
 
     @staticmethod
-    def GetPipeline(args, data_table, metadata_table, is_training, device_id, shard_id, num_shards, num_threads):
+    def GetPipeline(
+        args,
+        data_table,
+        metadata_table,
+        is_training,
+        device_id,
+        shard_id,
+        num_shards,
+        num_threads,
+    ):
         in_uuids = read_uuids(
-            metadata_table = metadata_table,
-            ids_cache_dir = args.ids_cache_dir,
+            metadata_table=metadata_table,
+            ids_cache_dir=args.ids_cache_dir,
         )
-        
+
         pipe = create_dali_pipeline(
-            data_table = data_table,
-            batch_size = args.batch_size,
-            shuffle_every_epoch = True,
-            num_threads = args.workers,
-            shard_id = shard_id,
-            num_shards = num_shards,
-            source_uuids = in_uuids,
-            device_id = device_id,
-            seed = 1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
-            crop = args.crop_size,
-            size = args.val_size,
-            dali_cpu = args.dali_cpu,
-            is_training = is_training,
+            data_table=data_table,
+            batch_size=args.batch_size,
+            shuffle_every_epoch=True,
+            num_threads=args.workers,
+            shard_id=shard_id,
+            num_shards=num_shards,
+            source_uuids=in_uuids,
+            device_id=device_id,
+            seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
+            crop=args.crop_size,
+            size=args.val_size,
+            dali_cpu=args.dali_cpu,
+            is_training=is_training,
         )
         pipe.build()
-        
+
         return pipe
 
 
@@ -402,7 +496,7 @@ def main():
         profiler = None
 
     print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
-    
+
     if args.arch == "inception_v3":
         raise RuntimeError("Currently, inception_v3 is not supported by this example.")
         # crop_size = 299
@@ -410,7 +504,6 @@ def main():
     else:
         args.crop_size = 224
         args.val_size = 256
-
 
     # create lightning model
     model = DALI_ImageNetLightningModel(args)
@@ -421,23 +514,31 @@ def main():
     else:
         ckpt_path = None
 
-    #if args.evaluate:
+    # if args.evaluate:
     #    validate(val_loader, model, criterion)
     #    return
 
-    ### Callbacks 
+    ### Callbacks
     callbacks_l = []
 
     if args.patience:
-        print (f"-- Early stopping enabled with patience={args.patience}")
-        early_stopping = EarlyStopping(monitor='val_loss', mode='min', patience=args.patience)
+        print(f"-- Early stopping enabled with patience={args.patience}")
+        early_stopping = EarlyStopping(
+            monitor="val_loss", mode="min", patience=args.patience
+        )
         callbacks_l.append(early_stopping)
 
     if not args.no_checkpoints:
-        print ("-- Enabling checkpointing for last epoch and best model")
-        checkpoint = ModelCheckpoint(monitor='val_acc1', mode='max', dirpath='checkpoints', save_last=True, save_top_k=1)
+        print("-- Enabling checkpointing for last epoch and best model")
+        checkpoint = ModelCheckpoint(
+            monitor="val_acc1",
+            mode="max",
+            dirpath="checkpoints",
+            save_last=True,
+            save_top_k=1,
+        )
         callbacks_l.append(checkpoint)
-        
+
     ### Loggers
     loggers_l = []
 
@@ -448,35 +549,37 @@ def main():
     if args.csv:
         csv_logger = logger = CSVLogger("logs_csv", name="my_model")
         loggers_l.append(csv_logger)
-    
+
     if not loggers_l:
-        loggers_l=None # To prevent warnings in the case metrics are logged only to the progress bar
+        loggers_l = None  # To prevent warnings in the case metrics are logged only to the progress bar
 
     ### Lightning Trainer
     if args.num_gpu > 1:
-        trainer = L.Trainer(max_epochs=args.epochs,  
-                accelerator="gpu", 
-                devices=args.num_gpu, 
-                strategy='ddp', 
-                profiler=profiler, 
-                enable_checkpointing=True,
-                logger=loggers_l, 
-                callbacks=callbacks_l,
-                num_sanity_val_steps=0,
-                precision="16-mixed"
-                )
+        trainer = L.Trainer(
+            max_epochs=args.epochs,
+            accelerator="gpu",
+            devices=args.num_gpu,
+            strategy="ddp",
+            profiler=profiler,
+            enable_checkpointing=True,
+            logger=loggers_l,
+            callbacks=callbacks_l,
+            num_sanity_val_steps=0,
+            precision="16-mixed",
+        )
     else:
-        trainer = L.Trainer(max_epochs=args.epochs,  
-                accelerator="gpu", 
-                devices=1, 
-                profiler=profiler, 
-                enable_checkpointing=True,
-                logger=loggers_l, 
-                callbacks=callbacks_l,
-                num_sanity_val_steps=0,
-                precision="16-mixed"
-                )
-    
+        trainer = L.Trainer(
+            max_epochs=args.epochs,
+            accelerator="gpu",
+            devices=1,
+            profiler=profiler,
+            enable_checkpointing=True,
+            logger=loggers_l,
+            callbacks=callbacks_l,
+            num_sanity_val_steps=0,
+            precision="16-mixed",
+        )
+
     trainer.fit(model, ckpt_path=ckpt_path)
 
 

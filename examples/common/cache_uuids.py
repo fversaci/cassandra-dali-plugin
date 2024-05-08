@@ -17,6 +17,7 @@ from clize import run
 from crs4.cassandra_utils import MiniListManager
 from private_data import cass_conf as CC
 
+
 def cache_uuids(
     *,
     metadata_table,

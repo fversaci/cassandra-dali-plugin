@@ -67,21 +67,21 @@ def get_jobs(src_dir, npy_dir, label_file):
         train = json.load(f)
     # map labels to numbers
     labels = dict()
-    for n, l in enumerate(train['labels']):
+    for n, l in enumerate(train["labels"]):
         labels[l] = n
     sz = len(labels)  # 260 possible labels
     # save npy labels for each image
-    samples = train['samples']
+    samples = train["samples"]
     for sample in samples:
-        fn = sample['image_name']
+        fn = sample["image_name"]
         path_img = os.path.join(src_dir, fn)
-        labs = sample['image_labels']
-        labs = [labels[l] for l in labs] # convert to numbers
+        labs = sample["image_labels"]
+        labs = [labels[l] for l in labs]  # convert to numbers
         tens_lab = np.zeros(sz)
         tens_lab[labs] = 1
         path_npy = os.path.join(npy_dir, fn)
         path_npy = Path(path_npy).with_suffix(".npy")
-        np.save(path_npy, tens_lab)        
+        np.save(path_npy, tens_lab)
         path_img = str(path_img)
         path_npy = str(path_npy)
         jobs.append((path_img, path_npy))

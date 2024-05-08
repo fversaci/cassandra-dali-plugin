@@ -74,12 +74,7 @@ def get_jobs(src_dir, mask_dir, new_suffix=".jpg"):
     return jobs
 
 
-def send_images_to_db(
-    cass_conf,
-    img_format,
-    data_table,
-    metadata_table
-):
+def send_images_to_db(cass_conf, img_format, data_table, metadata_table):
     def ret(jobs):
         cw = CassandraSegmentationWriter(
             cass_conf=cass_conf,
