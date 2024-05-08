@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
-FROM nvcr.io/nvidia/tritonserver:24.04-py3
+FROM nvcr.io/nvidia/tritonserver:24.03-py3
 
 # install some useful tools
 RUN \
