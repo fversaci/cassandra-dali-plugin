@@ -1,4 +1,5 @@
-### Starting and filling the DB
+# Imagenette Dataset with Lightning
+## Starting and filling the DB
 
 Once the Docker container is set up, it is possible to start the
 database and populate it with images from the imagenette dataset using
@@ -15,7 +16,6 @@ as a Cassandra dataset and then read the data into NVIDIA DALI.
 The raw files are already present in the `/tmp` directory of the
 provided [Docker container](../../README.md#running-the-docker-container),
 from which the following commands can be run.
-
 
 ## Multi-GPU training
 
