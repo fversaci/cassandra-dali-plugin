@@ -223,10 +223,10 @@ BatchLoader::BatchLoader(std::string table, std::string label_type,
   }
   // init multi-buffering variables
   bs.resize(prefetch_buffers);
-  in_batch.resize(prefetch_buffers);
+  ooo_in_bs.resize(prefetch_buffers);
   batch.resize(prefetch_buffers);
   copy_jobs.resize(prefetch_buffers);
-  comm_jobs.resize(prefetch_buffers);
+  comm_job.resize(prefetch_buffers);
   v_feats.resize(prefetch_buffers);
   v_labs.resize(prefetch_buffers);
   shapes.resize(prefetch_buffers);
@@ -394,25 +394,25 @@ void BatchLoader::wrap_enq(CassFuture* query_future, void* v_fd) {
   int i = fd->i;
   delete(fd);
   if (batch_ldr->ooo) {
-    batch_ldr->enqueue(query_future);
+    batch_ldr->ooo_enqueue(query_future);
   } else {
     batch_ldr->transfer2copy(query_future, wb, i);
   }
 }
 
-void BatchLoader::enqueue(CassFuture* query_future) {
+void BatchLoader::ooo_enqueue(CassFuture* query_future) {
   // insert future and check if there are now enough to create a new batch
-  curr_buf_mtx.lock();
-  int wb = curr_buf.front();
+  ooo_buf_mtx.lock();
+  int wb = ooo_buf.front();
   int bsz = bs[wb];
-  int i = in_batch[wb];
+  int i = ooo_in_bs[wb];
   transfer2copy(query_future, wb, i);
-  in_batch[wb] = ++i;
+  ooo_in_bs[wb] = ++i;
   if (i == bsz) {
-    in_batch[wb] = 0;
-    curr_buf.pop();
+    ooo_in_bs[wb] = 0;
+    ooo_buf.pop();
   }
-  curr_buf_mtx.unlock();
+  ooo_buf_mtx.unlock();
 }
 
 void BatchLoader::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
@@ -439,19 +439,19 @@ std::future<BatchImgLab> BatchLoader::start_transfers(
   copy_jobs[wb].reserve(bs[wb]);
   allocTens(wb);  // allocate space for tensors
   if (ooo) {  // out-of-order?
-    std::unique_lock<std::mutex> lck(curr_buf_mtx);
-    curr_buf.push(wb);
+    std::unique_lock<std::mutex> lck(ooo_buf_mtx);
+    ooo_buf.push(wb);
   }
   // enqueue keys for transfers
-  comm_jobs[wb] = comm_pool->enqueue(
+  comm_job[wb] = comm_pool->enqueue(
                              &BatchLoader::keys2transfers, this, keys, wb);
   auto r = wait_pool->enqueue(&BatchLoader::wait4images, this, wb);
   return(r);
 }
 
 BatchImgLab BatchLoader::wait4images(int wb) {
-  // check if tranfers succeeded
-  comm_jobs[wb].get();
+  // check if tranfers started
+  comm_job[wb].get();
   // wait for all copy_jobs to be scheduled
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
@@ -461,11 +461,11 @@ BatchImgLab BatchLoader::wait4images(int wb) {
   }
   // check if all images were copied correctly
   for (auto it=copy_jobs[wb].begin(); it != copy_jobs[wb].end(); ++it) {
-    it->get();  // using get to propagates exceptions
+    it->get();  // using get instead of wait, to propagates exceptions
   }
   // reset job queues
   copy_jobs[wb].clear();
-  comm_jobs[wb] = std::future<void>();
+  comm_job[wb] = std::future<void>();
   // copy vector to be returned
   BatchRawImage nv_feats = std::move(v_feats[wb]);
   BatchLabel nv_labs = std::move(v_labs[wb]);

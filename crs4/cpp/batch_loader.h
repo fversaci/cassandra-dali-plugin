@@ -73,18 +73,18 @@ class BatchLoader {
   bool ooo = false;  // enabling out-of-order?
   std::vector<std::mutex> alloc_mtx;
   std::vector<std::condition_variable> alloc_cv;
-  std::vector<std::future<void>> comm_jobs;
+  std::vector<std::future<void>> comm_job;
   std::vector<std::vector<std::future<void>>> copy_jobs;
   // current batch
   std::vector<size_t> bs;
-  std::vector<int> in_batch;  // how many images currently in batch
+  std::vector<int> ooo_in_bs;  // how many images currently in ooo batches
   std::vector<std::future<BatchImgLab>> batch;
   std::vector<BatchRawImage> v_feats;
   std::vector<BatchLabel> v_labs;
   std::queue<int> read_buf;
   std::queue<int> write_buf;
-  std::queue<int> curr_buf;  // active ooo buffers
-  std::mutex curr_buf_mtx;
+  std::queue<int> ooo_buf;  // active ooo buffers
+  std::mutex ooo_buf_mtx;
   std::vector<std::vector<int64_t>> shapes;
   std::vector<std::vector<int64_t>> lab_shapes;
   // methods
@@ -102,7 +102,7 @@ class BatchLoader {
   BatchImgLab wait4images(int wb);
   void keys2transfers(const std::vector<CassUuid>& keys, int wb);
   void transfer2copy(CassFuture* query_future, int wb, int i);
-  void enqueue(CassFuture* query_future);
+  void ooo_enqueue(CassFuture* query_future);
   static void wrap_enq(CassFuture* query_future, void* v_fd);
   void allocTens(int wb);
   void load_own_cert_file(std::string file, CassSsl* ssl);
