@@ -401,18 +401,20 @@ void BatchLoader::wrap_enq(CassFuture* query_future, void* v_fd) {
 }
 
 void BatchLoader::ooo_enqueue(CassFuture* query_future) {
-  // insert future and check if there are now enough to create a new batch
+  // receive image and check if there are now enough to create a new batch
   ooo_buf_mtx.lock();
   int wb = ooo_buf.front();
   int bsz = bs[wb];
-  int i = ooo_in_bs[wb];
-  transfer2copy(query_future, wb, i);
-  ooo_in_bs[wb] = ++i;
-  if (i == bsz) {
+  int idx = ooo_in_bs[wb];
+  int new_idx = idx + 1;
+  ooo_in_bs[wb] = new_idx;
+  if (new_idx == bsz) {
     ooo_in_bs[wb] = 0;
     ooo_buf.pop();
   }
   ooo_buf_mtx.unlock();
+  // actually handle data outside of lock section
+  transfer2copy(query_future, wb, idx);
 }
 
 void BatchLoader::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
