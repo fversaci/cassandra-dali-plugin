@@ -346,11 +346,14 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   shapes[wb][i] = sz;
   // label/mask/none
   std::future<void> cj;
-  if (label_t == lab_none) {
+  switch (label_t) {
+  case lab_none: {
     // enqueue image copy
     cj = copy_pool->enqueue(&BatchLoader::copy_data_none, this,
                             result, data, sz, i, wb);
-  } else if (label_t == lab_int) {
+    break;
+  }
+  case lab_int: {
     const CassValue* c_lab =
       cass_row_get_column_by_name(row, label_col.c_str());
     cass_int32_t lab;
@@ -358,7 +361,9 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     // enqueue image copy + int label
     cj = copy_pool->enqueue(&BatchLoader::copy_data_int, this,
                             result, data, sz, lab, i, wb);
-  } else if (label_t == lab_img) {
+    break;
+  }
+  case lab_img: {
     const CassValue* c_lab =
       cass_row_get_column_by_name(row, label_col.c_str());
     const cass_byte_t* lab;
@@ -368,6 +373,8 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     // enqueue image copy + image label (e.g., mask)
     cj = copy_pool->enqueue(&BatchLoader::copy_data_img, this,
                             result, data, sz, lab, l_sz, i, wb);
+    break;
+  }
   }
   // saving raw image size
   {
