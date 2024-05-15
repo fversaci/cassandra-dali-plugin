@@ -270,9 +270,7 @@ void BatchLoader::copy_data_none(const CassResult* result,
   // wait for feature tensor to be allocated
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    while (copy_jobs[wb].size() != bs[wb]) {
-      alloc_cv[wb].wait(lck);
-    }
+    alloc_cv[wb].wait(lck, [&]{ return copy_jobs[wb].size() == bs[wb]; });
   }
   // copy data in batch
   std::memcpy(v_feats[wb].raw_mutable_tensor(off), data, sz);
@@ -287,9 +285,7 @@ void BatchLoader::copy_data_int(const CassResult* result,
   // wait for feature tensor to be allocated
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    while (copy_jobs[wb].size() != bs[wb]) {
-      alloc_cv[wb].wait(lck);
-    }
+    alloc_cv[wb].wait(lck, [&]{ return copy_jobs[wb].size() == bs[wb]; });
   }
   // copy data in batch
   std::memcpy(v_feats[wb].raw_mutable_tensor(off), data, sz);
@@ -303,12 +299,10 @@ void BatchLoader::copy_data_img(const CassResult* result,
                                 const cass_byte_t* data, size_t sz,
                                 const cass_byte_t* lab, size_t l_sz,
                                 int off, int wb) {
-  // wait for feature tensor to be allocated
+  // wait for feature and target tensors to be allocated
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    while (copy_jobs[wb].size() != bs[wb]) {
-      alloc_cv[wb].wait(lck);
-    }
+    alloc_cv[wb].wait(lck, [&]{ return copy_jobs[wb].size() == bs[wb]; });
   }
   // copy data in batch
   std::memcpy(v_feats[wb].raw_mutable_tensor(off), data, sz);
@@ -378,20 +372,22 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   }
   // saving raw image size
   {
-    std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
+    std::lock_guard<std::mutex> lck(alloc_mtx[wb]);
     copy_jobs[wb].emplace_back(std::move(cj));
     // if all copy_jobs added
     if (copy_jobs[wb].size() == bs[wb]) {
-      // allocate feature tensor and notify waiting threads
+      // allocate feature tensor
       dali::TensorListShape t_sz(shapes[wb], bs[wb], 1);
       v_feats[wb].Resize(t_sz, DALI_IMG_TYPE);
       if (label_t == lab_img) {
+        // also allocate y/target tensor
         dali::TensorListShape t_sz(lab_shapes[wb], bs[wb], 1);
         v_labs[wb].Resize(t_sz, DALI_IMG_TYPE);
       }
-      alloc_cv[wb].notify_all();
     }
   }
+  // notify threads waiting for allocation
+  alloc_cv[wb].notify_all();
 }
 
 void BatchLoader::wrap_enq(CassFuture* query_future, void* v_fd) {
@@ -464,12 +460,10 @@ BatchImgLab BatchLoader::wait4images(int wb) {
   // wait for all copy_jobs to be scheduled
   {
     std::unique_lock<std::mutex> lck(alloc_mtx[wb]);
-    while (copy_jobs[wb].size() != bs[wb]) {
-      alloc_cv[wb].wait(lck);
-    }
+    alloc_cv[wb].wait(lck, [&]{ return copy_jobs[wb].size() == bs[wb]; });
   }
   // check if all images were copied correctly
-  for (auto it=copy_jobs[wb].begin(); it != copy_jobs[wb].end(); ++it) {
+  for (auto it = copy_jobs[wb].begin(); it != copy_jobs[wb].end(); ++it) {
     it->get();  // using get instead of wait, to propagates exceptions
   }
   // reset job queues
