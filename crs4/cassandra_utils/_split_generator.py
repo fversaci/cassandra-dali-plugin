@@ -19,15 +19,27 @@ import pickle
 
 
 class split_generator:
-    def __init__(self, id_col=None, data_col=None, label_col=None, label_type=None):
+    def __init__(self, data_id_col=None, metadata_id_col=None, data_col=None, data_label_col=None, metadata_label_col=None, label_type=None):
         ## Preliminary check on arguments
-        if label_type != "none" and not label_col:
+        if label_type != "none" and not metadata_label_col:
             raise Exception("Please provide the label_col argument")
+
         self._df = None
-        self._id_col = id_col
-        self._data_col = data_col
-        self._label_col = label_col
+        self._metadata_id_col = metadata_id_col
+        if data_id_col: 
+            self._data_id_col = data_id_col
+        else:
+            self._data_id_col = metadata_id_col
+
+        self._metadata_label_col = metadata_label_col
+        if data_label_col:
+            self._data_label_col = data_label_col
+        else:
+            self._data_label_col = metadata_label_col
+
         self._label_type = label_type
+        
+        self._data_col = data_col
         self._data_table = None
         self._metadata_table = None
 
@@ -63,11 +75,13 @@ class split_generator:
     def setup(self):
         self.split_metadata = {
             "data_table": self._data_table,
+            "data_id_col": self._data_id_col,
+            "data_label_col": self._data_label_col,
             "metadata_table": self._metadata_table,
-            "id_col": self._id_col,
+            "medadata_id_col": self._metadata_id_col,
+            "metadata_label_col": self._metadata_label_col,
             "data_col": self._data_col,
             "label_type": self._label_type,  # String {int|blob|none} to be defined in derived classes
-            "label_col": self._label_col,
             "row_keys": np.empty(1),  # 1D Numpy array containing UUIDs.
             # Computed in derived classes.
             # This is just a placeholder initialization.
