@@ -81,19 +81,21 @@ data retrieval information from the database
 
 ```python
 {'data_table': 'imagenette.data_orig',
+ 'data_id_col': 'patch_id',
+ 'data_label_col': 'label',
  'metadata_table': 'imagenette.metadata_orig',
- 'id_col': 'patch_id',
+ 'medadata_id_col': 'patch_id',
+ 'metadata_label_col': 'label',
  'data_col': 'data',
  'label_type': 'int',
- 'label_col': 'label',
  'row_keys': array([UUID('62842147-18e4-4447-a2eb-a185427aca73'),
         UUID('fd77ab8a-326d-46a5-a95b-77ce7ef92f33'),
         UUID('9be2a98e-bd6e-4fb0-8595-bbaaa5de4ce0'), ...,
         UUID('80540bb4-d57a-46cc-aa0b-d2490c6e9eb4'),
         UUID('94472c7e-1ead-4499-9bce-6e54249c818a'),
         UUID('0f155548-2033-45b2-ac9b-3d0c43738765')], dtype=object),
- 'split': [array([ 1622,  4182,  1410, ...,  8798,  6715, 12069]),
-  array([ 4920,  2468, 11776, ...,  2317,  6382,   376])],
+ 'split': [array([11670,  7805,   171, ...,  7043,  5710,  9004]),
+  array([1136, 9020, 8754, ..., 7620,  991, 8463])],
  'num_classes': 10}
 ```
 

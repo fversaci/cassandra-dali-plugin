@@ -18,9 +18,17 @@ from crs4.cassandra_utils._split_generator import split_generator
 
 class imagenet_split_generator(split_generator):
     def __init__(
-        self, id_col="patch_id", data_col="data", label_col="label", label_type="int"
+        self, 
+        metadata_id_col="patch_id",
+        metadata_label_col="label",
+        data_col="data", 
+        label_type="int"
     ):
-        super().__init__(id_col, data_col, label_col, label_type)
+        super().__init__(
+                metadata_id_col=metadata_id_col, 
+                metadata_label_col=metadata_label_col, 
+                data_col=data_col, 
+                label_type=label_type)
 
     def create_split(self, split_ratio_list, balance=None):
         """
@@ -34,7 +42,7 @@ class imagenet_split_generator(split_generator):
         rows = df.shape[0]
         # Get a dictionary of occurrence for each class
         class_count_dict = (
-            df.groupby(self._label_col).count().to_dict(orient="dict")[self._id_col]
+            df.groupby(self._metadata_label_col).count().to_dict(orient="dict")[self._metadata_id_col]
         )
         # get class count vector with index sorted by class
         class_count = [
@@ -73,7 +81,7 @@ class imagenet_split_generator(split_generator):
 
         ## Now that sample_per class has valid numbers we can start grouping per class and then creating splits
         # Each split will have an almost equal number of sample for each class
-        grps = df.groupby(self._label_col, as_index=False)
+        grps = df.groupby(self._metadata_label_col, as_index=False)
         split = [[] for _ in split_ratio_list]
 
         for current_class in grps.groups:
@@ -98,7 +106,7 @@ class imagenet_split_generator(split_generator):
 
         split = [np.array(i) for i in split]
 
-        row_keys = self._df[self._id_col].to_numpy()
+        row_keys = self._df[self._metadata_id_col].to_numpy()
         self.split_metadata["row_keys"] = row_keys
         self.split_metadata["split"] = split
         self.split_metadata["label_type"] = label_type

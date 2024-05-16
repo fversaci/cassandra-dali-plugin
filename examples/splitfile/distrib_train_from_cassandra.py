@@ -301,10 +301,10 @@ def create_dali_pipeline(
 def read_split_file(split_fn):
     data = pickle.load(open(split_fn, "rb"))
     data_table = data["data_table"]
-    id_col = data["id_col"]
+    id_col = data["data_id_col"]
+    label_col = data["data_label_col"]  # Name of the table column with the outcome label
     data_col = data["data_col"]  # Name of the table column with actual data
     label_type = data["label_type"]
-    label_col = data["label_col"]  # Name of the table column with the outcome label
     row_keys = data["row_keys"]  # Numpy array of UUIDs
     split = data[
         "split"
