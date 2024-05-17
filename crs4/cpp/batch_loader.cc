@@ -249,10 +249,10 @@ void BatchLoader::allocTens(int wb) {
   shapes[wb].resize(bs[wb]);
   v_feats[wb] = BatchRawImage();
   v_feats[wb].set_pinned(false);
-  // v_feats[wb].SetContiguous(true);
+  // v_feats[wb].SetContiguity(::dali::BatchContiguity::Contiguous);
   v_labs[wb] = BatchLabel();
   v_labs[wb].set_pinned(false);
-  // v_labs[wb].SetContiguous(true);
+  // v_labs[wb].SetContiguity(::dali::BatchContiguity::Contiguous);
   if (label_t == lab_img) {
     lab_shapes[wb].clear();
     lab_shapes[wb].resize(bs[wb]);
@@ -369,6 +369,8 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
                             result, data, sz, lab, l_sz, i, wb);
     break;
   }
+  default:
+    throw std::runtime_error("Unknown label type");
   }
   // saving raw image size
   {
