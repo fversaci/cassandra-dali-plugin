@@ -94,6 +94,10 @@ them by using the following parameters:
 - `ssl_own_key_pass`: password protecting the private key of the client (e.g., "blablabla")
 - `cloud_config`: Astra-like configuration (e.g., `{'secure_connect_bundle': 'secure-connect-blabla.zip'}`)
 
+Their use is demonstrated in [private_data.py
+file](examples/common/private_data.py), used by the
+[examples](README.md#examples)
+
 ### Performance tuning
 
 This plugin offers extensive internal parallelism that can be adjusted
