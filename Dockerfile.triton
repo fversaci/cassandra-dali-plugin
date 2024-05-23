@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
-FROM nvcr.io/nvidia/tritonserver:24.03-py3
+FROM nvcr.io/nvidia/tritonserver:24.04-py3
 
 # install some useful tools
 RUN \
@@ -64,30 +64,14 @@ RUN CMAKE_VERSION=3.18 && \
     make -j"$(grep ^processor /proc/cpuinfo | wc -l)" install && \
     rm -rf /cmake-${CMAKE_BUILD}
 
-# Miniconda
-ENV PATH="/opt/conda/bin:${PATH}"
-RUN MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-py38_4.12.0-Linux-x86_64.sh"; \
-    SHA256SUM="3190da6626f86eee8abf1b2fd7a5af492994eb2667357ee4243975cdbb175d7a"; \
-    wget "${MINICONDA_URL}" -O miniconda.sh -q && \
-    echo "${SHA256SUM} miniconda.sh" > shasum && \
-    sha256sum -c ./shasum && \
-    sh miniconda.sh -b -p /opt/conda && \
-    rm miniconda.sh shasum && \
-    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate base" >> ~/.bashrc && \
-    find /opt/conda/ -follow -type f -name '*.a' -delete && \
-    find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
-    /opt/conda/bin/conda clean -afy
-
-
 RUN git clone --recursive https://github.com/triton-inference-server/dali_backend.git /dali
 WORKDIR /dali
+RUN rm -rf /opt/tritonserver/backends/dali
 
 # use dali nightly build?
 ARG DALI_DOWNLOAD_EXTRA_INDEX_URL #=https://developer.download.nvidia.com/compute/redist/nightly
 ARG DALI_DOWNLOAD_PKG_NAME #=nvidia-dali-nightly-cuda120
-ARG DALI_DOWNLOAD_VERSION=1.37.0
+ARG DALI_DOWNLOAD_VERSION=1.37.1
 ARG DALI_DOWNLOAD_EXTRA_OPTIONS
 
 ARG TRITON_BACKEND_API_VERSION="r22.07"
@@ -106,6 +90,7 @@ RUN set -ex && mkdir build_in_ci && cd build_in_ci &&                           
     make -j"$(grep ^processor /proc/cpuinfo | wc -l)" install
 
 ENV LD_LIBRARY_PATH=/opt/tritonserver/lib:${LD_LIBRARY_PATH}
+ENV PYTHONPATH=/opt/tritonserver/backends/dali/wheel/dali
 
 
 ########################################################################
@@ -183,28 +168,19 @@ RUN \
     cp /home/triton-server/cassandra-dali-plugin/varia/keystore /cassandra/conf/ \
     && python3 /home/triton-server/cassandra-dali-plugin/varia/edit_cassandra_conf.py
 
-# install cassandra dali plugin
-WORKDIR /home/triton-server/cassandra-dali-plugin
-# install dali in conda environments
-RUN /opt/conda/bin/pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist \
-    --upgrade nvidia-dali-cuda120==$DALI_DOWNLOAD_VERSION
-RUN /opt/tritonserver/backends/dali/conda/envs/dalienv/bin/python3 -m pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
+# install DALI
+RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist \
     --upgrade nvidia-dali-cuda120==$DALI_DOWNLOAD_VERSION
 # RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
 #     --upgrade nvidia-dali-nightly-cuda120==$DALI_DOWNLOAD_VERSION
 
-# install cassandra-dali plugin in all environments
-## install cassandra-dali plugin in system
-# RUN /usr/bin/pip3 install .
-## install cassandra-dali plugin in conda environments
-ENV CONDA_DALI_LIB /opt/conda/lib
-RUN /opt/conda/bin/pip3 install .
-## install cassandra-dali plugin in dalienv
-RUN rm -Rf build \
-    && /opt/tritonserver/backends/dali/conda/envs/dalienv/bin/python3 -m pip install .
+
+# install cassandra dali plugin
+WORKDIR /home/triton-server/cassandra-dali-plugin
+RUN /usr/bin/pip3 install .
+
 # install triton client
 RUN pip3 install tritonclient[all] IPython
 
 WORKDIR /home/triton-server/cassandra-dali-plugin/examples/triton
 USER triton-server
-RUN /opt/conda/bin/conda init fish
