@@ -25,6 +25,7 @@ with open(yaml_fn, "r") as f:
     cass_conf["client_encryption_options"]["enabled"] = True
     cass_conf["client_encryption_options"]["optional"] = True
     cass_conf["client_encryption_options"]["keystore"] = "/cassandra/conf/keystore"
+    cass_conf["client_encryption_options"]["keystore_password"] = "cassandra"
 with open(yaml_fn, "w") as f:
     yaml.dump(cass_conf, f, sort_keys=False)
 
