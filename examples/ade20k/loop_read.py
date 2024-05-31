@@ -71,11 +71,11 @@ def read_data(
         device_id = types.CPU_ONLY_DEVICE_ID
 
     bs = 128
-    source_uuids = read_uuids(
-        metadata_table,
-        ids_cache_dir=ids_cache_dir,
-    )
     if reader == "cassandra":
+        source_uuids = read_uuids(
+            metadata_table,
+            ids_cache_dir=ids_cache_dir,
+        )
         db_reader = get_cassandra_reader(
             data_table=data_table,
             prefetch_buffers=16,
@@ -146,23 +146,18 @@ def read_data(
     pl = get_dali_pipeline()
     pl.build()
 
-    shard_size = math.ceil(len(source_uuids) / world_size)
-    steps = math.ceil(shard_size / bs)
     ########################################################################
     # DALI iterator
     ########################################################################
     # produce images
-    if reader == "cassandra":
-        # consume uuids to get images from DB
-        for _ in range(epochs):
-            # read data for current epoch
-            for _ in trange(steps):
-                pl.run()
-            pl.reset()
-    else:
-        for _ in range(epochs):
-            for _ in trange(steps):
-                x, y = pl.run()
+    shard_size = math.ceil(pl.epoch_size()['Reader'] / world_size)
+    steps = math.ceil(shard_size / bs)
+    # consume uuids to get images from DB
+    for _ in range(epochs):
+        # read data for current epoch
+        for _ in trange(steps):
+            pl.run()
+        pl.reset()
 
     ########################################################################
     # alternatively: use pytorch iterator

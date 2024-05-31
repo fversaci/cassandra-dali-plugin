@@ -110,12 +110,12 @@ def read_data(
     pl = get_dali_pipeline()
     pl.build()
 
-    shard_size = math.ceil(len(source_uuids) / world_size)
-    steps = math.ceil(shard_size / bs)
     ########################################################################
     # DALI iterator
     ########################################################################
     # produce images
+    shard_size = math.ceil(pl.epoch_size()['Reader'] / world_size)
+    steps = math.ceil(shard_size / bs)
     # consume uuids to get images from DB
     for _ in range(epochs):
         # read data for current epoch
