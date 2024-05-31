@@ -18,7 +18,7 @@
 
 namespace crs4 {
 
-CassandraUncoupled::CassandraUncoupled(const dali::OpSpec &spec) :
+CassandraDecoupled::CassandraDecoupled(const dali::OpSpec &spec) :
   CassandraInteractive(spec),
   mini_batch_size(spec.GetArgument<int>("mini_batch_size")) {
   if (mini_batch_size <= 0) {
@@ -26,7 +26,7 @@ CassandraUncoupled::CassandraUncoupled(const dali::OpSpec &spec) :
   }
 }
 
-bool CassandraUncoupled::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
+bool CassandraDecoupled::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                            const dali::Workspace &ws) {
   // create mini batches from list
   if (curr_prefetch == 0 && HasDataInQueue()) {
@@ -37,7 +37,7 @@ bool CassandraUncoupled::SetupImpl(std::vector<dali::OutputDesc> &output_desc,
   return false;
 }
 
-void CassandraUncoupled::prefetch_one() {
+void CassandraDecoupled::prefetch_one() {
   // exit if no data to prefetch
   if (input_interval >= intervals.size())
     return;
@@ -58,7 +58,7 @@ void CassandraUncoupled::prefetch_one() {
   ++curr_prefetch;
 }
 
-void CassandraUncoupled::fill_buffers(dali::Workspace &ws) {
+void CassandraDecoupled::fill_buffers(dali::Workspace &ws) {
   // start prefetching
   int num_buff = (slow_start > 0 && prefetch_buffers > 0) ? 1 : prefetch_buffers;
   for (int i=0; i < num_buff && ok_to_fill(); ++i) {
@@ -66,7 +66,7 @@ void CassandraUncoupled::fill_buffers(dali::Workspace &ws) {
   }
 }
 
-void CassandraUncoupled::list_to_minibatches(const dali::Workspace &ws) {
+void CassandraDecoupled::list_to_minibatches(const dali::Workspace &ws) {
   DALI_ENFORCE(HasDataInQueue(), "No UUIDs have been provided");
   // forward input data to uuids tensorlist
   auto &thread_pool = ws.GetThreadPool();
@@ -85,7 +85,7 @@ void CassandraUncoupled::list_to_minibatches(const dali::Workspace &ws) {
   }
 }
 
-void CassandraUncoupled::RunImpl(dali::Workspace &ws) {
+void CassandraDecoupled::RunImpl(dali::Workspace &ws) {
   // fill prefetch buffers
   if (curr_prefetch < prefetch_buffers) {
     fill_buffers(ws);
@@ -106,9 +106,9 @@ void CassandraUncoupled::RunImpl(dali::Workspace &ws) {
 
 }  // namespace crs4
 
-// register CassandraUncoupled class
+// register CassandraDecoupled class
 
-DALI_REGISTER_OPERATOR(crs4__cassandra_decoupled, crs4::CassandraUncoupled, dali::CPU);
+DALI_REGISTER_OPERATOR(crs4__cassandra_decoupled, crs4::CassandraDecoupled, dali::CPU);
 
 DALI_SCHEMA(crs4__cassandra_decoupled)
 .DocStr("Reads UUIDs as a large batch and returns images and labels/masks")

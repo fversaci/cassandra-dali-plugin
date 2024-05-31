@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CRS4_CPP_CASSANDRA_DALI_UNCOUPLED_H_
-#define CRS4_CPP_CASSANDRA_DALI_UNCOUPLED_H_
+#ifndef CRS4_CPP_CASSANDRA_DALI_DECOUPLED_H_
+#define CRS4_CPP_CASSANDRA_DALI_DECOUPLED_H_
 
 #include <vector>
 #include <map>
@@ -27,9 +27,9 @@
 
 namespace crs4 {
 
-class CassandraUncoupled : public CassandraInteractive {
+class CassandraDecoupled : public CassandraInteractive {
  public:
-  explicit CassandraUncoupled(const dali::OpSpec &spec);
+  explicit CassandraDecoupled(const dali::OpSpec &spec);
 
  protected:
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
@@ -48,4 +48,4 @@ class CassandraUncoupled : public CassandraInteractive {
 
 }  // namespace crs4
 
-#endif  // CRS4_CPP_CASSANDRA_DALI_UNCOUPLED_H_
+#endif  // CRS4_CPP_CASSANDRA_DALI_DECOUPLED_H_
