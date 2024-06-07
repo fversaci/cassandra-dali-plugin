@@ -97,7 +97,7 @@ class split_generator:
     def get_df_from_metadata(self):
         cs = CassandraSession(self.cass_conf)
         sess = cs.sess
-        sess.default_fetch_size = 10000000
+        sess.default_fetch_size = 1000000000
 
         ## Get rows
         query = f"SELECT * FROM {self._metadata_table};"
