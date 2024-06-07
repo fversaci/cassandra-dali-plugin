@@ -4,7 +4,7 @@
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, read_uuids
-from create_dali_pipeline import create_dali_pipeline
+from create_dali_pipeline import create_dali_pipeline_from_file, create_dali_pipeline_cassandra
 
 import argparse
 
@@ -46,6 +46,18 @@ def parse():
     )
 
     parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
+    parser.add_argument(
+        "--train-folder",
+        metavar="DIRECTORY (training)",
+        default="",
+        help="training folder with a subfolder for each class. This override cassandra",
+    )
+    parser.add_argument(
+        "--val-folder",
+        metavar="DIRECTORY (validation)",
+        default="",
+        help="validation folder with a subfolder for each class. This override cassandra",
+    )
     parser.add_argument(
         "--train-data-table",
         metavar="DATA TABLE (training)",
@@ -395,23 +407,17 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         # Create DALI pipelines (with cassandra plugins)
         train_pipeline = self.GetPipeline(
             args,
-            args.train_data_table,
-            args.train_metadata_table,
             is_training=True,
             device_id=device_id,
             shard_id=shard_id,
             num_shards=num_shards,
-            num_threads=8,
         )
         val_pipeline = self.GetPipeline(
             args,
-            args.val_data_table,
-            args.val_metadata_table,
             is_training=False,
             device_id=device_id,
             shard_id=shard_id,
             num_shards=num_shards,
-            num_threads=8,
         )
 
         # Wrapper class to allow for adding code to the methods
@@ -443,43 +449,73 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
     def val_dataloader(self):
         return self.val_loader
 
-    # def on_train_epoch_end(self):
-    #     self.train_loader.reset()
-    #
-    # def on_validation_epoch_end(self):
-    #     self.val_loader.reset()
+    def on_train_epoch_end(self):
+        self.train_loader.reset()
+
+    def on_validation_epoch_end(self):
+        self.val_loader.reset()
 
     @staticmethod
     def GetPipeline(
         args,
-        data_table,
-        metadata_table,
         is_training,
         device_id,
         shard_id,
         num_shards,
-        num_threads,
     ):
-        in_uuids = read_uuids(
-            metadata_table=metadata_table,
-            ids_cache_dir=args.ids_cache_dir,
-        )
+        if args.train_folder:
+            # Data come from disk
+            if is_training:
+                folder = args.train_folder
+            else:
+                folder = args.val_folder
 
-        pipe = create_dali_pipeline(
-            data_table=data_table,
-            batch_size=args.batch_size,
-            shuffle_every_epoch=True,
-            num_threads=args.workers,
-            shard_id=shard_id,
-            num_shards=num_shards,
-            source_uuids=in_uuids,
-            device_id=device_id,
-            seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
-            crop=args.crop_size,
-            size=args.val_size,
-            dali_cpu=args.dali_cpu,
-            is_training=is_training,
-        )
+            pipe = create_dali_pipeline_from_file(
+                batch_size=args.batch_size,
+                crop=args.crop_size,
+                dali_cpu=args.dali_cpu,
+                data_dir=folder,
+                device_id=device_id,
+                is_training=is_training,
+                num_shards=num_shards,
+                num_threads=args.workers,
+                prefetch_queue_depth=2,
+                seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
+                shard_id=shard_id,
+                size=args.val_size,
+            )
+
+        else:
+            # Data come from cassandra
+            if is_training:
+                data_table = args.train_data_table
+                metadata_table = args.train_metadata_table
+            else:
+                data_table = args.val_data_table
+                metadata_table = args.val_metadata_table
+
+            in_uuids = read_uuids(
+                metadata_table=metadata_table,
+                ids_cache_dir=args.ids_cache_dir,
+            )
+
+            pipe = create_dali_pipeline_cassandra(
+                batch_size=args.batch_size,
+                crop=args.crop_size,
+                dali_cpu=args.dali_cpu,
+                data_table=data_table,
+                device_id=device_id,
+                is_training=is_training,
+                num_shards=num_shards,
+                num_threads=args.workers,
+                prefetch_queue_depth=2,
+                seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
+                shard_id=shard_id,
+                shuffle_every_epoch=True,
+                size=args.val_size,
+                source_uuids=in_uuids,
+            )
+
         pipe.build()
 
         return pipe

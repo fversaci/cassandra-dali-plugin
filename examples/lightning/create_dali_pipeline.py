@@ -19,39 +19,7 @@ except ImportError:
 ### DALI PIPELINE CRATION CODE ###
 ##################################
 
-
-@pipeline_def
-def create_dali_pipeline(
-    data_table,
-    crop,
-    size,
-    source_uuids,
-    shuffle_every_epoch=True,
-    dali_cpu=False,
-    is_training=True,
-    prefetch_buffers=8,
-    shard_id=0,
-    num_shards=1,
-    io_threads=4,
-    comm_threads=2,
-    copy_threads=2,
-    wait_threads=2,
-):
-    cass_reader = get_cassandra_reader(
-        data_table=data_table,
-        prefetch_buffers=prefetch_buffers,
-        shard_id=shard_id,
-        num_shards=num_shards,
-        source_uuids=source_uuids,
-        io_threads=io_threads,
-        comm_threads=comm_threads,
-        copy_threads=copy_threads,
-        wait_threads=wait_threads,
-        shuffle_every_epoch=shuffle_every_epoch,
-        ooo=False,
-        slow_start=4,
-    )
-    images, labels = cass_reader
+def pipeline_transformations(images, labels, is_training, dali_cpu, crop, size):
     dali_device = "cpu" if dali_cpu else "gpu"
     decoder_device = "cpu" if dali_cpu else "mixed"
     # ask nvJPEG to preallocate memory for the biggest sample in ImageNet for CPU and GPU to avoid reallocations in runtime
@@ -101,5 +69,72 @@ def create_dali_pipeline(
         std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
         mirror=mirror,
     )
-    labels = labels.gpu()
+    if not dali_device == 'gpu':
+        labels = labels.gpu()
+
+    return images, labels
+
+
+@pipeline_def
+def create_dali_pipeline_cassandra(
+    data_table,
+    crop,
+    size,
+    source_uuids,
+    shuffle_every_epoch=True,
+    dali_cpu=False,
+    is_training=True,
+    prefetch_buffers=2,
+    shard_id=0,
+    num_shards=1,
+    io_threads=4,
+    comm_threads=1,
+    copy_threads=4,
+    wait_threads=2,
+):
+
+    cass_reader = get_cassandra_reader(
+        data_table=data_table,
+        prefetch_buffers=prefetch_buffers,
+        shard_id=shard_id,
+        num_shards=num_shards,
+        source_uuids=source_uuids,
+        io_threads=io_threads,
+        comm_threads=comm_threads,
+        copy_threads=copy_threads,
+        wait_threads=wait_threads,
+        shuffle_every_epoch=shuffle_every_epoch,
+        ooo=False,
+        slow_start=4,
+    )
+
+    images, labels = cass_reader
+
+    images, labels = pipeline_transformations(images, labels, is_training, dali_cpu, crop, size)
+
+    return (images, labels)
+
+
+@pipeline_def
+def create_dali_pipeline_from_file(
+    data_dir,
+    crop,
+    size,
+    dali_cpu=False,
+    is_training=True,
+    shard_id=0,
+    num_shards=1,
+):
+
+    images, labels = fn.readers.file(
+        file_root=data_dir,
+        shard_id=shard_id,
+        num_shards=num_shards,
+        random_shuffle=is_training,
+        pad_last_batch=True,
+        name="Reader",
+    )
+
+    images, labels = pipeline_transformations(images, labels, is_training, dali_cpu, crop, size)
+
     return (images, labels)
