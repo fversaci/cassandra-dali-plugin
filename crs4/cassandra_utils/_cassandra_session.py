@@ -18,12 +18,7 @@ from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.policies import TokenAwarePolicy, DCAwareRoundRobinPolicy
 from cassandra.cluster import ExecutionProfile
-import pandas as pd
 import ssl
-
-
-def pandas_factory(colnames, rows):
-    return pd.DataFrame(rows, columns=colnames)
 
 
 class CassandraSession:
@@ -41,11 +36,7 @@ class CassandraSession:
             load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
             row_factory=cassandra.query.tuple_factory,
         )
-        prof_pandas = ExecutionProfile(
-            load_balancing_policy=TokenAwarePolicy(DCAwareRoundRobinPolicy()),
-            row_factory=pandas_factory,
-        )
-        profs = {"dict": prof_dict, "tuple": prof_tuple, "pandas": prof_pandas}
+        profs = {"dict": prof_dict, "tuple": prof_tuple}
         # init cluster
         if cass_conf.cloud_config:
             self.cluster = Cluster(
