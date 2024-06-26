@@ -560,7 +560,7 @@ def main():
     if args.patience:
         print(f"-- Early stopping enabled with patience={args.patience}")
         early_stopping = EarlyStopping(
-            monitor="val_loss", mode="min", patience=args.patience
+            monitor="val_loss", mode="min", patience=args.patience, check_finite=False,
         )
         callbacks_l.append(early_stopping)
 
