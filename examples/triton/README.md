@@ -89,8 +89,8 @@ the container, use the following commands:
 ```bash
 # Build and run cassandra-dali-triton docker container
 $ docker build -t cassandra-dali-triton -f Dockerfile.triton .
-$ docker run --cap-add=sys_admin --rm -it --gpus all --ipc=host \
-  --ulimit memlock=-1 --ulimit stack=67108864 --name cass-dali cassandra-dali-triton
+$ docker run --rm -it --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+  --gpus all --cap-add=sys_admin --name cass-dali cassandra-dali-triton
 ```
 
 ### Starting and filling the DB

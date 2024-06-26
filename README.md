@@ -21,7 +21,8 @@ a Cassandra server, PyTorch and Apache Spark, as shown in the commands below.
 ```bash
 # Build and run cassandra-dali-plugin docker container
 $ docker build -t cassandra-dali-plugin .
-$ docker run --rm -it --cap-add=sys_admin cassandra-dali-plugin
+$ docker run --rm -it --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+  --cap-add=sys_admin cassandra-dali-plugin
 ```
 
 Alternatively, for better performance and for data persistence, it is
@@ -30,8 +31,9 @@ advised to mount a host directory for Cassandra on a fast disk (e.g.,
 
 ```bash
 # Run cassandra-dali-plugin docker container with external data dir
-$ docker run --rm -it -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
-  --cap-add=sys_nice cassandra-dali-plugin
+$ docker run --rm -it --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+  -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
+  --cap-add=sys_admin cassandra-dali-plugin
 ```
 
 ## How to call the plugin
