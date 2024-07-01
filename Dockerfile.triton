@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
-FROM nvcr.io/nvidia/tritonserver:24.05-py3
+FROM nvcr.io/nvidia/tritonserver:24.06-py3
 
 # install some useful tools
 RUN \
@@ -71,7 +71,7 @@ RUN rm -rf /opt/tritonserver/backends/dali
 # use dali nightly build?
 ARG DALI_DOWNLOAD_EXTRA_INDEX_URL #=https://developer.download.nvidia.com/compute/redist/nightly
 ARG DALI_DOWNLOAD_PKG_NAME #=nvidia-dali-nightly-cuda120
-ARG DALI_DOWNLOAD_VERSION=1.38
+ARG DALI_DOWNLOAD_VERSION=1.39
 ARG DALI_DOWNLOAD_EXTRA_OPTIONS
 
 ARG TRITON_BACKEND_API_VERSION="r22.07"

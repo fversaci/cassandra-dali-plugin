@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
-FROM nvcr.io/nvidia/pytorch:24.05-py3
+FROM nvcr.io/nvidia/pytorch:24.06-py3
 
 # install some useful tools
 RUN \
@@ -64,7 +64,8 @@ RUN \
 #install cassandra python driver + some python libraries
 RUN \
     pip3 install --upgrade --no-cache matplotlib pandas clize boto3 \
-      opencv-python cassandra-driver pybind11 tqdm tifffile pyyaml lightning
+      opencv-python cassandra-driver pybind11 tqdm tifffile pyyaml
+RUN pip3 install --upgrade --no-cache lightning==2.3.1
 
 ########################################################################
 # SPARK installation, to test examples
@@ -118,7 +119,7 @@ RUN \
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib:/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib"
 RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
-    --upgrade nvidia-dali-cuda120==1.38
+    --upgrade nvidia-dali-cuda120==1.39
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
