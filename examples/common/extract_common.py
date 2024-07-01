@@ -19,7 +19,6 @@ from tqdm import tqdm
 import io
 import numpy as np
 import os
-import os
 import uuid
 
 def_size = 256
