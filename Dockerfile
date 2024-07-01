@@ -63,7 +63,7 @@ RUN \
 
 #install cassandra python driver + some python libraries
 RUN \
-    pip3 install --upgrade --no-cache matplotlib pandas clize \
+    pip3 install --upgrade --no-cache matplotlib pandas clize boto3 \
       opencv-python cassandra-driver pybind11 tqdm tifffile pyyaml lightning
 
 ########################################################################
