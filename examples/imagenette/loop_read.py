@@ -38,9 +38,9 @@ from tqdm import trange, tqdm
 import math
 import time
 import boto3
-
-# supporting torchrun
+import statistics
 import os
+from IPython import embed
 
 global_rank = int(os.getenv("RANK", default=0))
 local_rank = int(os.getenv("LOCAL_RANK", default=0))
@@ -63,7 +63,7 @@ def parse_s3_uri(s3_uri):
 
 def list_s3_files(s3_uri):
     bucket_name, prefix = parse_s3_uri(s3_uri)
-    s3 = boto3.client('s3', use_ssl=False)
+    s3 = boto3.client('s3')
     paginator = s3.get_paginator('list_objects_v2')
     pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
 
@@ -87,9 +87,10 @@ def read_data(
     ids_cache_dir="ids_cache",
     reader="cassandra",
     use_gpu=False,
+    bs=128,
+    epochs=10,
     file_root=None,
     index_root=None,
-    epochs=10,
 ):
     """Read images from DB or filesystem, in a tight loop
 
@@ -97,6 +98,8 @@ def read_data(
     :param metadata_table: Name of the data metadata table (in the form: keyspace.tablename)
     :param reader: "cassandra", "file" or "tfrecord" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
+    :param bs: batch size (default: 128)
+    :param epochs: Number of epochs (default: 10)
     :param file_root: File root to be used (only when reading files or tfrecords)
     :param index_root: Root path to index files (only when reading tfrecords)
     :param ids_cache_dir: Directory containing the cached list of UUIDs (default: ./ids_cache)
@@ -106,7 +109,6 @@ def read_data(
     else:
         device_id = types.CPU_ONLY_DEVICE_ID
 
-    bs = 128
     if reader == "cassandra":
         source_uuids = read_uuids(
             metadata_table,
@@ -134,8 +136,8 @@ def read_data(
             num_shards=world_size,
             pad_last_batch=True,
             # speed up reading
-            prefetch_queue_depth=2,
-            dont_use_mmap=True,
+            prefetch_queue_depth=4,
+            # dont_use_mmap=True,
             read_ahead=True,
         )
         chosen_reader = file_reader
@@ -160,8 +162,8 @@ def read_data(
             num_shards=world_size,
             pad_last_batch=True,
             # speed up reading
-            prefetch_queue_depth=2,
-            dont_use_mmap=True,
+            prefetch_queue_depth=4,
+            # dont_use_mmap=True,
             read_ahead=True,
         )
         chosen_reader = tf_reader["image/encoded"], tf_reader["image/class/label"]
@@ -206,15 +208,29 @@ def read_data(
     ########################################################################
     # DALI iterator
     ########################################################################
-    # produce images
     shard_size = math.ceil(pl.epoch_size()["Reader"] / world_size)
     steps = math.ceil(shard_size / bs)
-    # consume uuids to get images from DB
+    speeds = []
+    first_epoch = True
     for _ in range(epochs):
         # read data for current epoch
-        for _ in trange(steps):
-            pl.run()
+        with trange(steps) as t:
+            for _ in t:
+                pl.run()
+            epoch_time = t.format_dict['elapsed']
+            if first_epoch:
+                # ignore first epoch for stats
+                first_epoch = False
+            else:
+                speeds.append(t.total/epoch_time)
+
         pl.reset()
+    # Calculate the average and standard deviation
+    if epochs > 3:
+        average_speed = statistics.mean(speeds)
+        std_dev_speed = statistics.stdev(speeds)
+        print(f'Stats for epochs > 1')
+        print(f'  Average speed: {average_speed:.2f} ± {std_dev_speed:.2f} it/s')
 
     ########################################################################
     # alternatively: use pytorch iterator
