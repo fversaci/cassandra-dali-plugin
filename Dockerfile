@@ -93,9 +93,10 @@ EXPOSE 4040
 ########################################################################
 # Cassandra server installation, to test examples
 ########################################################################
-ARG CASS_V=4.1
+# cassandra 5.0-beta
+ARG CASS_V=5.0
 RUN \
-    export CASS_VERS=$(curl 'https://archive.apache.org/dist/cassandra/' | grep -o "$CASS_V\.[[:digit:]]\+" | tail -n 1) \
+    export CASS_VERS=$(curl 'https://archive.apache.org/dist/cassandra/' | grep -o "$CASS_V-[[:alnum:]]\+" | tail -n 1) \
     && cd /tmp && wget -nv "https://archive.apache.org/dist/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
     && ln -s "apache-cassandra-$CASS_VERS" cassandra
