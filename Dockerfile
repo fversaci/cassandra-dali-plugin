@@ -49,7 +49,7 @@ RUN \
     && apt-get install -y libuv1-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/* 
 
-ARG CASS_DRIVER_VER=2.16.2
+ARG CASS_DRIVER_VER=2.17.1
 RUN \
     wget -nv "https://github.com/datastax/cpp-driver/archive/$CASS_DRIVER_VER.tar.gz" \
     && tar xfz $CASS_DRIVER_VER.tar.gz \
