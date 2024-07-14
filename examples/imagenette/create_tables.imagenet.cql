@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS imagenet.data_train_orig(
   label int,
   data blob,
   PRIMARY KEY ((patch_id))
-);
+) WITH compression = {'enabled':'false'};
 
 // Mapping patch uuid to metadata
 CREATE TABLE IF NOT EXISTS imagenet.metadata_train_orig(
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS imagenet.data_val_orig(
   label int,
   data blob,
   PRIMARY KEY ((patch_id))
-);
+) WITH compression = {'enabled':'false'};
 
 // Mapping patch uuid to metadata
 CREATE TABLE IF NOT EXISTS imagenet.metadata_val_orig(
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS imagenet.data_train_512_jpg(
   label int,
   data blob,
   PRIMARY KEY ((patch_id))
-);
+) WITH compression = {'enabled':'false'};
 
 // Mapping patch uuid to metadata
 CREATE TABLE IF NOT EXISTS imagenet.metadata_train_512_jpg(
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS imagenet.data_val_512_jpg(
   label int,
   data blob,
   PRIMARY KEY ((patch_id))
-);
+) WITH compression = {'enabled':'false'};
 
 // Mapping patch uuid to metadata
 CREATE TABLE IF NOT EXISTS imagenet.metadata_val_512_jpg(
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS imagenet.data_train_256_jpg(
   label int,
   data blob,
   PRIMARY KEY ((patch_id))
-);
+) WITH compression = {'enabled':'false'};
 
 // Mapping patch uuid to metadata
 CREATE TABLE IF NOT EXISTS imagenet.metadata_train_256_jpg(
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS imagenet.data_val_256_jpg(
   label int,
   data blob,
   PRIMARY KEY ((patch_id))
-);
+) WITH compression = {'enabled':'false'};
 
 // Mapping patch uuid to metadata
 CREATE TABLE IF NOT EXISTS imagenet.metadata_val_256_jpg(

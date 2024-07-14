@@ -141,15 +141,23 @@ void BatchLoader::set_ssl(CassCluster* cluster) {
 }
 
 void BatchLoader::connect() {
+  CassError rc;
   if (cloud_config.empty()) {
     // direct connection
-    cass_cluster_set_contact_points(cluster, s_cassandra_ips.c_str());
-    cass_cluster_set_port(cluster, port);
+    rc = cass_cluster_set_contact_points(cluster, s_cassandra_ips.c_str());
+    if (rc != CASS_OK) {
+      throw std::runtime_error("Error setting Cassandra contact points: "
+                               + std::string(cass_error_desc(rc)));
+    }
+    rc = cass_cluster_set_port(cluster, port);
+    if (rc != CASS_OK) {
+      throw std::runtime_error("Error setting Cassandra port: "
+                               + std::string(cass_error_desc(rc)));
+    }
   } else {
     // cloud configuration (e.g., AstraDB)
-    if (cass_cluster_set_cloud_secure_connection_bundle(cluster,
-                                                        cloud_config.c_str())
-        != CASS_OK) {
+    rc = cass_cluster_set_cloud_secure_connection_bundle(cluster, cloud_config.c_str());
+    if (rc != CASS_OK) {
       throw std::runtime_error(
            "Unable to configure cloud using the secure connection bundle: "
            + cloud_config);
@@ -158,17 +166,30 @@ void BatchLoader::connect() {
   cass_cluster_set_connect_timeout(cluster, 10000);
   cass_cluster_set_request_timeout(cluster, 60000);
   cass_cluster_set_credentials(cluster, username.c_str(), password.c_str());
-  cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4);
-  cass_cluster_set_num_threads_io(cluster, io_threads);
+  // rc = cass_cluster_set_use_beta_protocol_version(cluster, cass_true);
+  rc = cass_cluster_set_protocol_version(cluster, CASS_PROTOCOL_VERSION_V4);
+  if (rc != CASS_OK) {
+    throw std::runtime_error("Error setting Cassandra protocol: "
+                             + std::string(cass_error_desc(rc)));
+  }
+  rc = cass_cluster_set_num_threads_io(cluster, io_threads);
+  if (rc != CASS_OK) {
+    throw std::runtime_error("Error setting the number of io threads: "
+                             + std::string(cass_error_desc(rc)));
+  }
   cass_cluster_set_application_name(cluster,
                                "Cassandra module for NVIDIA DALI, CRS4");
-  cass_cluster_set_queue_size_io(cluster, 65536);  // max pending requests
+  rc = cass_cluster_set_queue_size_io(cluster, 65536);  // max pending requests
+  if (rc != CASS_OK) {
+    throw std::runtime_error("Error setting the io queue size: "
+                             + std::string(cass_error_desc(rc)));
+  }
   // set ssl if required
   if (use_ssl) {
     set_ssl(cluster);
   }
   CassFuture* connect_future = cass_session_connect(session, cluster);
-  CassError rc = cass_future_error_code(connect_future);
+  rc = cass_future_error_code(connect_future);
   cass_future_free(connect_future);
   if (rc != CASS_OK) {
     throw std::runtime_error("Error: unable to connect to Cassandra DB. ");
@@ -313,6 +334,7 @@ void BatchLoader::copy_data_img(const CassResult* result,
 }
 
 void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
+  CassError rc;
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
     // Handle error
@@ -336,7 +358,11 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     cass_row_get_column_by_name(row, data_col.c_str());
   const cass_byte_t* data;
   size_t sz;
-  cass_value_get_bytes(c_data, &data, &sz);
+  rc = cass_value_get_bytes(c_data, &data, &sz);
+  if (rc != CASS_OK) {
+    throw std::runtime_error("Error getting bytes from result: "
+                             + std::string(cass_error_desc(rc)));
+  }
   shapes[wb][i] = sz;
   // label/mask/none
   std::future<void> cj;
@@ -351,7 +377,11 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     const CassValue* c_lab =
       cass_row_get_column_by_name(row, label_col.c_str());
     cass_int32_t lab;
-    cass_value_get_int32(c_lab, &lab);
+    rc = cass_value_get_int32(c_lab, &lab);
+    if (rc != CASS_OK) {
+      throw std::runtime_error("Error getting value from result: "
+                               + std::string(cass_error_desc(rc)));
+    }
     // enqueue image copy + int label
     cj = copy_pool->enqueue(&BatchLoader::copy_data_int, this,
                             result, data, sz, lab, i, wb);
@@ -362,7 +392,11 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
       cass_row_get_column_by_name(row, label_col.c_str());
     const cass_byte_t* lab;
     size_t l_sz;
-    cass_value_get_bytes(c_lab, &lab, &l_sz);
+    rc = cass_value_get_bytes(c_lab, &lab, &l_sz);
+    if (rc != CASS_OK) {
+      throw std::runtime_error("Error getting value from result: "
+                               + std::string(cass_error_desc(rc)));
+    }
     lab_shapes[wb][i] = l_sz;
     // enqueue image copy + image label (e.g., mask)
     cj = copy_pool->enqueue(&BatchLoader::copy_data_img, this,
@@ -424,18 +458,27 @@ void BatchLoader::ooo_enqueue(CassFuture* query_future) {
 
 void BatchLoader::keys2transfers(const std::vector<CassUuid>& keys, int wb) {
   // start all transfers in parallel (send requests to driver)
+  CassError rc;
   for (size_t i=0; i != keys.size(); ++i) {
     CassUuid cuid = keys[i];
     // prepare query
     CassStatement* statement = cass_prepared_bind(prepared);
-    cass_statement_bind_uuid_by_name(statement, id_col.c_str(), cuid);
+    rc = cass_statement_bind_uuid_by_name(statement, id_col.c_str(), cuid);
+    if (rc != CASS_OK) {
+      throw std::runtime_error("Error binding statement: "
+                               + std::string(cass_error_desc(rc)));
+    }
     CassFuture* query_future = cass_session_execute(session, statement);
     cass_statement_free(statement);
     futdata* fd = new futdata();
     fd->batch_ldr = this;
     fd->wb = wb;
     fd->i = i;
-    cass_future_set_callback(query_future, wrap_enq, fd);
+    rc = cass_future_set_callback(query_future, wrap_enq, fd);
+    if (rc != CASS_OK) {
+      throw std::runtime_error("Error setting callback: "
+                               + std::string(cass_error_desc(rc)));
+    }
     cass_future_free(query_future);
   }
 }
