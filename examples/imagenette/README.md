@@ -72,17 +72,17 @@ We can also store the original, unchanged files in the DB:
 
 ```bash
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=train --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=train --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train_256_jpg
+$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train_orig
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
+$ python3 loop_read.py --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg --use-gpu
+$ python3 loop_read.py --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig --use-gpu
 ```
 
 ## Insert Imagenet dataset in parallel (with Apache Spark)
@@ -136,11 +136,11 @@ $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
 while [our modified version](distrib_train_from_cassandra.py) with:
 ```bash
 # Read the lists of UUIDs and cache them to disk
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train_256_jpg 
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_val_256_jpg
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train_orig 
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_val_orig
 
 # Modified script, reading from Cassandra:
 $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
-  --train-data-table imagenette.data_train_256_jpg --train-metadata-table imagenette.metadata_train_256_jpg \
-  --val-data-table imagenette.data_val_256_jpg --val-metadata-table imagenette.metadata_val_256_jpg
+  --train-data-table imagenette.data_train_orig --train-metadata-table imagenette.metadata_train_orig \
+  --val-data-table imagenette.data_val_orig --val-metadata-table imagenette.metadata_val_orig
