@@ -46,7 +46,7 @@ def start_inferring():
     model_name = "dali_cassandra_interactive_stress"
 
     uuids = read_uuids(
-        metadata_table="imagenette.metadata_train_256_jpg",
+        metadata_table="imagenette.metadata_train_orig",
         ids_cache_dir="ids_cache",
     )
     uuids, real_sz = get_shard(
