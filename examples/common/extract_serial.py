@@ -12,23 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# To insert in DB, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --data-table=imagenette.data_train_256_jpg --metadata-table=imagenette.metadatadata_train_256_jpg --split-subdir=train
-
-# To save files in a directory, run with, e.g.,
-# python3 extract_serial.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
-
-
 import extract_common
 from clize import run
-
 
 def save_images(
     src_dir,
     *,
-    img_format="JPEG",
-    data_table="imagenette.data_train_256_jpg",
-    metadata_table="imagenette.metadata_train_256_jpg",
+    img_format="UNCHANGED",
+    data_table="imagenette.data_train_orig",
+    metadata_table="imagenette.metadata_train_orig",
     split_subdir="train",
     target_dir=None,
     img_size=256,

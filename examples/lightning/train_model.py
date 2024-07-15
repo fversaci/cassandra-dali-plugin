@@ -61,26 +61,26 @@ def parse():
     parser.add_argument(
         "--train-data-table",
         metavar="DATA TABLE (training)",
-        default="imagenette.data_train_256_jpg",
-        help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train_256_jpg)",
+        default="imagenette.data_train_orig",
+        help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train_orig)",
     )
     parser.add_argument(
         "--train-metadata-table",
         metavar="METADATA TABLE (training)",
-        default="imagenette.metadata_train_256_jpg",
-        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_train_256_jpg)",
+        default="imagenette.metadata_train_orig",
+        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_train_orig)",
     )
     parser.add_argument(
         "--val-data-table",
         metavar="DATA TABLE (validation)",
-        default="imagenette.data_val_256_jpg",
-        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò_256_jpg)",
+        default="imagenette.data_val_orig",
+        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò_orig)",
     )
     parser.add_argument(
         "--val-metadata-table",
         metavar="METADATA TABLE (validation)",
-        default="imagenette.metadata_val_256_jpg",
-        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_val_256_jpg)",
+        default="imagenette.metadata_val_orig",
+        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_val_orig)",
     )
     parser.add_argument(
         "--ids-cache-dir",

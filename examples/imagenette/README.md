@@ -22,9 +22,8 @@ Note that the shell prompt is immediately returned.  Wait until `state
 jump to NORMAL` is shown (about 1 minute).
 
 ## Resized dataset
-The following commands will create a resized dataset in Cassandra
-(with minimum dimension equal to 256 pixels) and use the plugin to
-read the images in NVIDIA DALI.
+The following commands will copy the original dataset in Cassandra and
+use the plugin to read the images in NVIDIA DALI.
 
 ```bash
 # - Create the tables in the Cassandra DB
@@ -32,48 +31,8 @@ $ cd examples/imagenette/
 $ /cassandra/bin/cqlsh -f create_tables.cql
 
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg 
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table imagenette.data_val_256_jpg --metadata-table imagenette.metadata_val_256_jpg
-
-# Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train_256_jpg
-
-# - Tight loop data loading test in host memory
-$ python3 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
-
-# - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg --use-gpu
-
-# - Sharded, tight loop data loading test, using 2 processes via torchrun
-$ torchrun --nproc_per_node=2 loop_read.py --data-table imagenette.data_train_256_jpg --metadata-table imagenette.metadata_train_256_jpg
-```
-
-## Compare with DALI fn.readers.file
-The same scripts can be used to save the pre-processed images in the
-filesystem and to read them using the standard DALI file reader.
-
-```bash
-# - Save the resized files in the filesystem
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --target-dir=/data/imagenette/val_256_jpg
-
-# - Tight loop data loading test in host memory
-$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg
-
-# - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg --use-gpu
-
-# - Sharded, tight loop data loading test, using 2 processes via torchrun
-$ torchrun --nproc_per_node=2 loop_read.py --reader=file --file-root=/data/imagenette/train_256_jpg
-```
-
-## Storing the unchanged images in the DB (no resize)
-We can also store the original, unchanged files in the DB:
-
-```bash
-# - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=train --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig
-$ python3 extract_serial.py /tmp/imagenette2-320 --img-format=UNCHANGED --split-subdir=val --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig 
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table imagenette.data_val_orig --metadata-table imagenette.metadata_val_orig
 
 # Read the list of UUIDs and cache it to disk
 $ python3 cache_uuids.py --metadata-table=imagenette.metadata_train_orig
@@ -83,6 +42,24 @@ $ python3 loop_read.py --data-table imagenette.data_train_orig --metadata-table 
 
 # - Tight loop data loading test in GPU memory (GPU:0)
 $ python3 loop_read.py --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig --use-gpu
+
+# - Sharded, tight loop data loading test, using 2 processes via torchrun
+$ torchrun --nproc_per_node=2 loop_read.py --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig
+```
+
+## Compare with DALI fn.readers.file
+The same script can be used to read the original dataset from the
+filesystem, using the standard DALI file reader.
+
+```bash
+# - Tight loop data loading test in host memory
+$ python3 loop_read.py --reader=file --file-root=/tmp/imagenette2-320/train
+
+# - Tight loop data loading test in GPU memory (GPU:0)
+$ python3 loop_read.py --reader=file --file-root=/tmp/imagenette2-320/train --use-gpu
+
+# - Sharded, tight loop data loading test, using 2 processes via torchrun
+$ torchrun --nproc_per_node=2 loop_read.py --reader=file --file-root=/tmp/imagenette2-320/train
 ```
 
 ## Insert Imagenet dataset in parallel (with Apache Spark)
@@ -107,16 +84,16 @@ $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 # - Fill the tables in parallel (10 jobs) with Spark
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --split-subdir=train --data-table imagenet.data_train_256_jpg --metadata-table imagenet.metadata_train_256_jpg
+  --split-subdir=train --data-table imagenet.data_train_orig --metadata-table imagenet.metadata_train_orig
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --split-subdir=val --data-table imagenet.data_val_256_jpg --metadata-table imagenet.metadata_val_256_jpg
+  --split-subdir=val --data-table imagenet.data_val_orig --metadata-table imagenet.metadata_val_orig
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train_256_jpg
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train_orig
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --data-table imagenet.data_train_256_jpg --metadata-table imagenet.metadata_train_256_jpg
+$ python3 loop_read.py --data-table imagenet.data_train_orig --metadata-table imagenet.metadata_train_orig
 ```
 
 ## Multi-GPU training
@@ -144,3 +121,4 @@ $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   --train-data-table imagenette.data_train_orig --train-metadata-table imagenette.metadata_train_orig \
   --val-data-table imagenette.data_val_orig --val-metadata-table imagenette.metadata_val_orig
+```

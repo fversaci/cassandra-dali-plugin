@@ -23,6 +23,6 @@ Run the training of the Imagenette dataset with [the lightning application](trai
 ```bash
 $ python3 train_model.py --num-gpu NUM_GPUS \
   -a resnet50 --b 64 --workers 4 --lr=1.0e-3 \
-  --train-data-table imagenette.data_train_256_jpg --train-metadata-table imagenette.metadata_train_256_jpg \
-  --val-data-table imagenette.data_val_256_jpg --val-metadata-table imagenette.metadata_val_256_jpg
+  --train-data-table imagenette.data_train_orig --train-metadata-table imagenette.metadata_train_orig \
+  --val-data-table imagenette.data_val_orig --val-metadata-table imagenette.metadata_val_orig
 ```

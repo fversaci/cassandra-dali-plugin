@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# To insert in DB, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --data-table=imagenette.data_train_256_jpg --metadata-table=imagenette.metadata_train_256_jpg --split-subdir=train
-
-# To save files in a directory, run with, e.g.,
-# /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 --py-files extract_common.py extract_spark.py /tmp/imagenette2-320 --img-format=JPEG --split-subdir=train --target-dir=/data/imagenette/train_256_jpg
-
 import extract_common
 from pyspark.conf import SparkConf
 from pyspark.context import SparkContext
@@ -28,9 +22,9 @@ from clize import run
 def save_images(
     src_dir,
     *,
-    img_format="JPEG",
-    data_table="imagenette.data_256_jpg",
-    metadata_table="imagenette.metadata_256_jpg",
+    img_format="UNCHANGED",
+    data_table="imagenette.data_orig",
+    metadata_table="imagenette.metadata_orig",
     split_subdir="train",
     target_dir=None,
     img_size=256,
