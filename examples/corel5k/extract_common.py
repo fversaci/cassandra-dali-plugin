@@ -102,8 +102,6 @@ def send_images_to_db(
             metadata_table=metadata_table,
             data_id_col="patch_id",
             data_label_col="label",
-            metadata_id_col="patch_id",
-            metadata_label_col="label",
             data_col="data",
             cols=["filename"],
             get_data=get_data(img_format),

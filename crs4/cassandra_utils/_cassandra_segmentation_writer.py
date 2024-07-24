@@ -28,11 +28,11 @@ class CassandraSegmentationWriter(CassandraWriter):
         metadata_table,
         data_id_col,
         data_label_col,
-        metadata_id_col,
-        metadata_label_col,
         data_col,
         cols,
         get_data,
+        metadata_id_col=None,
+        metadata_label_col=None,
     ):
         super().__init__(
             cass_conf=cass_conf,
