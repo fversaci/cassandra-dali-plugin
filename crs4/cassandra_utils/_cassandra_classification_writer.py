@@ -26,8 +26,10 @@ class CassandraClassificationWriter(CassandraWriter):
         cass_conf,
         data_table,
         metadata_table,
-        id_col,
-        label_col,
+        data_id_col,
+        data_label_col,
+        metadata_id_col,
+        metadata_label_col,
         data_col,
         cols,
         get_data,
@@ -36,8 +38,10 @@ class CassandraClassificationWriter(CassandraWriter):
             cass_conf=cass_conf,
             data_table=data_table,
             metadata_table=metadata_table,
-            id_col=id_col,
-            label_col=label_col,
+            data_id_col=data_id_col,
+            data_label_col=data_label_col,
+            metadata_id_col=metadata_id_col,
+            metadata_label_col=metadata_label_col,
             data_col=data_col,
             cols=cols,
             get_data=get_data,
@@ -49,10 +53,10 @@ class CassandraClassificationWriter(CassandraWriter):
     def set_query(self):
         query_data = f"INSERT INTO {self.data_table} ("
         query_data += (
-            f"{self.id_col}, {self.label_col}, {self.data_col}) VALUES (?,?,?)"
+            f"{self.data_id_col}, {self.data_label_col}, {self.data_col}) VALUES (?,?,?)"
         )
         query_meta = f"INSERT INTO {self.metadata_table} ("
-        query_meta += f"{self.id_col}, {self.label_col}, {', '.join(self.cols)}) "
+        query_meta += f"{self.metadata_id_col}, {self.metadata_label_col}, {', '.join(self.cols)}) "
         query_meta += f"VALUES ({', '.join(['?']*(len(self.cols)+2))})"
 
         self.prep_data = self.sess.prepare(query_data)
