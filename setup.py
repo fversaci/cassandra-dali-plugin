@@ -50,7 +50,7 @@ class build_ext(build_ext_orig):
 
 setup(
     name="cassandra-dali-plugin",
-    version="1.1.7",
+    version="1.1.8",
     author="Francesco Versaci, Giovanni Busonera",
     author_email="francesco.versaci@gmail.com, giovanni.busonera@crs4.it",
     description="Cassandra data loader for ML pipelines",

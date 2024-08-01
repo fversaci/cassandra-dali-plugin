@@ -21,17 +21,30 @@ class CassandraWriter:
         cass_conf,
         data_table,
         metadata_table,
-        id_col,
-        label_col,
+        data_id_col,
+        data_label_col,
         data_col,
         cols,
         get_data,
+        metadata_id_col=None,
+        metadata_label_col=None,
     ):
         self.get_data = get_data
         self.data_table = data_table
         self.metadata_table = metadata_table
-        self.id_col = id_col
-        self.label_col = label_col
+        self.data_id_col = data_id_col
+        self.data_label_col = data_label_col
+
+        if metadata_id_col:
+            self.metadata_id_col = metadata_id_col
+        else:
+            self.metadata_id_col = data_id_col
+        
+        if metadata_label_col:
+            self.metadata_label_col = metadata_label_col
+        else:
+            self.metadata_label_col = data_label_col
+        
         self.data_col = data_col
         self.cols = cols
         self._cs = CassandraSession(cass_conf)
