@@ -126,6 +126,7 @@ RUN \
     && chown -R user.user /apache-cassandra-$CASS_V*
 
 COPY . /home/user/cassandra-dali-plugin
+COPY ./examples/common/private_data.template.py /home/user/cassandra-dali-plugin/examples/common/private_data.py
 
 # increase write timeout to 20 seconds, listen to all interfaces,
 # enable SSL and increase max direct memory available
