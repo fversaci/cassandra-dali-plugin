@@ -65,20 +65,14 @@ class CassandraSegmentationWriter(CassandraWriter):
     def save_item(self, item):
         image_id, label, data, partition_items = item
         stuff = (image_id, *partition_items)
+        
+        batch = BatchStatement()
         # insert metadata
-        self.sess.execute(
-            self.prep_meta,
-            stuff,
-            execution_profile="tuple",
-            timeout=30,
-        )
+        batch.add(self.prep_meta, stuff)
         # insert heavy data
-        self.sess.execute(
-            self.prep_data,
-            (image_id, label, data),
-            execution_profile="tuple",
-            timeout=30,
-        )
+        batch.add(self.prep_data, (image_id, label, data))
+        
+        self.sess.execute(batch, execution_profile="tuple", timeout=30)
 
     def enqueue_item(self, item):
         image_id, label, data, partition_items = item
