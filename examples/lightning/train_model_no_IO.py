@@ -28,6 +28,8 @@ from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks import ModelCheckpoint
 
+import time
+
 try:
     from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
 except ImportError:
@@ -247,7 +249,7 @@ class TensorIterator:
         self.model = model
         self.data_size = data_size
         self.cnt = 0
-        
+
         t = torch.rand(self.bs, self.size[0], self.size[1], self.size[2], device=self.model.device)
         fake_label = torch.randint(0, 999, (self.bs,), device=self.model.device)
         self.batch = [{'data':t, 'label':fake_label}]
@@ -265,6 +267,9 @@ class TensorIterator:
         else:
             self.cnt += 1
             return self.batch
+
+    def reset(self):
+        self.cnt = 0
 
 
 ########################
@@ -306,6 +311,9 @@ class ImageNetLightningModel(L.LightningModule):
         self.batch_size = batch_size
         self.workers = workers
 
+        self.start_time = time.time()
+        self.step_time = time.time()
+
         print("*" * 80)
         print(f"*************** Loading model {self.arch}")
         print("*" * 80)
@@ -325,6 +333,18 @@ class ImageNetLightningModel(L.LightningModule):
         loss_train = F.cross_entropy(output, target)
 
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
+
+        im_sec = self.batch_size / self.step_time * self.trainer.world_size
+
+        self.log(
+            "im_sec",
+            im_sec,
+            prog_bar=True,
+            on_step=False,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
         self.log(
             "train_loss",
             loss_train,
@@ -422,6 +442,12 @@ class ImageNetLightningModel(L.LightningModule):
         # scheduler = lr_scheduler.LambdaLR(optimizer, lambda epoch: 0.1 ** (epoch // 30))
         # return [optimizer], [scheduler]
         return [optimizer]
+
+    def on_train_batch_start(self, batch, batch_idx):
+        self.start_time = time.time()
+
+    def on_train_batch_end(self, outputs, batch, batch_idx):
+        self.step_time = time.time() - self.start_time
 
 
 ## Derived class to add the Cassandra DALI pipeline and the no-io Lightning module
@@ -567,6 +593,7 @@ class NoIO_ImageNetLightningModel(ImageNetLightningModel):
         args,
     ):
         super().__init__(**vars(args))
+        self.data_size = 10000
 
     def prepare_data(self):
         # no preparation is needed in DALI
@@ -574,17 +601,17 @@ class NoIO_ImageNetLightningModel(ImageNetLightningModel):
         pass
 
     def train_dataloader(self):
-        return TensorIterator(model=self, batch_size=self.batch_size, data_size=10000)
+        return TensorIterator(model=self, batch_size=self.batch_size, data_size=self.data_size)
 
     def val_dataloader(self):
-        return TensorIterator(model=self, batch_size=self.batch_size, data_size=5000)
-    
-    def test_dataloader(self):
-        return TensorIterator(model=self, batch_size=self.batch_size, data_size=5000)
-    
-    def test_step(self, batch, batch_idx):
-        return self.eval_step(batch, batch_idx, "test")
-    
+        return TensorIterator(model=self, batch_size=self.batch_size, data_size=self.data_size)
+
+    def on_train_epoch_end(self):
+        self.trainer.train_dataloader.reset()
+
+    def on_validation_epoch_end(self):
+        self.trainer.val_dataloaders.reset()
+
 
 def main():
     global best_prec1, args
