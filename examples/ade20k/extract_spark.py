@@ -24,8 +24,8 @@ def save_images(
     mask_dir,
     *,
     img_format="UNCHANGED",
-    data_table="ade20k.data_orig",
-    metadata_table="ade20k.metadata_orig",
+    data_table="ade20k.data",
+    metadata_table="ade20k.metadata",
 ):
     """Save center-cropped images to Cassandra DB or directory
 

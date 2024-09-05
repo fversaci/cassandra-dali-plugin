@@ -46,8 +46,8 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 
 def read_data(
     *,
-    data_table="corel5k.data_orig",
-    metadata_table="corel5k.metadata_orig",
+    data_table="corel5k.data",
+    metadata_table="corel5k.metadata",
     ids_cache_dir="ids_cache",
     use_gpu=False,
     epochs=10,

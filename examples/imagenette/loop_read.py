@@ -82,8 +82,8 @@ def just_sleep(im1, im2):
 
 def read_data(
     *,
-    data_table="imagenette.data_train_orig",
-    metadata_table="imagenette.metadata_train_orig",
+    data_table="imagenette.data_train",
+    metadata_table="imagenette.metadata_train",
     ids_cache_dir="ids_cache",
     reader="cassandra",
     use_gpu=False,
