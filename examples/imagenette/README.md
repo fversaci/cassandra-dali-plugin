@@ -31,20 +31,20 @@ $ cd examples/imagenette/
 $ /cassandra/bin/cqlsh -f create_tables.cql
 
 # - Fill the tables with data and metadata
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig 
-$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table imagenette.data_val_orig --metadata-table imagenette.metadata_val_orig
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table imagenette.data_train --metadata-table imagenette.metadata_train
+$ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table imagenette.data_val --metadata-table imagenette.metadata_val
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train_orig
+$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig
+$ python3 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig --use-gpu
+$ python3 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train --use-gpu
 
 # - Sharded, tight loop data loading test, using 2 processes via torchrun
-$ torchrun --nproc_per_node=2 loop_read.py --data-table imagenette.data_train_orig --metadata-table imagenette.metadata_train_orig
+$ torchrun --nproc_per_node=2 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train
 ```
 
 ## Compare with DALI fn.readers.file
@@ -84,16 +84,16 @@ $ /cassandra/bin/cqlsh -f create_tables.imagenet.cql
 # - Fill the tables in parallel (10 jobs) with Spark
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --split-subdir=train --data-table imagenet.data_train_orig --metadata-table imagenet.metadata_train_orig
+  --split-subdir=train --data-table imagenet.data_train --metadata-table imagenet.metadata_train
 $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
   --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --split-subdir=val --data-table imagenet.data_val_orig --metadata-table imagenet.metadata_val_orig
+  --split-subdir=val --data-table imagenet.data_val --metadata-table imagenet.metadata_val
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train_orig
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --data-table imagenet.data_train_orig --metadata-table imagenet.metadata_train_orig
+$ python3 loop_read.py --data-table imagenet.data_train --metadata-table imagenet.metadata_train
 ```
 
 ## Multi-GPU training
@@ -113,12 +113,12 @@ $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
 while [our modified version](distrib_train_from_cassandra.py) with:
 ```bash
 # Read the lists of UUIDs and cache them to disk
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train_orig 
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_val_orig
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_val
 
 # Modified script, reading from Cassandra:
 $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
-  --train-data-table imagenette.data_train_orig --train-metadata-table imagenette.metadata_train_orig \
-  --val-data-table imagenette.data_val_orig --val-metadata-table imagenette.metadata_val_orig
+  --train-data-table imagenette.data_train --train-metadata-table imagenette.metadata_train \
+  --val-data-table imagenette.data_val --val-metadata-table imagenette.metadata_val
 ```

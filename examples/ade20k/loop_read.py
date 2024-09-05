@@ -46,8 +46,8 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 
 def read_data(
     *,
-    data_table="ade20k.data_orig",
-    metadata_table="ade20k.metadata_orig",
+    data_table="ade20k.data",
+    metadata_table="ade20k.metadata",
     ids_cache_dir="ids_cache",
     reader="cassandra",
     use_gpu=False,

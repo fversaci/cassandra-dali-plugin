@@ -6,7 +6,7 @@ CREATE KEYSPACE IF NOT EXISTS imagenette WITH replication = {'class': 'SimpleStr
 // Tables with original files
 
 // Mapping patch uuid to data and label
-CREATE TABLE IF NOT EXISTS imagenette.data_orig(
+CREATE TABLE IF NOT EXISTS imagenette.data(
   patch_id uuid,
   label int,
   data blob,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS imagenette.data_orig(
 );
 
 // Mapping patch uuid to metadata
-CREATE TABLE IF NOT EXISTS imagenette.metadata_orig(
+CREATE TABLE IF NOT EXISTS imagenette.metadata(
   label int,
   or_label text,
   or_split text,

@@ -22,8 +22,8 @@ def save_images(
     label_file,
     *,
     img_format="UNCHANGED",
-    data_table="corel5k.data_orig",
-    metadata_table="corel5k.metadata_orig",
+    data_table="corel5k.data",
+    metadata_table="corel5k.metadata",
 ):
     """Save center-cropped images to Cassandra DB or directory
 

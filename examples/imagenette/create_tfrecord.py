@@ -105,8 +105,8 @@ def write_tfrecords(data_dir, output_dir, split_name, max_file_size=64 * 1024 * 
 
 
 if __name__ == "__main__":
-    train_data_dir = "/data/imagenet/train_orig"
-    val_data_dir = "/data/imagenet/val_orig"
+    train_data_dir = "/data/imagenet/train"
+    val_data_dir = "/data/imagenet/val"
     output_dir = "/data/imagenet/tfrecords"
 
     write_tfrecords(val_data_dir, output_dir, "val")
