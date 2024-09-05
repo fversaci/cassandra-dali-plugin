@@ -29,6 +29,7 @@ from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks import ModelCheckpoint
 
 import time
+import numpy as np
 
 try:
     from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
@@ -185,14 +186,16 @@ def parse():
     )
     parser.add_argument(
         "--log-tensorboard",
-        dest="tensorboard",
-        action="store_true",
+        dest="log_tensorboard_fname",
+        type=str,
+        default="",
         help="Log metrics to tensorboard format",
     )
     parser.add_argument(
         "--log-csv",
-        dest="csv",
-        action="store_true",
+        dest="log_csv_fname",
+        type=str,
+        default='',
         help="Log metrics to csv file",
     )
     parser.add_argument(
@@ -337,14 +340,25 @@ class ImageNetLightningModel(L.LightningModule):
         im_sec = self.batch_size / self.step_time * self.trainer.world_size
 
         self.log(
-            "im_sec",
+            "train_batch_ts",
+            self.batch_ts,
+            prog_bar=False,
+            on_step=True,
+            on_epoch=False,
+            logger=True,
+            sync_dist=True,
+        )
+
+        self.log(
+            "train_im_sec",
             im_sec,
             prog_bar=True,
-            on_step=False,
+            on_step=True,
             on_epoch=True,
             logger=True,
             sync_dist=True,
         )
+
         self.log(
             "train_loss",
             loss_train,
@@ -354,6 +368,7 @@ class ImageNetLightningModel(L.LightningModule):
             logger=True,
             sync_dist=True,
         )
+
         self.log(
             "train_acc1",
             acc1,
@@ -363,6 +378,7 @@ class ImageNetLightningModel(L.LightningModule):
             logger=True,
             sync_dist=True,
         )
+
         self.log(
             "train_acc5",
             acc5,
@@ -372,6 +388,7 @@ class ImageNetLightningModel(L.LightningModule):
             logger=True,
             sync_dist=True,
         )
+
         return loss_train
 
     def eval_step(self, batch, batch_idx, prefix: str):
@@ -380,6 +397,29 @@ class ImageNetLightningModel(L.LightningModule):
         output = self(images)
         loss_val = F.cross_entropy(output, target)
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
+
+        im_sec = self.batch_size / self.step_time * self.trainer.world_size
+
+        self.log(
+            f"{prefix}_batch_ts",
+            self.batch_ts,
+            prog_bar=False,
+            on_step=True,
+            on_epoch=False,
+            logger=True,
+            sync_dist=True,
+        )
+
+        self.log(
+            f"{prefix}_im_sec",
+            im_sec,
+            prog_bar=True,
+            on_step=True,
+            on_epoch=True,
+            logger=True,
+            sync_dist=True,
+        )
+
         self.log(
             f"{prefix}_loss",
             loss_val,
@@ -389,6 +429,7 @@ class ImageNetLightningModel(L.LightningModule):
             sync_dist=True,
             logger=True,
         )
+
         self.log(
             f"{prefix}_acc1",
             acc1,
@@ -398,6 +439,7 @@ class ImageNetLightningModel(L.LightningModule):
             sync_dist=True,
             logger=True,
         )
+
         self.log(
             f"{prefix}_acc5",
             acc5,
@@ -445,10 +487,16 @@ class ImageNetLightningModel(L.LightningModule):
 
     def on_train_batch_start(self, batch, batch_idx):
         self.start_time = time.time()
+        self.batch_ts = torch.tensor(self.start_time, dtype=torch.double)
 
     def on_train_batch_end(self, outputs, batch, batch_idx):
         self.step_time = time.time() - self.start_time
 
+    def on_validation_batch_start(self, batch, batch_idx):
+        self.on_train_batch_start(batch, batch_idx)
+
+    def on_validation_batch_end(self, outputs, batch, batch_idx):
+        self.on_train_batch_end(outputs, batch, batch_idx)
 
 ## Derived class to add the Cassandra DALI pipeline and the no-io Lightning module
 
@@ -673,12 +721,12 @@ def main():
     ### Loggers
     loggers_l = []
 
-    if args.tensorboard:
-        tensorboard_logger = TensorBoardLogger("tb_logs", name="my_model")
+    if args.log_tensorboard_fname:
+        tensorboard_logger = TensorBoardLogger("tb_logs", name=log_tensorboard_fname)
         loggers_l.append(tensorboard_logger)
 
-    if args.csv:
-        csv_logger = logger = CSVLogger("logs_csv", name="my_model")
+    if args.log_csv_fname:
+        csv_logger = logger = CSVLogger("logs_csv", name=args.log_csv_fname)
         loggers_l.append(csv_logger)
 
     if not loggers_l:
@@ -697,6 +745,7 @@ def main():
             callbacks=callbacks_l,
             num_sanity_val_steps=0,
             precision="16-mixed",
+            log_every_n_steps=1,
         )
     else:
         trainer = L.Trainer(
@@ -709,6 +758,7 @@ def main():
             callbacks=callbacks_l,
             num_sanity_val_steps=0,
             precision="16-mixed",
+            log_every_n_steps=1,
         )
 
     trainer.fit(model, ckpt_path=ckpt_path)
