@@ -4,7 +4,10 @@
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, read_uuids
-from create_dali_pipeline import create_dali_pipeline_from_file, create_dali_pipeline_cassandra
+from create_dali_pipeline import (
+    create_dali_pipeline_from_file,
+    create_dali_pipeline_cassandra,
+)
 
 import argparse
 
@@ -195,7 +198,7 @@ def parse():
         "--log-csv",
         dest="log_csv_fname",
         type=str,
-        default='',
+        default="",
         help="Log metrics to csv file",
     )
     parser.add_argument(
@@ -245,26 +248,29 @@ def parse():
 ## It is used to evaluate the upper bound performance of the GPU training a specific model
 ## It is activated by the command line argument --no-io
 
+
 class TensorIterator:
-    def __init__(self, model, size=(3,224,224), batch_size=256, data_size=10000):
+    def __init__(self, model, size=(3, 224, 224), batch_size=256, data_size=10000):
         self.size = size
         self.bs = batch_size
         self.model = model
         self.data_size = data_size
         self.cnt = 0
 
-        t = torch.rand(self.bs, self.size[0], self.size[1], self.size[2], device=self.model.device)
+        t = torch.rand(
+            self.bs, self.size[0], self.size[1], self.size[2], device=self.model.device
+        )
         fake_label = torch.randint(0, 999, (self.bs,), device=self.model.device)
-        self.batch = [{'data':t, 'label':fake_label}]
+        self.batch = [{"data": t, "label": fake_label}]
 
     def __len__(self):
-        return self.data_size // self.bs 
+        return self.data_size // self.bs
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self.cnt == self.data_size//self.bs:
+        if self.cnt == self.data_size // self.bs:
             self.cnt = 0
             raise StopIteration
         else:
@@ -498,7 +504,9 @@ class ImageNetLightningModel(L.LightningModule):
     def on_validation_batch_end(self, outputs, batch, batch_idx):
         self.on_train_batch_end(outputs, batch, batch_idx)
 
+
 ## Derived class to add the Cassandra DALI pipeline and the no-io Lightning module
+
 
 class DALI_ImageNetLightningModel(ImageNetLightningModel):
     def __init__(
@@ -649,10 +657,14 @@ class NoIO_ImageNetLightningModel(ImageNetLightningModel):
         pass
 
     def train_dataloader(self):
-        return TensorIterator(model=self, batch_size=self.batch_size, data_size=self.data_size)
+        return TensorIterator(
+            model=self, batch_size=self.batch_size, data_size=self.data_size
+        )
 
     def val_dataloader(self):
-        return TensorIterator(model=self, batch_size=self.batch_size, data_size=self.data_size)
+        return TensorIterator(
+            model=self, batch_size=self.batch_size, data_size=self.data_size
+        )
 
     def on_train_epoch_end(self):
         self.trainer.train_dataloader.reset()
@@ -703,7 +715,10 @@ def main():
     if args.patience:
         print(f"-- Early stopping enabled with patience={args.patience}")
         early_stopping = EarlyStopping(
-            monitor="val_loss", mode="min", patience=args.patience, check_finite=False,
+            monitor="val_loss",
+            mode="min",
+            patience=args.patience,
+            check_finite=False,
         )
         callbacks_l.append(early_stopping)
 
