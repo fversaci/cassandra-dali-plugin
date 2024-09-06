@@ -50,30 +50,32 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 def parse_s3_uri(s3_uri):
     if not s3_uri.startswith("s3://"):
         raise ValueError("Invalid S3 URI")
-    
+
     # Remove the "s3://" prefix
     s3_uri = s3_uri[5:]
-    
+
     # Split the remaining part into bucket and prefix
-    parts = s3_uri.split('/', 1)
+    parts = s3_uri.split("/", 1)
     bucket_name = parts[0]
-    prefix = parts[1] if len(parts) > 1 else ''
-    
+    prefix = parts[1] if len(parts) > 1 else ""
+
     return bucket_name, prefix
+
 
 def list_s3_files(s3_uri):
     bucket_name, prefix = parse_s3_uri(s3_uri)
-    s3 = boto3.client('s3')
-    paginator = s3.get_paginator('list_objects_v2')
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
     pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
 
     paths = []
     for page in pages:
-        if 'Contents' in page:
-            for obj in page['Contents']:
+        if "Contents" in page:
+            for obj in page["Contents"]:
                 paths.append(f"s3://{bucket_name}/{obj['Key']}")
 
     return sorted(paths)
+
 
 def just_sleep(im1, im2):
     time.sleep(2e-5 * world_size)
@@ -91,6 +93,8 @@ def read_data(
     epochs=10,
     file_root=None,
     index_root=None,
+    out_of_order=False,
+    slow_start=0,
 ):
     """Read images from DB or filesystem, in a tight loop
 
@@ -121,8 +125,8 @@ def read_data(
             name="Reader",
             comm_threads=1,
             copy_threads=4,
-            ooo=True,
-            slow_start=4,
+            ooo=out_of_order,
+            slow_start=slow_start,
             source_uuids=source_uuids,
             shard_id=global_rank,
             num_shards=world_size,
@@ -217,20 +221,20 @@ def read_data(
         with trange(steps) as t:
             for _ in t:
                 pl.run()
-            epoch_time = t.format_dict['elapsed']
+            epoch_time = t.format_dict["elapsed"]
             if first_epoch:
                 # ignore first epoch for stats
                 first_epoch = False
             else:
-                speeds.append(t.total/epoch_time)
+                speeds.append(t.total / epoch_time)
 
         pl.reset()
     # Calculate the average and standard deviation
     if epochs > 3:
         average_speed = statistics.mean(speeds)
         std_dev_speed = statistics.stdev(speeds)
-        print(f'Stats for epochs > 1')
-        print(f'  Average speed: {average_speed:.2f} ± {std_dev_speed:.2f} it/s')
+        print(f"Stats for epochs > 1")
+        print(f"  Average speed: {average_speed:.2f} ± {std_dev_speed:.2f} it/s")
 
     ########################################################################
     # alternatively: use pytorch iterator
