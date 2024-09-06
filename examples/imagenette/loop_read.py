@@ -92,6 +92,8 @@ def read_data(
     epochs=10,
     file_root=None,
     index_root=None,
+    out_of_order=False,
+    slow_start=0,
 ):
     """Read images from DB or filesystem, in a tight loop
 
@@ -120,8 +122,8 @@ def read_data(
             name="Reader",
             comm_threads=1,
             copy_threads=4,
-            ooo=True,
-            slow_start=4,
+            ooo=out_of_order,
+            slow_start=slow_start,
             source_uuids=source_uuids,
             shard_id=global_rank,
             num_shards=world_size,
