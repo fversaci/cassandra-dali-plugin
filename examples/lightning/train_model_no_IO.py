@@ -125,9 +125,9 @@ def parse():
         "--arch",
         "-a",
         metavar="ARCH",
-        default="resnet18",
+        default="resnet50",
         choices=model_names,
-        help="model architecture: " + " | ".join(model_names) + " (default: resnet18)",
+        help="model architecture: " + " | ".join(model_names) + " (default: resnet50)",
     )
     parser.add_argument(
         "-j",
@@ -255,6 +255,19 @@ def parse():
         dest="no_io",
         action="store_true",
         help="Train model by using a single tensor. No data loading is performed. It is used to evaluate the upper bound of the GPU performance",
+    )
+    parser.add_argument(
+        "--out-of-order",
+        dest="ooo",
+        action="store_true",
+        help="Enable out of order Cassandra data loading",
+    )
+    parser.add_argument(
+        "--slow-start",
+        default=0,
+        type=int,
+        metavar="INT",
+        help="Incremental prefetching factor (default: 0)",
     )
     parser.add_argument("--deterministic", action="store_true")
 
@@ -689,6 +702,8 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 shuffle_every_epoch=True,
                 size=args.val_size,
                 source_uuids=in_uuids,
+                ooo=args.ooo,
+                slow_start=args.slow_start,
             )
 
         pipe.build()
