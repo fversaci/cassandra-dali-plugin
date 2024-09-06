@@ -4,11 +4,14 @@
 
 # Cassandra Reader
 from cassandra_reader import get_cassandra_reader
+from s3_utils import list_s3_files
+import os
 
 try:
     from nvidia.dali.pipeline import pipeline_def
     import nvidia.dali.types as types
     import nvidia.dali.fn as fn
+    import nvidia.dali.tfrecord as tfrec
 except ImportError:
     raise ImportError(
         "Please install DALI from https://www.github.com/NVIDIA/DALI to run this example."
@@ -132,6 +135,52 @@ def create_dali_pipeline_from_file(
         pad_last_batch=True,
         name="Reader",
     )
+
+    images, labels = pipeline_transformations(
+        images, labels, is_training, dali_cpu, crop, size
+    )
+
+    return (images, labels)
+
+
+@pipeline_def
+def create_dali_pipeline_from_tfrecord(
+    file_root,
+    index_root,
+    crop,
+    size,
+    dali_cpu=False,
+    is_training=True,
+    shard_id=0,
+    num_shards=1,
+):
+
+    # read tfrecords from filesystem or s3
+    if file_root.startswith("s3://"):
+        path = list_s3_files(file_root)
+        index_path = list_s3_files(index_root)
+    else:
+        path = sorted([f.path for f in os.scandir(file_root) if f.is_file()])
+        index_path = sorted([f.path for f in os.scandir(index_root) if f.is_file()])
+
+    tf_reader = fn.readers.tfrecord(
+        path=path,
+        index_path=index_path,
+        features={
+            "image/encoded": tfrec.FixedLenFeature([], tfrec.string, ""),
+            "image/class/label": tfrec.FixedLenFeature([], tfrec.int64, -1),
+        },
+        name="Reader",
+        shard_id=shard_id,
+        num_shards=num_shards,
+        pad_last_batch=True,
+        # speed up reading
+        prefetch_queue_depth=4,
+        # dont_use_mmap=True,
+        read_ahead=True,
+    )
+
+    images, labels = tf_reader["image/encoded"], tf_reader["image/class/label"]
 
     images, labels = pipeline_transformations(
         images, labels, is_training, dali_cpu, crop, size

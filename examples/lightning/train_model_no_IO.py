@@ -7,6 +7,7 @@ from cassandra_reader import get_cassandra_reader, read_uuids
 from create_dali_pipeline import (
     create_dali_pipeline_from_file,
     create_dali_pipeline_cassandra,
+    create_dali_pipeline_from_tfrecord,
 )
 
 import argparse
@@ -34,6 +35,8 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 import time
 import numpy as np
 
+from s3_utils import list_s3_files
+
 try:
     from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
 except ImportError:
@@ -56,13 +59,37 @@ def parse():
         "--train-folder",
         metavar="DIRECTORY (training)",
         default="",
-        help="training folder with a subfolder for each class. This override cassandra",
+        help="training folder with a subfolder for each class. This override cassandra and tfrecord",
     )
     parser.add_argument(
         "--val-folder",
         metavar="DIRECTORY (validation)",
         default="",
-        help="validation folder with a subfolder for each class. This override cassandra",
+        help="validation folder with a subfolder for each class. This override cassandra and tfrecord",
+    )
+    parser.add_argument(
+        "--train-tfr-folder",
+        metavar="TFRECORD DIRECTORY (training)",
+        default="",
+        help="training folder with tfrecords. This override cassandra",
+    )
+    parser.add_argument(
+        "--val-tfr-folder",
+        metavar="TFRECORD DIRECTORY (validation)",
+        default="",
+        help="validation folder with tfrecords. This override cassandra",
+    )
+    parser.add_argument(
+        "--train-index-folder",
+        metavar="TFRECORD INDEX DIRECTORY (training)",
+        default="",
+        help="training folder with tfrecord index. This override cassandra",
+    )
+    parser.add_argument(
+        "--val-index-folder",
+        metavar="TFRECORD INDEX DIRECTORY (validation)",
+        default="",
+        help="validation folder with tfrecord index. This override cassandra",
     )
     parser.add_argument(
         "--train-data-table",
@@ -352,7 +379,7 @@ class ImageNetLightningModel(L.LightningModule):
             on_step=True,
             on_epoch=False,
             logger=True,
-            sync_dist=True,
+            sync_dist=False,
         )
 
         self.log(
@@ -413,7 +440,7 @@ class ImageNetLightningModel(L.LightningModule):
             on_step=True,
             on_epoch=False,
             logger=True,
-            sync_dist=True,
+            sync_dist=False,
         )
 
         self.log(
@@ -505,7 +532,7 @@ class ImageNetLightningModel(L.LightningModule):
         self.on_train_batch_end(outputs, batch, batch_idx)
 
 
-## Derived class to add the Cassandra DALI pipeline and the no-io Lightning module
+## Derived class to use either DALI (file reader, tfrecord reader, Cassandra plugin reader) or the no-io Lightning module
 
 
 class DALI_ImageNetLightningModel(ImageNetLightningModel):
@@ -585,8 +612,9 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         shard_id,
         num_shards,
     ):
+
         if args.train_folder:
-            # Data come from disk
+            # Data come from files
             if is_training:
                 folder = args.train_folder
             else:
@@ -597,6 +625,31 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 crop=args.crop_size,
                 dali_cpu=args.dali_cpu,
                 data_dir=folder,
+                device_id=device_id,
+                is_training=is_training,
+                num_shards=num_shards,
+                num_threads=args.workers,
+                prefetch_queue_depth=2,
+                seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
+                shard_id=shard_id,
+                size=args.val_size,
+            )
+
+        elif args.train_tfr_folder:
+            # Data from TFRecord
+            if is_training:
+                folder = args.train_tfr_folder
+                index_folder = args.train_index_folder
+            else:
+                folder = args.val_tfr_folder
+                index_folder = args.val_index_folder
+
+            pipe = create_dali_pipeline_from_tfrecord(
+                batch_size=args.batch_size,
+                crop=args.crop_size,
+                dali_cpu=args.dali_cpu,
+                file_root=folder,
+                index_root=index_folder,
                 device_id=device_id,
                 is_training=is_training,
                 num_shards=num_shards,
@@ -643,13 +696,14 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         return pipe
 
 
+### model with no dataloader
 class NoIO_ImageNetLightningModel(ImageNetLightningModel):
     def __init__(
         self,
         args,
     ):
         super().__init__(**vars(args))
-        self.data_size = 10000
+        self.data_size = 100000
 
     def prepare_data(self):
         # no preparation is needed in DALI
