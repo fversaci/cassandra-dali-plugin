@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 HOST="KENTU"
 BS=512
@@ -9,6 +9,12 @@ EPOCHS=2
 echo $HOST
 
 ### Hi-latency Tests
+
+### Prefetch data
+rm -f ids_cache/* 
+python3 cache_uuids.py --metadata-table=imagenette.metadata_train 
+python3 cache_uuids.py --metadata-table=imagenette.metadata_val
+
 
 ### Cassandra
 TRAIN_DATA=imagenet.data_train
