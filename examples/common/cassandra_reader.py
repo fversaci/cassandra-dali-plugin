@@ -58,6 +58,7 @@ def get_cassandra_reader(
     slow_start=0,
     source_uuids=None,
     loop_forever=True,
+    server_ips=None
 ):
     # Read Cassandra parameters
     from private_data import cass_conf as CC
@@ -66,6 +67,10 @@ def get_cassandra_reader(
         connect_bundle = CC.cloud_config["secure_connect_bundle"]
     else:
         connect_bundle = None
+
+    if server_ips:
+        # Override server ips in private_data
+        CC.cassandra_ips=server_ips
 
     cassandra_reader = fn.crs4.cassandra(
         name=name,
