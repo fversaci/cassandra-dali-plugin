@@ -135,7 +135,7 @@ def parse():
         default=4,
         type=int,
         metavar="N",
-        help="number of data loading workers (default: 4)",
+        help="number of DALI data loading workers (default: 4)",
     )
     parser.add_argument(
         "-g",
@@ -269,6 +269,21 @@ def parse():
         metavar="INT",
         help="Incremental prefetching factor (default: 0)",
     )
+    parser.add_argument(
+        "--n-io-threads",
+        default=4,
+        type=int,
+        metavar="INT",
+        help="Number of the Cassandra plugin IO threads (default:4)",
+    )
+    parser.add_argument(
+        "--n-prefetch-buffers",
+        default=2,
+        type=int,
+        metavar="INT",
+        help="Number of the Cassandra plugin prefetch buffers (default: 2)",
+    )
+    parser.add_argument('-ips', '--ip-list', nargs='+', default=[])
     parser.add_argument("--deterministic", action="store_true")
 
     parser.add_argument("--sync_bn", action="store_true", help="enabling apex sync BN.")
@@ -704,6 +719,9 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 source_uuids=in_uuids,
                 ooo=args.ooo,
                 slow_start=args.slow_start,
+                io_threads=args.n_io_threads,
+                prefetch_buffers=args.n_prefetch_buffers,
+                server_ips=args.ip_list,
             )
 
         pipe.build()
