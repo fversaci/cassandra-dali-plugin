@@ -61,7 +61,7 @@ void CassandraSelfFeed::feed_epoch() {
   int num;
   while (i < pad_shard_size - batch_size) {
     for (num = 0; num != batch_size ; ++i, ++num, ++it) {
-      auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);
+      auto ten = (uint64_t*) tl_batch.raw_mutable_tensor(num);
       ten[0] = it->first;
       ten[1] = it->second;
     }
@@ -71,14 +71,14 @@ void CassandraSelfFeed::feed_epoch() {
   // 1) fill what remains
   auto last_elem = shard_begin;
   for (num = 0; i < shard_size; ++i, ++num, ++it) {
-    auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);
+    auto ten = (uint64_t*) tl_batch.raw_mutable_tensor(num);
     ten[0] = it->first;
     ten[1] = it->second;
     last_elem = it;
   }
   // 2) pad using last element
   for (; i < pad_shard_size; ++i, ++num) {
-    auto ten = (dali::uint64*) tl_batch.raw_mutable_tensor(num);
+    auto ten = (uint64_t*) tl_batch.raw_mutable_tensor(num);
     ten[0] = last_elem->first;
     ten[1] = last_elem->second;
   }

@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
-FROM nvcr.io/nvidia/pytorch:24.07-py3
+FROM nvcr.io/nvidia/pytorch:24.08-py3
 
 # install some useful tools
 RUN \
@@ -49,7 +49,7 @@ RUN \
     && apt-get install -y libuv1-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/* 
 
-ARG CASS_DRIVER_VER=2.16.2
+ARG CASS_DRIVER_VER=2.17.0
 RUN \
     wget -nv "https://github.com/datastax/cpp-driver/archive/$CASS_DRIVER_VER.tar.gz" \
     && tar xfz $CASS_DRIVER_VER.tar.gz \
@@ -93,7 +93,7 @@ EXPOSE 4040
 ########################################################################
 # Cassandra server installation, to test examples
 ########################################################################
-ARG CASS_V=4.1
+ARG CASS_V=5.0
 RUN \
     export CASS_VERS=$(curl 'https://archive.apache.org/dist/cassandra/' | grep -o "$CASS_V\.[[:digit:]]\+" | tail -n 1) \
     && cd /tmp && wget -nv "https://archive.apache.org/dist/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
@@ -119,7 +119,7 @@ RUN \
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib:/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib"
 RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
-    --upgrade nvidia-dali-cuda120==1.40
+    --upgrade nvidia-dali-cuda120==1.41
 RUN \
     useradd -m -G sudo -s /usr/bin/fish -p '*' user \
     && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
@@ -132,6 +132,7 @@ COPY ./examples/common/private_data.template.py /home/user/cassandra-dali-plugin
 # enable SSL and increase max direct memory available
 RUN \
     cp /home/user/cassandra-dali-plugin/varia/keystore /cassandra/conf/ \
+    && cp /cassandra/conf/cassandra.yaml /tmp/cassandra.orig.yaml \
     && python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_conf.py
 
 RUN chown -R user.user '/home/user/cassandra-dali-plugin'

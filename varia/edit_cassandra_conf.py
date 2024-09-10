@@ -26,14 +26,18 @@ with open(yaml_fn, "r") as f:
     cass_conf["client_encryption_options"]["optional"] = True
     cass_conf["client_encryption_options"]["keystore"] = "/cassandra/conf/keystore"
     cass_conf["client_encryption_options"]["keystore_password"] = "cassandra"
+    cass_conf.setdefault("sstable", {})["selected_format"] = "bti"
+    cass_conf["concurrent_compactors"] = "4"
+    cass_conf["compaction_throughput"] = "250MiB/s"
+    cass_conf["storage_compatibility_mode"] = "NONE"
 with open(yaml_fn, "w") as f:
     yaml.dump(cass_conf, f, sort_keys=False)
 
 
-# increase max direct memory
-from pathlib import Path
-
-jvm_fns = Path("/cassandra/conf/").glob("jvm*server.options")
-for fn in jvm_fns:
-    with open(fn, "a") as f:
-        f.write("-XX:MaxDirectMemorySize=64G")
+## # increase max direct memory -- Cassandra 4
+## from pathlib import Path
+## 
+## jvm_fns = Path("/cassandra/conf/").glob("jvm*server.options")
+## for fn in jvm_fns:
+##     with open(fn, "a") as f:
+##         f.write("-XX:MaxDirectMemorySize=64G")
