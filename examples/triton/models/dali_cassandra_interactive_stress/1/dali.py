@@ -8,7 +8,7 @@ print("Python Version:", sys.version)
 print("Python Executable Path:", sys.executable)
 
 # cassandra reader
-from cassandra_reader_interactive import get_cassandra_reader, read_uuids
+from cassandra_reader_interactive import get_cassandra_reader
 from nvidia.dali.plugin.triton import autoserialize
 import nvidia.dali.types as types
 import nvidia.dali.fn as fn

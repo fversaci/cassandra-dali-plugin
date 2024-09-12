@@ -36,10 +36,7 @@ def start_inferring():
 
     model_name = "cass_to_inference"
 
-    uuids = read_uuids(
-        metadata_table="imagenette.metadata_train",
-        ids_cache_dir="ids_cache",
-    )
+    uuids = read_uuids(rows_fn="train.rows")
     uuids, real_sz = get_shard(
         uuids,
         batch_size=64,
