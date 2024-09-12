@@ -45,11 +45,11 @@ $ /cassandra/bin/cqlsh -f create_tables.cql
 $ python3 extract_serial.py /data/Corel-5k/images/ /data/Corel-5k/npy_labs /data/Corel-5k/train.json --data-table corel5k.data --metadata-table corel5k.metadata
 
 # - Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table corel5k.metadata
+$ python3 cache_uuids.py --metadata-table corel5k.metadata --rows-fn corel5k.rows
 
 # - Tight loop, data loading and decoding in GPU memory (GPU:0)
-$ python3 loop_read.py --data-table corel5k.data --metadata-table corel5k.metadata --use-gpu
+$ python3 loop_read.py --data-table corel5k.data --rows-fn corel5k.rows --use-gpu
 
 # - Sharded, tight loop test, using 2 GPUs via torchrun
-$ torchrun --nproc_per_node=2 loop_read.py --data-table corel5k.data --metadata-table corel5k.metadata --use-gpu
+$ torchrun --nproc_per_node=2 loop_read.py --data-table corel5k.data --rows-fn corel5k.rows --use-gpu
 ```
