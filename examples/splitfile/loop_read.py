@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # cassandra reader
-from cassandra_reader import get_cassandra_reader, read_uuids
+from cassandra_reader import get_cassandra_reader
 
 # dali
 from nvidia.dali.pipeline import pipeline_def

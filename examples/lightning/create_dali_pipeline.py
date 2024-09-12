@@ -3,7 +3,7 @@
 # (Apache License, Version 2.0)
 
 # Cassandra Reader
-from cassandra_reader import get_cassandra_reader, read_uuids
+from cassandra_reader import get_cassandra_reader
 
 try:
     from nvidia.dali.pipeline import pipeline_def
