@@ -17,7 +17,7 @@ pgrep -f spark || (/spark/sbin/start-master.sh  && /spark/sbin/start-worker.sh s
                         --split-subdir=val --data-table=imagenette.data_val \
                         --metadata-table=imagenette.metadata_val
 # read from db
--rm -f {train,val}.rows
+rm -f {train,val}.rows
 python3 cache_uuids.py --metadata-table=imagenette.metadata_train --rows-fn train.rows
 python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
 python3 cache_uuids.py --metadata-table=imagenette.metadata_val --rows-fn val.rows
