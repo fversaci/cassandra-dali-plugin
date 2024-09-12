@@ -83,8 +83,7 @@ def just_sleep(im1, im2):
 def read_data(
     *,
     data_table="imagenette.data_train",
-    metadata_table="imagenette.metadata_train",
-    ids_cache_dir="ids_cache",
+    rows_fn="train.rows",
     reader="cassandra",
     use_gpu=False,
     bs=128,
@@ -95,14 +94,13 @@ def read_data(
     """Read images from DB or filesystem, in a tight loop
 
     :param data_table: Name of the data table (in the form: keyspace.tablename)
-    :param metadata_table: Name of the data metadata table (in the form: keyspace.tablename)
+    :param rows_fn: Filename of local copy of UUIDs (default: train.rows)
     :param reader: "cassandra", "file" or "tfrecord" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
     :param bs: batch size (default: 128)
     :param epochs: Number of epochs (default: 10)
     :param file_root: File root to be used (only when reading files or tfrecords)
     :param index_root: Root path to index files (only when reading tfrecords)
-    :param ids_cache_dir: Directory containing the cached list of UUIDs (default: ./ids_cache)
     """
     if use_gpu:
         device_id = local_rank
@@ -111,8 +109,7 @@ def read_data(
 
     if reader == "cassandra":
         source_uuids = read_uuids(
-            metadata_table,
-            ids_cache_dir=ids_cache_dir,
+            rows_fn,
         )
         chosen_reader = get_cassandra_reader(
             data_table=data_table,
