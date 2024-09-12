@@ -19,6 +19,7 @@ except ImportError:
 ### DALI PIPELINE CRATION CODE ###
 ##################################
 
+
 def pipeline_transformations(images, labels, is_training, dali_cpu, crop, size):
     dali_device = "cpu" if dali_cpu else "gpu"
     decoder_device = "cpu" if dali_cpu else "mixed"
@@ -64,7 +65,7 @@ def pipeline_transformations(images, labels, is_training, dali_cpu, crop, size):
         std=[0.229 * 255, 0.224 * 255, 0.225 * 255],
         mirror=mirror,
     )
-    if not dali_device == 'gpu':
+    if not dali_device == "gpu":
         labels = labels.gpu()
 
     return images, labels
@@ -105,7 +106,9 @@ def create_dali_pipeline_cassandra(
 
     images, labels = cass_reader
 
-    images, labels = pipeline_transformations(images, labels, is_training, dali_cpu, crop, size)
+    images, labels = pipeline_transformations(
+        images, labels, is_training, dali_cpu, crop, size
+    )
 
     return (images, labels)
 
@@ -130,6 +133,8 @@ def create_dali_pipeline_from_file(
         name="Reader",
     )
 
-    images, labels = pipeline_transformations(images, labels, is_training, dali_cpu, crop, size)
+    images, labels = pipeline_transformations(
+        images, labels, is_training, dali_cpu, crop, size
+    )
 
     return (images, labels)

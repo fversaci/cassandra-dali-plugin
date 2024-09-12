@@ -4,7 +4,10 @@
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, read_uuids
-from create_dali_pipeline import create_dali_pipeline_from_file, create_dali_pipeline_cassandra
+from create_dali_pipeline import (
+    create_dali_pipeline_from_file,
+    create_dali_pipeline_cassandra,
+)
 
 import argparse
 
@@ -65,10 +68,10 @@ def parse():
         help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train)",
     )
     parser.add_argument(
-        "--train-metadata-table",
-        metavar="METADATA TABLE (training)",
-        default="imagenette.metadata_train",
-        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_train)",
+        "--train-rows-fn",
+        metavar="Local copy of UUIDs (training)",
+        default="train.rows",
+        help="Local copy of training UUIDs (default: train.rows)",
     )
     parser.add_argument(
         "--val-data-table",
@@ -77,16 +80,10 @@ def parse():
         help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò)",
     )
     parser.add_argument(
-        "--val-metadata-table",
-        metavar="METADATA TABLE (validation)",
-        default="imagenette.metadata_val",
-        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_val)",
-    )
-    parser.add_argument(
-        "--ids-cache-dir",
-        metavar="CACH",
-        default="ids_cache",
-        help="Directory containing the cached list of UUIDs (default: ./ids_cache)",
+        "--val-rows-fn",
+        metavar="Local copy of UUIDs (validation)",
+        default="val.rows",
+        help="Local copy of training UUIDs (default: val.rows)",
     )
     parser.add_argument(
         "--arch",
@@ -489,15 +486,12 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
             # Data come from cassandra
             if is_training:
                 data_table = args.train_data_table
-                metadata_table = args.train_metadata_table
+                rows_fn = args.train_rows_fn
             else:
                 data_table = args.val_data_table
-                metadata_table = args.val_metadata_table
+                rows_fn = args.val_rows_fn
 
-            in_uuids = read_uuids(
-                metadata_table=metadata_table,
-                ids_cache_dir=args.ids_cache_dir,
-            )
+            in_uuids = read_uuids(rows_fn=rows_fn)
 
             pipe = create_dali_pipeline_cassandra(
                 batch_size=args.batch_size,
@@ -560,7 +554,10 @@ def main():
     if args.patience:
         print(f"-- Early stopping enabled with patience={args.patience}")
         early_stopping = EarlyStopping(
-            monitor="val_loss", mode="min", patience=args.patience, check_finite=False,
+            monitor="val_loss",
+            mode="min",
+            patience=args.patience,
+            check_finite=False,
         )
         callbacks_l.append(early_stopping)
 
