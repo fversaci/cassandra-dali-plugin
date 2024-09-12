@@ -48,7 +48,7 @@ set IO_THREADS 4
 set PREFETCH_BUFF 2
 set CASSANDRA_IP $_flag_ipc
 
-sed -i '/cassandra_ips/s/\(\[.*\]\)/\[\"$CASSANDRA_IP\"\]/' private_data.py
+sed -i --follow-symlinks '/cassandra_ips/s/\(\[.*\]\)/\[\"$CASSANDRA_IP\"\]/' private_data.py
 
 rm -f ids_cache/*
 python3 cache_uuids.py --metadata-table=imagenette.metadata_train
@@ -69,7 +69,7 @@ set IO_THREADS 4
 set PREFETCH_BUFF 2
 set SCYLLA_IP $_flag_ips
 
-sed -i '/cassandra_ips/s/\(\[.*\]\)/\[\"$SCYLLA_IP\"\]/' private_data.py
+sed -i --follow-symlinks '/cassandra_ips/s/\(\[.*\]\)/\[\"$SCYLLA_IP\"\]/' private_data.py
 
 rm -f ids_cache/*
 python3 cache_uuids.py --metadata-table=imagenette.metadata_train
