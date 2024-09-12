@@ -92,7 +92,6 @@ def create_dali_pipeline_cassandra(
     wait_threads=2,
     ooo=False,
     slow_start=4,
-    server_ips=None,
 ):
 
     cass_reader = get_cassandra_reader(
@@ -108,7 +107,6 @@ def create_dali_pipeline_cassandra(
         shuffle_every_epoch=shuffle_every_epoch,
         ooo=ooo,
         slow_start=slow_start,
-        server_ips=server_ips,
     )
 
     images, labels = cass_reader
