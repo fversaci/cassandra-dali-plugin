@@ -54,9 +54,9 @@ rm -f ids_cache/*
 python3 cache_uuids.py --metadata-table=imagenette.metadata_train
 python3 cache_uuids.py --metadata-table=imagenette.metadata_val
 
-python3 train_model_no_IO.py --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --log-csv "{$HOST}_1_GPU_CASSANDRA_BS_{$BS}" -ips $CASSANDRA_IP
+python3 train_model_no_IO.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --log-csv "$HOST"_1_GPU_CASSANDRA_BS_"$BS"
 
-python3 train_model_no_IO.py --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --log-csv "{$HOST}_{$MAX_GPUS}_GPU_CASSANDRA_BS_{$BS}" -ips $CASSANDRA_IP
+python3 train_model_no_IO.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --log-csv "$HOST"_"$MAX_GPUS"_GPU_CASSANDRA_BS_"$BS"
 
 
 ### SCYLLA
@@ -75,6 +75,6 @@ rm -f ids_cache/*
 python3 cache_uuids.py --metadata-table=imagenette.metadata_train
 python3 cache_uuids.py --metadata-table=imagenette.metadata_val
 
-python3 train_model_no_IO.py --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --log-csv "{$HOST}_1_GPU_SCYLLA_BS_{$BS}" -ips $SCYLLA_IP
+python3 train_model_no_IO.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --log-csv "$HOST"_1_GPU_SCYLLA_BS_"$BS"
 
-python3 train_model_no_IO.py --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --log-csv "{$HOST}_{$MAX_GPUS}_GPU_SCYLLA_BS_{$BS}" -ips $SCYLLA_IP
+python3 train_model_no_IO.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --log-csv "$HOST"_"$MAX_GPUS"_GPU_SCYLLA_BS_"$BS"
