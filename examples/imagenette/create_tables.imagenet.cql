@@ -7,10 +7,10 @@ CREATE KEYSPACE IF NOT EXISTS imagenet WITH replication = {'class': 'SimpleStrat
 
 // Mapping patch uuid to data and label
 CREATE TABLE IF NOT EXISTS imagenet.data_train(
-  patch_id uuid,
+  id uuid,
   label int,
   data blob,
-  PRIMARY KEY ((patch_id))
+  PRIMARY KEY ((id))
 ) WITH compression = {'enabled':'false'};
 
 // Mapping patch uuid to metadata
@@ -18,16 +18,16 @@ CREATE TABLE IF NOT EXISTS imagenet.metadata_train(
   label int,
   or_label text,
   or_split text,
-  patch_id uuid,
-  PRIMARY KEY ((patch_id))
+  id uuid,
+  PRIMARY KEY ((id))
 );
 
 // Mapping patch uuid to data and label
 CREATE TABLE IF NOT EXISTS imagenet.data_val(
-  patch_id uuid,
+  id uuid,
   label int,
   data blob,
-  PRIMARY KEY ((patch_id))
+  PRIMARY KEY ((id))
 ) WITH compression = {'enabled':'false'};
 
 // Mapping patch uuid to metadata
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS imagenet.metadata_val(
   label int,
   or_label text,
   or_split text,
-  patch_id uuid,
-  PRIMARY KEY ((patch_id))
+  id uuid,
+  PRIMARY KEY ((id))
 );
 

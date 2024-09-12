@@ -21,7 +21,7 @@ from private_data import cass_conf as CC
 def cache_uuids(
     *,
     metadata_table,
-    id_col="patch_id",
+    id_col="id",
 ):
     """Cache uuids from DB to local file (via pickle)
 

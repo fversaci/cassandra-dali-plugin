@@ -19,7 +19,7 @@ from crs4.cassandra_utils._split_generator import split_generator
 class imagenet_split_generator(split_generator):
     def __init__(
         self, 
-        metadata_id_col="patch_id",
+        metadata_id_col="id",
         metadata_label_col="label",
         data_col="data", 
         label_type="int"

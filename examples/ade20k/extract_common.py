@@ -80,7 +80,7 @@ def send_images_to_db(cass_conf, img_format, data_table, metadata_table):
             cass_conf=cass_conf,
             data_table=data_table,
             metadata_table=metadata_table,
-            data_id_col="patch_id",
+            data_id_col="id",
             data_label_col="label",
             data_col="data",
             cols=["filename"],
