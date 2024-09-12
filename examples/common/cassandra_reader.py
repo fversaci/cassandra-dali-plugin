@@ -28,9 +28,7 @@ plugin_path = str(plugin_path)
 plugin_manager.load_library(plugin_path)
 
 
-def read_uuids(
-    rows_fn
-):
+def read_uuids(rows_fn):
     print("Loading list of uuids from cached file... ", end="", flush=True)
     with open(rows_fn, "rb") as f:
         stuff = pickle.load(f)

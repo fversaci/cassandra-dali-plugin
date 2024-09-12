@@ -15,6 +15,7 @@
 import extract_common
 from clize import run
 
+
 def save_images(
     src_dir,
     *,

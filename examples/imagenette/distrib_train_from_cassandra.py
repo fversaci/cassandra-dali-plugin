@@ -417,9 +417,7 @@ def main():
         val_size = 256
 
     # train pipe
-    train_uuids = read_uuids(
-        rows_fn=args.train_rows_fn
-    )
+    train_uuids = read_uuids(rows_fn=args.train_rows_fn)
     pipe = create_dali_pipeline(
         data_table=args.train_data_table,
         batch_size=args.batch_size,
@@ -441,9 +439,7 @@ def main():
     )
 
     # val pipe
-    val_uuids = read_uuids(
-        rows_fn=args.val_rows_fn
-    )
+    val_uuids = read_uuids(rows_fn=args.val_rows_fn)
     pipe = create_dali_pipeline(
         data_table=args.val_data_table,
         batch_size=args.batch_size,
