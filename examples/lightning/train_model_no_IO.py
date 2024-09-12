@@ -283,7 +283,6 @@ def parse():
         metavar="INT",
         help="Number of the Cassandra plugin prefetch buffers (default: 2)",
     )
-    parser.add_argument('-ips', '--ip-list', nargs='+', default=[])
     parser.add_argument("--deterministic", action="store_true")
 
     parser.add_argument("--sync_bn", action="store_true", help="enabling apex sync BN.")
@@ -375,9 +374,6 @@ class ImageNetLightningModel(L.LightningModule):
         self.batch_size = batch_size
         self.workers = workers
 
-        self.start_time = time.time()
-        self.step_time = time.time()
-
         print("*" * 80)
         print(f"*************** Loading model {self.arch}")
         print("*" * 80)
@@ -398,26 +394,16 @@ class ImageNetLightningModel(L.LightningModule):
 
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
 
-        im_sec = self.batch_size / self.step_time * self.trainer.world_size
+        batch_ts = time.time()
 
         self.log(
             "train_batch_ts",
-            self.batch_ts,
+            torch.tensor(batch_ts, dtype=torch.double),
             prog_bar=False,
             on_step=True,
             on_epoch=False,
             logger=True,
             sync_dist=False,
-        )
-
-        self.log(
-            "train_im_sec",
-            im_sec,
-            prog_bar=True,
-            on_step=True,
-            on_epoch=True,
-            logger=True,
-            sync_dist=True,
         )
 
         self.log(
@@ -455,30 +441,23 @@ class ImageNetLightningModel(L.LightningModule):
     def eval_step(self, batch, batch_idx, prefix: str):
         images = batch[0]["data"]
         target = batch[0]["label"].squeeze(-1).long()
+
         output = self(images)
+
         loss_val = F.cross_entropy(output, target)
+
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
 
-        im_sec = self.batch_size / self.step_time * self.trainer.world_size
+        batch_ts = time.time()
 
         self.log(
-            f"{prefix}_batch_ts",
-            self.batch_ts,
+            "val_batch_ts",
+            torch.tensor(batch_ts, dtype=torch.double),
             prog_bar=False,
             on_step=True,
             on_epoch=False,
             logger=True,
             sync_dist=False,
-        )
-
-        self.log(
-            f"{prefix}_im_sec",
-            im_sec,
-            prog_bar=True,
-            on_step=True,
-            on_epoch=True,
-            logger=True,
-            sync_dist=True,
         )
 
         self.log(
@@ -546,19 +525,6 @@ class ImageNetLightningModel(L.LightningModule):
         # return [optimizer], [scheduler]
         return [optimizer]
 
-    def on_train_batch_start(self, batch, batch_idx):
-        self.start_time = time.time()
-        self.batch_ts = torch.tensor(self.start_time, dtype=torch.double)
-
-    def on_train_batch_end(self, outputs, batch, batch_idx):
-        self.step_time = time.time() - self.start_time
-
-    def on_validation_batch_start(self, batch, batch_idx):
-        self.on_train_batch_start(batch, batch_idx)
-
-    def on_validation_batch_end(self, outputs, batch, batch_idx):
-        self.on_train_batch_end(outputs, batch, batch_idx)
-
 
 ## Derived class to use either DALI (file reader, tfrecord reader, Cassandra plugin reader) or the no-io Lightning module
 
@@ -609,13 +575,15 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         # Creatind actual loaders used by the lightning module to get data (train_dataloader and val_dataloader methods)
         self.train_loader = LightningWrapper(
             train_pipeline,
-            last_batch_policy=LastBatchPolicy.PARTIAL,
+            # last_batch_policy=LastBatchPolicy.PARTIAL,
+            last_batch_policy=LastBatchPolicy.DROP,
             auto_reset=True,
             reader_name="Reader",
         )
         self.val_loader = LightningWrapper(
             val_pipeline,
-            last_batch_policy=LastBatchPolicy.PARTIAL,
+            # last_batch_policy=LastBatchPolicy.PARTIAL,
+            last_batch_policy=LastBatchPolicy.DROP,
             auto_reset=True,
             reader_name="Reader",
         )
@@ -721,7 +689,6 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 slow_start=args.slow_start,
                 io_threads=args.n_io_threads,
                 prefetch_buffers=args.n_prefetch_buffers,
-                server_ips=args.ip_list,
             )
 
         pipe.build()
@@ -736,7 +703,9 @@ class NoIO_ImageNetLightningModel(ImageNetLightningModel):
         args,
     ):
         super().__init__(**vars(args))
-        self.data_size = 100000
+
+    def setup(self, stage=None):
+        self.data_size = 65536 // self.trainer.world_size
 
     def prepare_data(self):
         # no preparation is needed in DALI
