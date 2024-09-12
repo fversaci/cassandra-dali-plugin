@@ -41,6 +41,4 @@ torchrun --nproc_per_node=1 distrib_train_from_cassandra.py -a resnet50 --dali_c
          --workers 4 --lr=0.4 --opt-level O2 --epochs 1 \
          --train-data-table imagenette.data_train --train-rows-fn train.rows \
          --val-data-table imagenette.data_val --val-rows-fn val.rows
-### BEGIN COMMENT \
-### END COMMENT`
 echo "--- OK ---"
