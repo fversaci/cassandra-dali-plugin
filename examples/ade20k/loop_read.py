@@ -47,8 +47,7 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 def read_data(
     *,
     data_table="ade20k.data",
-    metadata_table="ade20k.metadata",
-    ids_cache_dir="ids_cache",
+    rows_fn="ade20k.rows",
     reader="cassandra",
     use_gpu=False,
     image_root=None,
@@ -58,12 +57,11 @@ def read_data(
     """Read images from DB or filesystem, in a tight loop
 
     :param data_table: Name of the data table (in the form: keyspace.tablename)
-    :param metadata_table: Name of the data metadata table (in the form: keyspace.tablename)
+    :param rows_fn: Filename of local copy of UUIDs (default: ade20k.rows)
     :param reader: "cassandra" or "file" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
     :param image_root: File root for images (only when reading from the filesystem)
     :param mask_root: File root for masks (only when reading from the filesystem)
-    :param ids_cache_dir: Directory containing the cached list of UUIDs (default: ./ids_cache)
     """
     if use_gpu:
         device_id = local_rank
@@ -73,8 +71,7 @@ def read_data(
     bs = 128
     if reader == "cassandra":
         source_uuids = read_uuids(
-            metadata_table,
-            ids_cache_dir=ids_cache_dir,
+            rows_fn,
         )
         db_reader = get_cassandra_reader(
             data_table=data_table,
@@ -150,7 +147,7 @@ def read_data(
     # DALI iterator
     ########################################################################
     # produce images
-    shard_size = math.ceil(pl.epoch_size()['Reader'] / world_size)
+    shard_size = math.ceil(pl.epoch_size()["Reader"] / world_size)
     steps = math.ceil(shard_size / bs)
     # consume uuids to get images from DB
     for _ in range(epochs):
