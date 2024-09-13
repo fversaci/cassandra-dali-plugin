@@ -42,6 +42,19 @@ echo "IP Scylla server: $_flag_ips"
 
 
 ### Run tests
+
+set start_time (date "+%Y-%m-%d %H:%M:%S")
+
 source ./test_no_io.fish --host $HOST --bs $BS --epochs $EPOCHS
+set no_io_test_end_time (date "+%Y-%m-%d %H:%M:%S")
+
 source ./test_local.fish --host $HOST --bs $BS --epochs $EPOCHS
+set local_test_end_time (date "+%Y-%m-%d %H:%M:%S")
+
 source ./test_hi_lat.fish --host $HOST --bs $BS --epochs $EPOCHS --ipc $_flag_ipc --ips $_flag_ips
+set stop_time (date "+%Y-%m-%d %H:%M:%S")
+
+echo "Start time: $start_time"
+echo "no IO stop time: $no_io_test_end_time"
+echo "local stop time: $local_test_end_time"
+echo "hilat stop time: $stop_time"
