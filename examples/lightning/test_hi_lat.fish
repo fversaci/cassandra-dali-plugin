@@ -42,7 +42,7 @@ set TRAIN_METADATA imagenet.metadata_train
 set TRAIN_ROWS train.rows
 set VAL_DATA imagenet.data_val
 set VAL_METADATA imagenet.metadata_val
-SET VAL_ROWS val.rows
+set VAL_ROWS val.rows
 
 ### CASSANDRA
 
