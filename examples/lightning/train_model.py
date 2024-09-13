@@ -329,6 +329,45 @@ class TensorIterator:
         self.cnt = 0
 
 
+##################################
+### CALLBACKS TO LOG TIMESTAMP ###
+##################################
+
+
+class TrainBatchStartCallback(L.Callback):
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
+        # Record the current timestamp
+        batch_ts = time.time()
+
+        # Log the timestamp to the logger
+        pl_module.log(
+            "train_batch_ts",
+            torch.tensor(batch_ts, dtype=torch.double),
+            prog_bar=False,  # Don't show in the progress bar
+            on_step=True,  # Log it at the step level (every batch)
+            on_epoch=False,  # Don't log it at the epoch level
+            logger=True,  # Send the log to the logger (e.g., TensorBoard)
+            sync_dist=False,  # No need to sync across distributed systems (if not using multiple GPUs)
+        )
+
+
+class ValidationBatchStartCallback(L.Callback):
+    def on_validation_batch_start(self, trainer, pl_module, batch, batch_idx):
+        # Record the current timestamp
+        batch_ts = time.time()
+
+        # Log the timestamp to the logger
+        pl_module.log(
+            "val_batch_ts",
+            torch.tensor(batch_ts, dtype=torch.double),
+            prog_bar=False,  # Don't show in the progress bar
+            on_step=True,  # Log it at the step level (every batch)
+            on_epoch=False,  # Don't log it at the epoch level
+            logger=True,  # Send the log to the logger (e.g., TensorBoard)
+            sync_dist=False,  # No need to sync across distributed systems (if not using multiple GPUs)
+        )
+
+
 ########################
 ### LIGHTNING MODELS ###
 ########################
@@ -388,18 +427,6 @@ class ImageNetLightningModel(L.LightningModule):
 
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
 
-        batch_ts = time.time()
-
-        self.log(
-            "train_batch_ts",
-            torch.tensor(batch_ts, dtype=torch.double),
-            prog_bar=False,
-            on_step=True,
-            on_epoch=False,
-            logger=True,
-            sync_dist=False,
-        )
-
         self.log(
             "train_loss",
             loss_train,
@@ -441,18 +468,6 @@ class ImageNetLightningModel(L.LightningModule):
         loss_val = F.cross_entropy(output, target)
 
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
-
-        batch_ts = time.time()
-
-        self.log(
-            "val_batch_ts",
-            torch.tensor(batch_ts, dtype=torch.double),
-            prog_bar=False,
-            on_step=True,
-            on_epoch=False,
-            logger=True,
-            sync_dist=False,
-        )
 
         self.log(
             f"{prefix}_loss",
@@ -520,7 +535,9 @@ class ImageNetLightningModel(L.LightningModule):
         return [optimizer]
 
 
-## Derived class to use either DALI (file reader, tfrecord reader, Cassandra plugin reader) or the no-io Lightning module
+############################################################################################################################
+## Derived class to use either DALI (file reader, tfrecord reader, Cassandra plugin reader) or the no-io Lightning module ##
+############################################################################################################################
 
 
 class DALI_ImageNetLightningModel(ImageNetLightningModel):
@@ -757,7 +774,11 @@ def main():
     #    return
 
     ### Callbacks
-    callbacks_l = []
+    train_start_callback = TrainBatchStartCallback()
+    val_start_callback = ValidationBatchStartCallback()
+
+    callbacks_l = [train_start_callback, val_start_callback]
+    # callbacks_l = []
 
     if args.patience:
         print(f"-- Early stopping enabled with patience={args.patience}")
