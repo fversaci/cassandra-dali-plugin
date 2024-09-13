@@ -1,11 +1,11 @@
 #!/usr/bin/env fish
 
 function usage
-    echo "Usage: script_name.fish --host <host> --bs <batch size> --epochs <num_epochs> --ipc <ip_cassandra> --ips<ip_scylla>"
+    echo "Usage: script_name.fish --host <host> --bs <batch size> --epochs <num_epochs> --ipc <ip_cassandra> --ips <ip_scylla>"
 end
 
 # Parse arguments
-argparse 'h/host=' 'b/bs=' 'e/epochs=' 'ipc' 'ips' -- $argv
+argparse 'h/host=' 'b/bs=' 'e/epochs=' 'i/ipc' 'i/ips' -- $argv
 
 if not set -q _flag_host
     set _flag_host NONE
@@ -27,7 +27,6 @@ if not set -q _flag_ips
     set _flag_ips 172.19.179.86
 end
 
-
 # Access the values passed to the named parameters
 set HOST $_flag_host
 set BS $_flag_bs
@@ -48,11 +47,11 @@ set IO_THREADS 4
 set PREFETCH_BUFF 2
 set CASSANDRA_IP $_flag_ipc
 
-sed -i --follow-symlinks '/cassandra_ips/s/\(\[.*\]\)/\[\"$CASSANDRA_IP\"\]/' private_data.py
+sed -i --follow-symlinks "/cassandra_ips/s/\(\[.*\]\)/\[\"$CASSANDRA_IP\"\]/" private_data.py
 
 rm -f ids_cache/*
-python3 cache_uuids.py --metadata-table=imagenette.metadata_train
-python3 cache_uuids.py --metadata-table=imagenette.metadata_val
+python3 cache_uuids.py --metadata-table=imagenet.metadata_train
+python3 cache_uuids.py --metadata-table=imagenet.metadata_val
 
 python3 train_model_no_IO.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --log-csv "$HOST"_1_GPU_CASSANDRA_BS_"$BS"
 
@@ -69,11 +68,11 @@ set IO_THREADS 4
 set PREFETCH_BUFF 2
 set SCYLLA_IP $_flag_ips
 
-sed -i --follow-symlinks '/cassandra_ips/s/\(\[.*\]\)/\[\"$SCYLLA_IP\"\]/' private_data.py
+sed -i --follow-symlinks "/cassandra_ips/s/\(\[.*\]\)/\[\"$SCYLLA_IP\"\]/" private_data.py
 
 rm -f ids_cache/*
-python3 cache_uuids.py --metadata-table=imagenette.metadata_train
-python3 cache_uuids.py --metadata-table=imagenette.metadata_val
+python3 cache_uuids.py --metadata-table=imagenet.metadata_train
+python3 cache_uuids.py --metadata-table=imagenet.metadata_val
 
 python3 train_model_no_IO.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-metadata-table $TRAIN_METADATA --val-data-table $VAL_DATA --val-metadata-table $VAL_METADATA --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --log-csv "$HOST"_1_GPU_SCYLLA_BS_"$BS"
 
