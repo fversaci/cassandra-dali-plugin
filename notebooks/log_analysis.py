@@ -13,7 +13,7 @@
 #     name: python3
 # ---
 
-import os, sys
+import os, sys, glob
 import pandas as pd
 import numpy as np
 import yaml
@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 fnames = []
 
-folder = "../examples/lightning/logs_csv/prova_1_GPU_NOIO_BS_1024/version_14"
+folder = "../examples/lightning/logs_csv/KENTU03_3_GPU_NO_IO_BS_512/version_0/"
 hyperparams_fname = os.path.join(folder, "hparams.yaml")
 log_fname = os.path.join(folder, "metrics.csv")
 
@@ -50,12 +50,6 @@ df["val_batch_ts_diff"] = df["val_batch_ts"].diff()
 
 df
 # -
-
-df
-
-df["train_batch_ts_diff"]
-
-df["val_batch_ts_diff"]
 
 # ### Plots
 
@@ -158,6 +152,9 @@ folders = [
     "../examples/lightning/logs_csv/KENTU400_1_GPU_CASSANDRA_BS_1024/version_1/",
 ]
 
+folders = glob.glob("../examples/lightning/logs_csv/KENTU03*/version_0")
+folders = sorted(folders)
+
 fnames = []
 
 for folder in folders:
@@ -166,18 +163,22 @@ for folder in folders:
     fnames.append((hyperparams_fname, log_fname))
 
 fnames
-
-# +
-
+# -
 
 for hyperparams_fname, log_fname in fnames:
     f, ax = plt.subplots(1, 2, figsize=(12, 4))
+    
+    with open(hyperparams_fname, "r") as f:
+        hyperparams = yaml.load(f, Loader=yaml.UnsafeLoader)
+    
     print(hyperparams_fname, log_fname)
 
     batch_size = hyperparams["batch_size"]
     num_gpu = hyperparams["num_gpu"]
+    
+    print(batch_size, num_gpu)
 
-    test_name = "".join(log_fname.split("/")[-3].split("_")[1:])
+    test_name = "_".join(log_fname.split("/")[-3].split("_")[1:])
     df = pd.read_csv(log_fname)
 
     df["train_batch_ts_diff"] = df["train_batch_ts"].diff()
@@ -199,4 +200,3 @@ for hyperparams_fname, log_fname in fnames:
     ax[1].set_xlabel("time (s)")
     ax[1].set_ylabel("im/sec")
 
-# -
