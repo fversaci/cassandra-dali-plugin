@@ -41,6 +41,8 @@ import boto3
 import statistics
 import os
 from IPython import embed
+import numpy as np
+import pickle
 
 global_rank = int(os.getenv("RANK", default=0))
 local_rank = int(os.getenv("LOCAL_RANK", default=0))
@@ -94,6 +96,7 @@ def read_data(
     index_root=None,
     out_of_order=False,
     slow_start=0,
+    log_fn=None,
 ):
     """Read images from DB or filesystem, in a tight loop
 
@@ -211,27 +214,52 @@ def read_data(
     ########################################################################
     shard_size = math.ceil(pl.epoch_size()["Reader"] / world_size)
     steps = math.ceil(shard_size / bs)
-    speeds = []
+    timestamps_np = np.zeros((epochs, steps))
+    batch_bytes_np = np.zeros((epochs, steps))
     first_epoch = True
-    for _ in range(epochs):
+    for epoch in range(epochs):
         # read data for current epoch
         with trange(steps) as t:
-            for _ in t:
-                pl.run()
-            epoch_time = t.format_dict["elapsed"]
-            if first_epoch:
-                # ignore first epoch for stats
-                first_epoch = False
-            else:
-                speeds.append(t.total / epoch_time)
+            start_ts = time.time()
+            for step in t:
+                images, labels = pl.run()
+
+                images_batch_bytes = np.sum(np.array(images.shape()).reshape(bs))
+                labels_batch_bytes = np.sum(np.array(labels.shape()).reshape(bs))
+                batch_bytes = images_batch_bytes + labels_batch_bytes
+
+                batch_bytes_np[epoch][step] = batch_bytes
+                timestamps_np[epoch, step] = time.time() - start_ts
+                start_ts = time.time()
 
         pl.reset()
     # Calculate the average and standard deviation
     if epochs > 3:
-        average_speed = statistics.mean(speeds)
-        std_dev_speed = statistics.stdev(speeds)
-        print(f"Stats for epochs > 1")
-        print(f"  Average speed: {average_speed:.2f} ± {std_dev_speed:.2f} it/s")
+        # First epoch is skipped
+        ## Speed im/s
+        average_io_GBs_per_epoch = (
+            np.mean(batch_bytes_np[1:] / timestamps_np[1:], axis=1) / 1e9
+        )
+        std_dev_io_GBs = np.std(average_io_GBs_per_epoch)
+        average_time_per_epoch = np.mean(timestamps_np[1:], axis=(1))
+        std_dev_time = np.std(average_time_per_epoch)
+        average_speed_per_epoch = bs / average_time_per_epoch
+        std_dev_speed = np.std(average_speed_per_epoch)
+        
+        print(f"Stats for epochs > 1, batch_size = {bs}")
+        print(
+            f"  Average IO: {np.mean(average_io_GBs_per_epoch):.2e} ± {std_dev_io_GBs:.2e} GB/s"
+        )
+        print(
+            f"  Average batch time: {np.mean(average_time_per_epoch):.2e} ± {std_dev_time:.2e} s"
+        )
+        print(
+            f"  Average speed: {np.mean(average_speed_per_epoch):.2e} ± {std_dev_speed:.2e} im/s"
+        )
+        
+    if log_fn:
+        data = (bs, timestamps_np, batch_bytes_np)
+        pickle.dump(data, open("log_loop_reader.pickle", "wb"))
 
     ########################################################################
     # alternatively: use pytorch iterator
