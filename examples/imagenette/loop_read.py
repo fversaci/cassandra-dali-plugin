@@ -237,9 +237,7 @@ def read_data(
     if epochs > 3:
         # First epoch is skipped
         ## Speed im/s
-        average_io_GBs_per_epoch = (
-            np.mean(batch_bytes_np[1:] / timestamps_np[1:], axis=1) / 1e9
-        )
+        average_io_GBs_per_epoch = (np.sum(batch_bytes_np[1:], axis=1) / np.sum(timestamps_np[1:],axis=1)) / 1e9
         std_dev_io_GBs = np.std(average_io_GBs_per_epoch)
         average_time_per_epoch = np.mean(timestamps_np[1:], axis=(1))
         std_dev_time = np.std(average_time_per_epoch)
