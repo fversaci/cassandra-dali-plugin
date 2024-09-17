@@ -257,7 +257,7 @@ def read_data(
         
     if log_fn:
         data = (bs, timestamps_np, batch_bytes_np)
-        pickle.dump(data, open("log_loop_reader.pickle", "wb"))
+        pickle.dump(data, open(log_fn, "wb"))
 
     ########################################################################
     # alternatively: use pytorch iterator
