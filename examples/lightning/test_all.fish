@@ -5,7 +5,7 @@ function usage
 end
 
 # Parse arguments
-argparse 'h/host=' 'b/bs=' 'e/epochs=' 'ipc' 'ips' -- $argv
+argparse 'h/host=' 'b/bs=' 'e/epochs=' 'c/ipc=' 's/ips=' -- $argv
 
 if not set -q _flag_host
     set _flag_host DOCKER
