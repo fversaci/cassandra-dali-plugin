@@ -223,9 +223,13 @@ def read_data(
             start_ts = time.time()
             for step in t:
                 images, labels = pl.run()
-
                 images_batch_bytes = np.sum(np.array(images.shape()).reshape(bs))
-                labels_batch_bytes = np.sum(np.array(labels.shape()).reshape(bs))
+
+                # Using tfrecord labels.shape is empty
+                if labels.shape()[0]:
+                    labels_batch_bytes = np.sum(np.array(labels.shape()).reshape(bs))
+                else:
+                    labels_batch_bytes = bs
                 batch_bytes = images_batch_bytes + labels_batch_bytes
 
                 batch_bytes_np[epoch][step] = batch_bytes
@@ -237,13 +241,15 @@ def read_data(
     if epochs > 3:
         # First epoch is skipped
         ## Speed im/s
-        average_io_GBs_per_epoch = (np.sum(batch_bytes_np[1:], axis=1) / np.sum(timestamps_np[1:],axis=1)) / 1e9
+        average_io_GBs_per_epoch = (
+            np.sum(batch_bytes_np[1:], axis=1) / np.sum(timestamps_np[1:], axis=1)
+        ) / 1e9
         std_dev_io_GBs = np.std(average_io_GBs_per_epoch)
         average_time_per_epoch = np.mean(timestamps_np[1:], axis=(1))
         std_dev_time = np.std(average_time_per_epoch)
         average_speed_per_epoch = bs / average_time_per_epoch
         std_dev_speed = np.std(average_speed_per_epoch)
-        
+
         print(f"Stats for epochs > 1, batch_size = {bs}")
         print(
             f"  Average IO: {np.mean(average_io_GBs_per_epoch):.2e} ± {std_dev_io_GBs:.2e} GB/s"
@@ -254,7 +260,7 @@ def read_data(
         print(
             f"  Average speed: {np.mean(average_speed_per_epoch):.2e} ± {std_dev_speed:.2e} im/s"
         )
-        
+
     if log_fn:
         data = (bs, timestamps_np, batch_bytes_np)
         pickle.dump(data, open(log_fn, "wb"))
