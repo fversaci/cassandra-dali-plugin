@@ -713,7 +713,7 @@ class NoIO_ImageNetLightningModel(ImageNetLightningModel):
         super().__init__(**vars(args))
 
     def setup(self, stage=None):
-        self.data_size = 65536 // self.trainer.world_size
+        self.data_size = 131072 // self.trainer.world_size
 
     def prepare_data(self):
         # no preparation is needed in DALI
