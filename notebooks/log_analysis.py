@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 
 fnames = []
 
-folder = "../examples/lightning/logs_csv/KENTU03_3_GPU_NO_IO_BS_512/version_0/"
+folder = "../examples/lightning/logs_csv/ACCA400_1_GPU_NO_IO_BS_1024/version_0/"
 hyperparams_fname = os.path.join(folder, "hparams.yaml")
 log_fname = os.path.join(folder, "metrics.csv")
 
@@ -152,7 +152,14 @@ folders = [
     "../examples/lightning/logs_csv/KENTU400_1_GPU_CASSANDRA_BS_1024/version_1/",
 ]
 
-folders = glob.glob("../examples/lightning/logs_csv/KENTU03*/version_0")
+folders = [
+    "../examples/lightning/logs_csv/ACCA400_1_GPU_NO_IO_BS_1024/version_0/",
+    "../examples/lightning/logs_csv/ACCA400_1_GPU_TFR_BS_1024/version_0/",
+    "../examples/lightning/logs_csv/ACCA400_1_GPU_SCYLLA_BS_1024/version_0/",
+    #"../examples/lightning/logs_csv/ACCA400_1_GPU_CASSANDRA_BS_1024/version_0/",
+]
+
+#folders = glob.glob("../examples/lightning/logs_csv/KENTU03*/version_0")
 folders = sorted(folders)
 
 fnames = []
@@ -170,11 +177,10 @@ for hyperparams_fname, log_fname in fnames:
     
     with open(hyperparams_fname, "r") as f:
         hyperparams = yaml.load(f, Loader=yaml.UnsafeLoader)
-    
-    print(hyperparams_fname, log_fname)
+        print(hyperparams_fname, log_fname)
 
-    batch_size = hyperparams["batch_size"]
-    num_gpu = hyperparams["num_gpu"]
+        batch_size = hyperparams["batch_size"]
+        num_gpu = hyperparams["num_gpu"]
     
     print(batch_size, num_gpu)
 
