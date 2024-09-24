@@ -29,9 +29,9 @@ set MAX_GPUS (nvidia-smi -L | wc -l)
 set TRAIN_FOLDER /scratch/imagenet-files/train
 set VAL_FOLDER /scratch/imagenet-files/val
 
-python3 train_model.py --epoch $EPOCHS --train-folder $TRAIN_FOLDER --val-folder $VAL_FOLDER -g 1 -b $BS --log-csv "$HOST"_1_GPU_TFR_BS_"$BS"
+python3 train_model.py --epoch $EPOCHS --train-folder $TRAIN_FOLDER --val-folder $VAL_FOLDER -g 1 -b $BS --log-csv "$HOST"_1_GPU_FILE_BS_"$BS"
 
-python3 train_model.py --epoch $EPOCHS --train-folder $TRAIN_FOLDER --val-folder $VAL_FOLDER -g $MAX_GPUS -b $BS --log-csv "$HOST"_"$MAX_GPUS"_GPU_TFR_BS_"$BS"
+python3 train_model.py --epoch $EPOCHS --train-folder $TRAIN_FOLDER --val-folder $VAL_FOLDER -g $MAX_GPUS -b $BS --log-csv "$HOST"_"$MAX_GPUS"_GPU_FILE_BS_"$BS"
 
 ### Tfrecords
 set TRAIN_TFR /scratch/imagenet-tfrecords/train
