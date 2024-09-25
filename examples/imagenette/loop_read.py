@@ -94,8 +94,8 @@ def read_data(
     epochs=10,
     file_root=None,
     index_root=None,
-    out_of_order=False,
-    slow_start=0,
+    out_of_order=True,
+    slow_start=4,
     log_fn=None,
 ):
     """Read images from DB or filesystem, in a tight loop
