@@ -53,23 +53,14 @@ set LOG $_flag_logdir
 # create log dir
 mkdir -p $LOG
 
-# Set environment variables to test S3
-set S3_IP $_flag_ip
-set S3_PORT 9000
-set -e http_proxy
-set -x AWS_ENDPOINT_URL "http://$S3_IP:$S3_PORT"
-set -x AWS_ACCESS_KEY_ID root
-set -x AWS_SECRET_ACCESS_KEY passpass
-set -x S3_ENDPOINT_URL "http://$S3_IP:$S3_PORT"
-
 ## Local filesystem
 ### files with DALI
 echo "-- DALI FILES TEST --"
-python loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root $ROOT/imagenet-files/train/ --log-fn "$LOG/$HOST"_loop_read_DALI_file_BS_"$BS".pickle
+python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root $ROOT/imagenet-files/train/ --log-fn "$LOG/$HOST"_loop_read_DALI_file_BS_"$BS".pickle
 	
 ### TFRecords with DALI
 echo "-- DALI TFRECORDS TEST --"
-python loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root $ROOT/imagenet-tfrecords/train/ --index-root $ROOT/imagenet-tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_DALI_tfrecord_BS_"$BS".pickle
+python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root $ROOT/imagenet-tfrecords/train/ --index-root $ROOT/imagenet-tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_DALI_tfrecord_BS_"$BS".pickle
 
 ### files with Pytorch
 
@@ -85,7 +76,6 @@ set IO_THREADS 4
 set PREFETCH_BUFF 2
 set SCYLLA_IP $_flag_ip
 set SCYLLA_PORT $_flag_ps
-echo $SCYLLA_PORT
 
 sed -i --follow-symlinks "/cassandra_ips/s/\(\[.*\]\)/\[\"$SCYLLA_IP\"\]/" private_data.py
 sed -i --follow-symlinks "/cassandra_port/s/= \(.*\)/= $SCYLLA_PORT/" private_data.py
@@ -107,6 +97,23 @@ sed -i --follow-symlinks "/cassandra_port/s/= \(.*\)/= $CASSANDRA_PORT/" private
 rm -f $TRAIN_ROWS
 python3 cache_uuids.py --metadata-table=$TRAIN_METADATA --rows-fn=$TRAIN_ROWS
 python3 loop_read.py --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_cassandra_BS_"$BS".pickle
+
+# Set environment variables to test S3
+set S3_IP $_flag_ip
+set S3_PORT 9000
+set -e http_proxy
+set -x AWS_ENDPOINT_URL "http://$S3_IP:$S3_PORT"
+set -x AWS_ACCESS_KEY_ID root
+set -x AWS_SECRET_ACCESS_KEY passpass
+set -x S3_ENDPOINT_URL "http://$S3_IP:$S3_PORT"
+
+### S3, files with DALI
+echo "-- S3 DALI FILES TEST --"
+python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_file_BS_"$BS".pickle
+	
+### S3, TFRecords with DALI
+echo "-- S3 DALI TFRECORDS TEST --"
+python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root s3://imagenet/tfrecords/train/ --index-root s3://imagenet/tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_tfrecord_BS_"$BS".pickle
 
 # disable debug print
 set -e fish_trace
