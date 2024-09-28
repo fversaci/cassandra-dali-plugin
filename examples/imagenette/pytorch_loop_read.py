@@ -118,7 +118,7 @@ class ImageNetDataset(Dataset):
         return img, label
 
 
-def scan(*, root_dir="s3://imagenet/val", epochs=4, bs=128, log_fn=None):
+def scan(*, root_dir=None, epochs=10, bs=128, log_fn=None):
     if "s3://" in root_dir:
         # Create pytorch file loader from s3
         print("Reading from S3")
