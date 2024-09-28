@@ -63,7 +63,8 @@ echo "-- DALI TFRECORDS TEST --"
 python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root $ROOT/imagenet-tfrecords/train/ --index-root $ROOT/imagenet-tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_DALI_tfrecord_BS_"$BS".pickle
 
 ### files with Pytorch
-
+echo "-- PYTORCH FILES TEST --"
+python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir $ROOT/imagenet-files/train/ --log-fn "$LOG/$HOST"_loop_read_pytorch_files_BS_"$BS".pickle
 
 ## Hi latency
 set TRAIN_DATA imagenet.data_train
@@ -114,6 +115,10 @@ python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root s3://im
 ### S3, TFRecords with DALI
 echo "-- S3 DALI TFRECORDS TEST --"
 python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root s3://imagenet/tfrecords/train/ --index-root s3://imagenet/tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_tfrecord_BS_"$BS".pickle
+
+### S3 files with Pytorch
+echo "-- S3 PYTORCH FILES TEST --"
+python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_pytorch_files_BS_"$BS".pickle
 
 # disable debug print
 set -e fish_trace
