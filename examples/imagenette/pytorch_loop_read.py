@@ -159,7 +159,7 @@ def scan(*, root_dir=None, epochs=10, bs=128, log_fn=None):
                 labels = b[1]
                 
                 images_batch_bytes = sum([len(dd) for dd in images])
-                labels_batch_bytes = labels.shape[0]
+                labels_batch_bytes = labels.shape[0] * 4 # label is int32
                 batch_bytes = images_batch_bytes + labels_batch_bytes
 
                 batch_bytes_np[epoch][step] = batch_bytes
