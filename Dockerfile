@@ -142,6 +142,6 @@ RUN mkdir /data
 RUN chown user.user '/data'
 # install plugin
 WORKDIR /home/user/cassandra-dali-plugin
-RUN pip3 install IPython
+RUN pip3 install IPython torchdata
 RUN pip3 install .
 USER user
