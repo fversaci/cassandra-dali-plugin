@@ -40,8 +40,7 @@ def get_tfrecord_dataset(tfrecord_paths, bs=128, prefetch=8):
         num_parallel_calls=tf.data.experimental.AUTOTUNE,
     )
     # Add prefetching
-    epochs = 30
-    dataset = dataset.repeat(epochs).shuffle(1024).batch(bs).prefetch(prefetch)
+    dataset = dataset.shuffle(1024).batch(bs).prefetch(prefetch)
     
     return dataset
 
@@ -94,7 +93,7 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
         dataset = (
             ImageNetDataset(root_dir).get_dataset().batch(bs).prefetch(tf.data.AUTOTUNE)
         )
-       
+    
     ## Get the number of batches looping across the whole dataset
     steps = 0
     for _ in tqdm(dataset):
@@ -113,13 +112,14 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
         with tqdm(dataset) as t:
             start_ts = time.time()
             for step, b in enumerate(t):
-                images = b[0]
+                images = tf.get_static_value(b[0])
                 labels = b[1]
                
                 #if step == 10:
                 #    embed()
                 
-                images_batch_bytes = sum([len(dd.numpy()) for dd in images])
+                images
+                images_batch_bytes = sum([len(dd) for dd in images])
                 labels_batch_bytes = labels.shape[0] * 4
                 batch_bytes = images_batch_bytes + labels_batch_bytes
 
