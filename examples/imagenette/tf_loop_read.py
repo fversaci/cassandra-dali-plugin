@@ -8,10 +8,61 @@ from IPython import embed
 import time
 import pickle
 
-def parse_image(img, label):
-    return tf.io.decode_jpeg(img), label
+
+## tf-data files
+
+
+def parse_image(filename, label):
+    img = tf.io.read_file(filename)
+    # img = tf.io.decode_jpeg(img, channels=3)
+    return img, label
+
+
+def get_raw_image_dataset(root_dir, bs=128, prefetch=8, shuffle_buffer=1024):
+    # List all JPEG files recursively
+    dataset = tf.data.Dataset.list_files(os.path.join(root_dir, "*/*.JPEG"))
+
+    # Infer labels from file paths
+    def extract_label(file_path):
+        parts = tf.strings.split(file_path, os.path.sep)
+        label = parts[-2]  # Assumes that the label is the parent directory
+        return label
+
+    dataset = dataset.map(
+        lambda x: (x, extract_label(x)),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE,
+    )
+
+    # Convert string labels to integer indices
+    class_names = sorted([d.name for d in os.scandir(root_dir) if d.is_dir()])
+    class_indices = dict((name, idx) for idx, name in enumerate(class_names))
+
+    table = tf.lookup.StaticHashTable(
+        initializer=tf.lookup.KeyValueTensorInitializer(
+            keys=tf.constant(class_names),
+            values=tf.constant(list(range(len(class_names))), dtype=tf.int64),
+        ),
+        default_value=-1,
+    )
+
+    dataset = dataset.map(
+        lambda x, y: (x, table.lookup(y)),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE,
+    )
+
+    # Parse and preprocess images
+    dataset = dataset.map(parse_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+
+    # Shuffle, batch, and prefetch
+    dataset = dataset.shuffle(buffer_size=shuffle_buffer)
+    dataset = dataset.batch(bs)
+    dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
+
+    return dataset
+
 
 ## tfrecords
+
 
 def get_tfrecord_dataset(tfrecord_paths, bs=128, prefetch=8):
     # Function to parse each TFRecord
@@ -41,8 +92,9 @@ def get_tfrecord_dataset(tfrecord_paths, bs=128, prefetch=8):
     )
     # Add prefetching
     dataset = dataset.shuffle(1024).batch(bs).prefetch(prefetch)
-    
+
     return dataset
+
 
 def scan_directory(directory_path):
     tfrecord_paths = [
@@ -53,47 +105,17 @@ def scan_directory(directory_path):
     print(f"Found {len(tfrecord_paths)} TFRecord files.")
     return tfrecord_paths
 
-## tf-data files
-class ImageNetDataset:
-    def __init__(self, root_dir):
-        self.root_dir = root_dir
-        self.classes = sorted(os.listdir(root_dir))
-        self.files = [
-            (os.path.join(dp, f), dp.split("/")[-1])
-            for dp, dn, filenames in os.walk(root_dir)
-            for f in filenames
-            if f.endswith(".JPEG")
-        ]
-
-    def _generator(self):
-        for img_path, label in self.files:
-            with open(img_path, "rb") as f:
-                img = f.read()  # Read raw image bytes
-            label = self.classes.index(label)
-            yield img, label
-
-    def get_dataset(self):
-        return tf.data.Dataset.from_generator(
-            self._generator,
-            output_signature=(
-                tf.TensorSpec(shape=(), dtype=tf.string),
-                tf.TensorSpec(shape=(), dtype=tf.int32),
-            ),
-        )  # .map(parse_image, num_parallel_calls=tf.data.AUTOTUNE)
-
 
 ## Loop read
 def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
     print("Reading from a local filesystem")
-    
+
     if tfr:
         paths = scan_directory(root_dir)
         dataset = get_tfrecord_dataset(paths, bs=bs, prefetch=8)
     else:
-        dataset = (
-            ImageNetDataset(root_dir).get_dataset().batch(bs).prefetch(tf.data.AUTOTUNE)
-        )
-    
+        dataset = get_raw_image_dataset(root_dir, bs=bs, prefetch=8)
+
     ## Get the number of batches looping across the whole dataset
     steps = 0
     for _ in tqdm(dataset):
@@ -114,10 +136,10 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
             for step, b in enumerate(t):
                 images = tf.get_static_value(b[0])
                 labels = b[1]
-               
-                #if step == 10:
+
+                # if step == 10:
                 #    embed()
-                
+
                 images
                 images_batch_bytes = sum([len(dd) for dd in images])
                 labels_batch_bytes = labels.shape[0] * 4
@@ -126,8 +148,7 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
                 batch_bytes_np[epoch][step] = batch_bytes
                 timestamps_np[epoch, step] = time.time() - start_ts
                 start_ts = time.time()
-                
-                
+
     # Calculate the average and standard deviation
     if epochs > 3:
         # First epoch is skipped
@@ -155,6 +176,7 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
     if log_fn:
         data = (bs, timestamps_np, batch_bytes_np)
         pickle.dump(data, open(log_fn, "wb"))
+
 
 if __name__ == "__main__":
     run(scan)
