@@ -85,9 +85,10 @@ def get_tfrecord_dataset(tfrecord_paths, bs=128, prefetch=8):
     # Interleave TFRecord files to parallelize reads
     dataset = dataset.interleave(
         lambda filepath: tf.data.TFRecordDataset(filepath).map(
-            parse_tfrecord_fn,  # num_parallel_calls=tf.data.experimental.AUTOTUNE
+            parse_tfrecord_fn,
+            num_parallel_calls=tf.data.experimental.AUTOTUNE,
         ),
-        cycle_length=cycle_length,  # Number of input elements that will be processed concurrently
+        cycle_length=cycle_length,
         num_parallel_calls=tf.data.experimental.AUTOTUNE,
     )
     # Add prefetching
@@ -113,13 +114,13 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
     if tfr:
         paths = scan_directory(root_dir)
         dataset = get_tfrecord_dataset(paths, bs=bs, prefetch=8)
+        ## Get the number of batches looping across the whole dataset
+        steps = 0
+        for _ in tqdm(dataset):
+            steps += 1
     else:
         dataset = get_raw_image_dataset(root_dir, bs=bs, prefetch=8)
-
-    ## Get the number of batches looping across the whole dataset
-    steps = 0
-    for _ in tqdm(dataset):
-        steps += 1
+        steps = tf.data.experimental.cardinality(dataset).numpy()
 
     ### Start scanning
     print(f"Batches per epoch: {steps}")
@@ -134,13 +135,12 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
         with tqdm(dataset) as t:
             start_ts = time.time()
             for step, b in enumerate(t):
-                images = tf.get_static_value(b[0])
+                images = b[0].numpy()
                 labels = b[1]
 
                 # if step == 10:
                 #    embed()
 
-                images
                 images_batch_bytes = sum([len(dd) for dd in images])
                 labels_batch_bytes = labels.shape[0] * 4
                 batch_bytes = images_batch_bytes + labels_batch_bytes
