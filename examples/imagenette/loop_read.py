@@ -140,9 +140,9 @@ def read_data(
             num_shards=world_size,
             pad_last_batch=True,
             # speed up reading
-            prefetch_queue_depth=4,
+            prefetch_queue_depth=8,
             # dont_use_mmap=True,
-            read_ahead=True,
+            read_ahead=False,
         )
         chosen_reader = file_reader
     elif reader == "tfrecord":
@@ -166,7 +166,7 @@ def read_data(
             num_shards=world_size,
             pad_last_batch=True,
             # speed up reading
-            prefetch_queue_depth=4,
+            prefetch_queue_depth=8,
             # dont_use_mmap=True,
             read_ahead=True,
         )
@@ -177,9 +177,9 @@ def read_data(
     # create dali pipeline
     @pipeline_def(
         batch_size=bs,
-        num_threads=4,
+        num_threads=8,
         device_id=device_id,
-        prefetch_queue_depth=2,
+        prefetch_queue_depth=4,
         #########################
         # - uncomment to enable delay via just_sleep
         # exec_async=False,
