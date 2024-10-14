@@ -31,7 +31,7 @@ def cleanup():
     dist.destroy_process_group()
 
 
-def scan(root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, log_fn=None, local_cache="/tmp/streamingdata_loopread/"):
+def scan(root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, log_fn=None, local_cache="/tmp/streamingdata_loopread/", shuffle_batches=16):
     # Set up distributed environment
     rank = local_rank
     setup(rank, world_size)
@@ -49,7 +49,7 @@ def scan(root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, 
     split=split,                       # Training split
     batch_size=bs,
     shuffle=True,
-    shuffle_block_size=bs*4,
+    shuffle_block_size=bs*shuffle_batches,
     cache_limit=10e9,
     )
 

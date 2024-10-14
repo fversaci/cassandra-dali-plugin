@@ -18,7 +18,7 @@ def parse_image(filename, label):
     return img, label
 
 
-def get_raw_image_dataset(root_dir, bs=128, prefetch=8, shuffle_buffer=1024):
+def get_raw_image_dataset(root_dir, bs=128, prefetch=8, shuffle_batches=16):
     # List all JPEG files recursively
     dataset = tf.data.Dataset.list_files(os.path.join(root_dir, "*/*.JPEG"))
 
@@ -54,7 +54,7 @@ def get_raw_image_dataset(root_dir, bs=128, prefetch=8, shuffle_buffer=1024):
     dataset = dataset.map(parse_image, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     # Shuffle, batch, and prefetch
-    dataset = dataset.shuffle(buffer_size=shuffle_buffer)
+    dataset = dataset.shuffle(buffer_size=bs*shuffle_batches)
     dataset = dataset.batch(bs)
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
@@ -64,7 +64,7 @@ def get_raw_image_dataset(root_dir, bs=128, prefetch=8, shuffle_buffer=1024):
 ## tfrecords
 
 
-def get_tfrecord_dataset(tfrecord_paths, bs=128, prefetch=8):
+def get_tfrecord_dataset(tfrecord_paths, bs=128, prefetch=8, shuffle_batches=16):
     # Function to parse each TFRecord
     def parse_tfrecord_fn(example):
         features = {
@@ -92,7 +92,7 @@ def get_tfrecord_dataset(tfrecord_paths, bs=128, prefetch=8):
         num_parallel_calls=tf.data.experimental.AUTOTUNE,
     )
     # Add prefetching
-    dataset = dataset.shuffle(1024).batch(bs).prefetch(prefetch)
+    dataset = dataset.shuffle(bs*shuffle_batches).batch(bs).prefetch(prefetch)
 
     return dataset
 
@@ -108,18 +108,18 @@ def scan_directory(directory_path):
 
 
 ## Loop read
-def scan(*, root_dir="", tfr=False, epochs=4, bs=128, log_fn=None):
+def scan(*, root_dir="", tfr=False, epochs=4, bs=128, shuffle_batches=16, log_fn=None):
     print("Reading from a local filesystem")
 
     if tfr:
         paths = scan_directory(root_dir)
-        dataset = get_tfrecord_dataset(paths, bs=bs, prefetch=8)
+        dataset = get_tfrecord_dataset(paths, bs=bs, prefetch=8, shuffle_batches=shuffle_batches)
         ## Get the number of batches looping across the whole dataset
         steps = 0
         for _ in tqdm(dataset):
             steps += 1
     else:
-        dataset = get_raw_image_dataset(root_dir, bs=bs, prefetch=8)
+        dataset = get_raw_image_dataset(root_dir, bs=bs, prefetch=8, shuffle_batches=shuffle_batches)
         steps = tf.data.experimental.cardinality(dataset).numpy()
 
     ### Start scanning
