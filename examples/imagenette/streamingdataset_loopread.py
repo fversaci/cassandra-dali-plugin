@@ -14,6 +14,7 @@ from IPython import embed
 from clize import run
 import numpy as np
 import time 
+import pickle 
 
 global_rank = int(os.getenv("RANK", default=0))
 local_rank = int(os.getenv("LOCAL_RANK", default=0))
@@ -31,7 +32,7 @@ def cleanup():
     dist.destroy_process_group()
 
 
-def scan(root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, log_fn=None, local_cache="/tmp/streamingdata_loopread/", shuffle_batches=16):
+def scan(*, root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, log_fn=None, local_cache="/tmp/streamingdata_loopread/", shuffle_batches=16):
     # Set up distributed environment
     rank = local_rank
     setup(rank, world_size)
@@ -51,13 +52,14 @@ def scan(root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, 
     shuffle=True,
     shuffle_block_size=bs*shuffle_batches,
     cache_limit=10e9,
+    predownload=2,
     )
 
     # Create the DataLoader for distributed training
     data_loader = DataLoader(
         dataset,
-        batch_size = bs // world_size,
-        num_workers=4,
+        batch_size = bs,
+        num_workers=8,
         #pin_memory=True,
     )
     
@@ -92,7 +94,7 @@ def scan(root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, 
                 
                 
     # Calculate the average and standard deviation
-    if epochs > 3:
+    if epochs > 3 and rank == 0:
         # First epoch is skipped
         ## Speed im/s
         average_io_GBs_per_epoch = (
@@ -116,6 +118,7 @@ def scan(root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, 
         )
 
     if log_fn:
+        log_fn = f"{log_fn}_rank_{rank}.pickle"
         data = (bs, timestamps_np, batch_bytes_np)
         pickle.dump(data, open(log_fn, "wb"))
 
