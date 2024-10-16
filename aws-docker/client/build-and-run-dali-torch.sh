@@ -1,3 +1,5 @@
+docker build --progress=plain -t dali:aws -f Dockerfile.dali .
+
 docker run \
     --cap-add=sys_admin --cap-add=net_admin --shm-size 70GB \
     --rm -it \
@@ -5,4 +7,4 @@ docker run \
     -v /mnt/scratch/ldic-varia/:/data:rw \
     # -v /mnt/bla:/ebs:rw \
     --entrypoint fish \
-    --name client harbor.crs4.it/cesco-public/cassandra-dali-plugin:pap
+    --name client dali:aws
