@@ -6,7 +6,6 @@ from tqdm import tqdm
 import tensorflow as tf
 
 
-# Prepare dataset function (modify as needed)
 def preprocess_image(image):
     image = tf.image.decode_jpeg(image, channels=3)
     image = tf.image.resize(image, [224, 224])
@@ -17,21 +16,27 @@ def preprocess_image(image):
 def train(*, bs=128, shuffle_batches=16, tfr=False):
     # Choose if files or tfrecords
     if tfr:
-        dataset_id="imagenet_tfr"
+        dataset_id = "imagenet_tfr"
     else:
-        dataset_id="imagenet_files"
+        dataset_id = "imagenet_files"
     # Distribute the dataset using tf.data service
     dataset = tf.data.experimental.service.from_dataset_id(
         processing_mode="parallel_epochs",
         service=service,
         dataset_id=dataset_id,
-        element_spec=(tf.TensorSpec(shape=(None,), dtype=tf.string, name=None), tf.TensorSpec(shape=(None,), dtype=tf.int64, name=None))
+        element_spec=(
+            tf.TensorSpec(shape=(None,), dtype=tf.string, name=None),
+            tf.TensorSpec(shape=(None,), dtype=tf.int64, name=None),
+        ),
     )
 
     # Shuffle, batch, and prefetch
     dataset = dataset.unbatch()
-    dataset = dataset.map(lambda x, y: (preprocess_image(x), y))
-    dataset = dataset.shuffle(buffer_size=bs*shuffle_batches)
+    dataset = dataset.map(
+        lambda x, y: (preprocess_image(x), y),
+        num_parallel_calls=tf.data.experimental.AUTOTUNE,
+    )
+    dataset = dataset.shuffle(buffer_size=bs * shuffle_batches)
     dataset = dataset.batch(bs)
     dataset = dataset.prefetch(buffer_size=tf.data.experimental.AUTOTUNE)
 
@@ -41,10 +46,12 @@ def train(*, bs=128, shuffle_batches=16, tfr=False):
     with strategy.scope():
         # Define the model
         model = ResNet50(
-            weights=None, input_shape=(224, 224, 3), classes=10
+            weights=None, input_shape=(224, 224, 3), classes=1000
         )  # Adjust number of classes
         model.compile(
-            optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"]
+            optimizer="adam",
+            loss="sparse_categorical_crossentropy",
+            metrics=["accuracy"],
         )
 
     # Train the model
