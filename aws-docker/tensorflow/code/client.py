@@ -1,5 +1,4 @@
 import tensorflow as tf
-import os
 from tqdm import tqdm
 from mynet import service
 from clize import run
