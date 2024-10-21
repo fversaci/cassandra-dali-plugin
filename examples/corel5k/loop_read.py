@@ -47,18 +47,16 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 def read_data(
     *,
     data_table="corel5k.data",
-    metadata_table="corel5k.metadata",
-    ids_cache_dir="ids_cache",
+    rows_fn="corel5k.rows",
     use_gpu=False,
     epochs=10,
 ):
     """Read images from DB or filesystem, in a tight loop
 
     :param data_table: Name of datatable (i.e.: keyspace.tablename)
-    :param metadata_table: Name of metadatatable (i.e.: keyspace.tablename)
+    :param rows_fn: Filename of local copy of UUIDs (default: corel5k.rows)
     :param reader: "cassandra" or "file" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
-    :param ids_cache_dir: Directory containing the cached list of UUIDs (default: ./ids_cache)
     """
     if use_gpu:
         device_id = local_rank
@@ -66,10 +64,7 @@ def read_data(
         device_id = types.CPU_ONLY_DEVICE_ID
 
     bs = 128
-    source_uuids = read_uuids(
-        metadata_table,
-        ids_cache_dir=ids_cache_dir,
-    )
+    source_uuids = read_uuids(rows_fn)
     db_reader = get_cassandra_reader(
         data_table=data_table,
         prefetch_buffers=16,
@@ -113,7 +108,7 @@ def read_data(
     # DALI iterator
     ########################################################################
     # consume uuids to get images and npy labels from DB
-    shard_size = math.ceil(pl.epoch_size()['Reader'] / world_size)
+    shard_size = math.ceil(pl.epoch_size()["Reader"] / world_size)
     steps = math.ceil(shard_size / bs)
     for _ in range(epochs):
         # read data for current epoch

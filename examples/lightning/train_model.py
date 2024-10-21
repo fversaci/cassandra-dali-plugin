@@ -4,7 +4,11 @@
 
 # cassandra reader
 from cassandra_reader import get_cassandra_reader, read_uuids
-from create_dali_pipeline import create_dali_pipeline_from_file, create_dali_pipeline_cassandra
+from create_dali_pipeline import (
+    create_dali_pipeline_from_file,
+    create_dali_pipeline_cassandra,
+    create_dali_pipeline_from_tfrecord,
+)
 
 import argparse
 
@@ -28,6 +32,11 @@ from lightning.pytorch.loggers import CSVLogger
 from lightning.pytorch.callbacks import EarlyStopping
 from lightning.pytorch.callbacks import ModelCheckpoint
 
+import time
+import numpy as np
+
+from s3_utils import list_s3_files
+
 try:
     from nvidia.dali.plugin.pytorch import DALIClassificationIterator, LastBatchPolicy
 except ImportError:
@@ -50,13 +59,37 @@ def parse():
         "--train-folder",
         metavar="DIRECTORY (training)",
         default="",
-        help="training folder with a subfolder for each class. This override cassandra",
+        help="training folder with a subfolder for each class. This override cassandra and tfrecord",
     )
     parser.add_argument(
         "--val-folder",
         metavar="DIRECTORY (validation)",
         default="",
-        help="validation folder with a subfolder for each class. This override cassandra",
+        help="validation folder with a subfolder for each class. This override cassandra and tfrecord",
+    )
+    parser.add_argument(
+        "--train-tfr-folder",
+        metavar="TFRECORD DIRECTORY (training)",
+        default="",
+        help="training folder with tfrecords. This override cassandra",
+    )
+    parser.add_argument(
+        "--val-tfr-folder",
+        metavar="TFRECORD DIRECTORY (validation)",
+        default="",
+        help="validation folder with tfrecords. This override cassandra",
+    )
+    parser.add_argument(
+        "--train-index-folder",
+        metavar="TFRECORD INDEX DIRECTORY (training)",
+        default="",
+        help="training folder with tfrecord index. This override cassandra",
+    )
+    parser.add_argument(
+        "--val-index-folder",
+        metavar="TFRECORD INDEX DIRECTORY (validation)",
+        default="",
+        help="validation folder with tfrecord index. This override cassandra",
     )
     parser.add_argument(
         "--train-data-table",
@@ -65,10 +98,10 @@ def parse():
         help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train)",
     )
     parser.add_argument(
-        "--train-metadata-table",
-        metavar="METADATA TABLE (training)",
-        default="imagenette.metadata_train",
-        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_train)",
+        "--train-rows-fn",
+        metavar="Local copy of UUIDs (training)",
+        default="train.rows",
+        help="Local copy of training UUIDs (default: train.rows)",
     )
     parser.add_argument(
         "--val-data-table",
@@ -77,24 +110,18 @@ def parse():
         help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò)",
     )
     parser.add_argument(
-        "--val-metadata-table",
-        metavar="METADATA TABLE (validation)",
-        default="imagenette.metadata_val",
-        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_val)",
-    )
-    parser.add_argument(
-        "--ids-cache-dir",
-        metavar="CACH",
-        default="ids_cache",
-        help="Directory containing the cached list of UUIDs (default: ./ids_cache)",
+        "--val-rows-fn",
+        metavar="Local copy of UUIDs (validation)",
+        default="val.rows",
+        help="Local copy of training UUIDs (default: val.rows)",
     )
     parser.add_argument(
         "--arch",
         "-a",
         metavar="ARCH",
-        default="resnet18",
+        default="resnet50",
         choices=model_names,
-        help="model architecture: " + " | ".join(model_names) + " (default: resnet18)",
+        help="model architecture: " + " | ".join(model_names) + " (default: resnet50)",
     )
     parser.add_argument(
         "-j",
@@ -102,7 +129,7 @@ def parse():
         default=4,
         type=int,
         metavar="N",
-        help="number of data loading workers (default: 4)",
+        help="number of DALI data loading workers (default: 4)",
     )
     parser.add_argument(
         "-g",
@@ -183,14 +210,16 @@ def parse():
     )
     parser.add_argument(
         "--log-tensorboard",
-        dest="tensorboard",
-        action="store_true",
+        dest="log_tensorboard_fname",
+        type=str,
+        default="",
         help="Log metrics to tensorboard format",
     )
     parser.add_argument(
         "--log-csv",
-        dest="csv",
-        action="store_true",
+        dest="log_csv_fname",
+        type=str,
+        default="",
         help="Log metrics to csv file",
     )
     parser.add_argument(
@@ -215,6 +244,39 @@ def parse():
     parser.add_argument(
         "--prof", default=-1, type=int, help="Only run 10 iterations for profiling."
     )
+    parser.add_argument(
+        "--no-io",
+        dest="no_io",
+        action="store_true",
+        help="Train model by using a single tensor. No data loading is performed. It is used to evaluate the upper bound of the GPU performance",
+    )
+    parser.add_argument(
+        "--out-of-order",
+        dest="ooo",
+        action="store_true",
+        help="Enable out of order Cassandra data loading",
+    )
+    parser.add_argument(
+        "--slow-start",
+        default=0,
+        type=int,
+        metavar="INT",
+        help="Incremental prefetching factor (default: 0)",
+    )
+    parser.add_argument(
+        "--n-io-threads",
+        default=4,
+        type=int,
+        metavar="INT",
+        help="Number of the Cassandra plugin IO threads (default:4)",
+    )
+    parser.add_argument(
+        "--n-prefetch-buffers",
+        default=2,
+        type=int,
+        metavar="INT",
+        help="Number of the Cassandra plugin prefetch buffers (default: 2)",
+    )
     parser.add_argument("--deterministic", action="store_true")
 
     parser.add_argument("--sync_bn", action="store_true", help="enabling apex sync BN.")
@@ -224,6 +286,86 @@ def parse():
 
     args = parser.parse_args()
     return args
+
+
+#######################
+### TENSOR ITERATOR ###
+#######################
+
+## This iterator is used to feed GPU with the same tensor without loading data
+## It is used to evaluate the upper bound performance of the GPU training a specific model
+## It is activated by the command line argument --no-io
+
+
+class TensorIterator:
+    def __init__(self, model, size=(3, 224, 224), batch_size=256, data_size=10000):
+        self.size = size
+        self.bs = batch_size
+        self.model = model
+        self.data_size = data_size
+        self.cnt = 0
+
+        t = torch.rand(
+            self.bs, self.size[0], self.size[1], self.size[2], device=self.model.device
+        )
+        fake_label = torch.randint(0, 999, (self.bs,), device=self.model.device)
+        self.batch = [{"data": t, "label": fake_label}]
+
+    def __len__(self):
+        return self.data_size // self.bs
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.cnt == self.data_size // self.bs:
+            self.cnt = 0
+            raise StopIteration
+        else:
+            self.cnt += 1
+            return self.batch
+
+    def reset(self):
+        self.cnt = 0
+
+
+##################################
+### CALLBACKS TO LOG TIMESTAMP ###
+##################################
+
+
+class TrainBatchStartCallback(L.Callback):
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
+        # Record the current timestamp
+        batch_ts = time.time()
+
+        # Log the timestamp to the logger
+        pl_module.log(
+            "train_batch_ts",
+            torch.tensor(batch_ts, dtype=torch.double),
+            prog_bar=False,  # Don't show in the progress bar
+            on_step=True,  # Log it at the step level (every batch)
+            on_epoch=False,  # Don't log it at the epoch level
+            logger=True,  # Send the log to the logger (e.g., TensorBoard)
+            sync_dist=False,  # No need to sync across distributed systems (if not using multiple GPUs)
+        )
+
+
+class ValidationBatchStartCallback(L.Callback):
+    def on_validation_batch_start(self, trainer, pl_module, batch, batch_idx):
+        # Record the current timestamp
+        batch_ts = time.time()
+
+        # Log the timestamp to the logger
+        pl_module.log(
+            "val_batch_ts",
+            torch.tensor(batch_ts, dtype=torch.double),
+            prog_bar=False,  # Don't show in the progress bar
+            on_step=True,  # Log it at the step level (every batch)
+            on_epoch=False,  # Don't log it at the epoch level
+            logger=True,  # Send the log to the logger (e.g., TensorBoard)
+            sync_dist=False,  # No need to sync across distributed systems (if not using multiple GPUs)
+        )
 
 
 ########################
@@ -284,6 +426,7 @@ class ImageNetLightningModel(L.LightningModule):
         loss_train = F.cross_entropy(output, target)
 
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
+
         self.log(
             "train_loss",
             loss_train,
@@ -293,6 +436,7 @@ class ImageNetLightningModel(L.LightningModule):
             logger=True,
             sync_dist=True,
         )
+
         self.log(
             "train_acc1",
             acc1,
@@ -302,6 +446,7 @@ class ImageNetLightningModel(L.LightningModule):
             logger=True,
             sync_dist=True,
         )
+
         self.log(
             "train_acc5",
             acc5,
@@ -311,14 +456,19 @@ class ImageNetLightningModel(L.LightningModule):
             logger=True,
             sync_dist=True,
         )
+
         return loss_train
 
     def eval_step(self, batch, batch_idx, prefix: str):
         images = batch[0]["data"]
         target = batch[0]["label"].squeeze(-1).long()
+
         output = self(images)
+
         loss_val = F.cross_entropy(output, target)
+
         acc1, acc5 = self.__accuracy(output, target, topk=(1, 5))
+
         self.log(
             f"{prefix}_loss",
             loss_val,
@@ -328,6 +478,7 @@ class ImageNetLightningModel(L.LightningModule):
             sync_dist=True,
             logger=True,
         )
+
         self.log(
             f"{prefix}_acc1",
             acc1,
@@ -337,6 +488,7 @@ class ImageNetLightningModel(L.LightningModule):
             sync_dist=True,
             logger=True,
         )
+
         self.log(
             f"{prefix}_acc5",
             acc5,
@@ -383,7 +535,9 @@ class ImageNetLightningModel(L.LightningModule):
         return [optimizer]
 
 
-## Derived class to add the Cassandra DALI pipeline
+############################################################################################################################
+## Derived class to use either DALI (file reader, tfrecord reader, Cassandra plugin reader) or the no-io Lightning module ##
+############################################################################################################################
 
 
 class DALI_ImageNetLightningModel(ImageNetLightningModel):
@@ -432,13 +586,15 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         # Creatind actual loaders used by the lightning module to get data (train_dataloader and val_dataloader methods)
         self.train_loader = LightningWrapper(
             train_pipeline,
-            last_batch_policy=LastBatchPolicy.PARTIAL,
+            # last_batch_policy=LastBatchPolicy.PARTIAL,
+            last_batch_policy=LastBatchPolicy.DROP,
             auto_reset=True,
             reader_name="Reader",
         )
         self.val_loader = LightningWrapper(
             val_pipeline,
-            last_batch_policy=LastBatchPolicy.PARTIAL,
+            # last_batch_policy=LastBatchPolicy.PARTIAL,
+            last_batch_policy=LastBatchPolicy.DROP,
             auto_reset=True,
             reader_name="Reader",
         )
@@ -463,8 +619,9 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         shard_id,
         num_shards,
     ):
+
         if args.train_folder:
-            # Data come from disk
+            # Data come from files
             if is_training:
                 folder = args.train_folder
             else:
@@ -485,19 +642,41 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 size=args.val_size,
             )
 
+        elif args.train_tfr_folder:
+            # Data from TFRecord
+            if is_training:
+                folder = args.train_tfr_folder
+                index_folder = args.train_index_folder
+            else:
+                folder = args.val_tfr_folder
+                index_folder = args.val_index_folder
+
+            pipe = create_dali_pipeline_from_tfrecord(
+                batch_size=args.batch_size,
+                crop=args.crop_size,
+                dali_cpu=args.dali_cpu,
+                file_root=folder,
+                index_root=index_folder,
+                device_id=device_id,
+                is_training=is_training,
+                num_shards=num_shards,
+                num_threads=args.workers,
+                prefetch_queue_depth=2,
+                seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
+                shard_id=shard_id,
+                size=args.val_size,
+            )
+
         else:
             # Data come from cassandra
             if is_training:
                 data_table = args.train_data_table
-                metadata_table = args.train_metadata_table
+                rows_fn = args.train_rows_fn
             else:
                 data_table = args.val_data_table
-                metadata_table = args.val_metadata_table
+                rows_fn = args.val_rows_fn
 
-            in_uuids = read_uuids(
-                metadata_table=metadata_table,
-                ids_cache_dir=args.ids_cache_dir,
-            )
+            in_uuids = read_uuids(rows_fn=rows_fn)
 
             pipe = create_dali_pipeline_cassandra(
                 batch_size=args.batch_size,
@@ -514,11 +693,48 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
                 shuffle_every_epoch=True,
                 size=args.val_size,
                 source_uuids=in_uuids,
+                ooo=args.ooo,
+                slow_start=args.slow_start,
+                io_threads=args.n_io_threads,
+                prefetch_buffers=args.n_prefetch_buffers,
             )
 
         pipe.build()
 
         return pipe
+
+
+### model with no dataloader
+class NoIO_ImageNetLightningModel(ImageNetLightningModel):
+    def __init__(
+        self,
+        args,
+    ):
+        super().__init__(**vars(args))
+
+    def setup(self, stage=None):
+        self.data_size = 131072 // self.trainer.world_size
+
+    def prepare_data(self):
+        # no preparation is needed in DALI
+        # All the preprocessing steps are performed within the DALI pipeline
+        pass
+
+    def train_dataloader(self):
+        return TensorIterator(
+            model=self, batch_size=self.batch_size, data_size=self.data_size
+        )
+
+    def val_dataloader(self):
+        return TensorIterator(
+            model=self, batch_size=self.batch_size, data_size=self.data_size
+        )
+
+    def on_train_epoch_end(self):
+        self.trainer.train_dataloader.reset()
+
+    def on_validation_epoch_end(self):
+        self.trainer.val_dataloaders.reset()
 
 
 def main():
@@ -542,7 +758,10 @@ def main():
         args.val_size = 256
 
     # create lightning model
-    model = DALI_ImageNetLightningModel(args)
+    if args.no_io:
+        model = NoIO_ImageNetLightningModel(args)
+    else:
+        model = DALI_ImageNetLightningModel(args)
 
     # Optionally resume from a checkpoint
     if args.resume:
@@ -555,12 +774,19 @@ def main():
     #    return
 
     ### Callbacks
-    callbacks_l = []
+    train_start_callback = TrainBatchStartCallback()
+    val_start_callback = ValidationBatchStartCallback()
+
+    callbacks_l = [train_start_callback, val_start_callback]
+    # callbacks_l = []
 
     if args.patience:
         print(f"-- Early stopping enabled with patience={args.patience}")
         early_stopping = EarlyStopping(
-            monitor="val_loss", mode="min", patience=args.patience, check_finite=False,
+            monitor="val_loss",
+            mode="min",
+            patience=args.patience,
+            check_finite=False,
         )
         callbacks_l.append(early_stopping)
 
@@ -578,12 +804,12 @@ def main():
     ### Loggers
     loggers_l = []
 
-    if args.tensorboard:
-        tensorboard_logger = TensorBoardLogger("tb_logs", name="my_model")
+    if args.log_tensorboard_fname:
+        tensorboard_logger = TensorBoardLogger("tb_logs", name=log_tensorboard_fname)
         loggers_l.append(tensorboard_logger)
 
-    if args.csv:
-        csv_logger = logger = CSVLogger("logs_csv", name="my_model")
+    if args.log_csv_fname:
+        csv_logger = logger = CSVLogger("logs_csv", name=args.log_csv_fname)
         loggers_l.append(csv_logger)
 
     if not loggers_l:
@@ -602,6 +828,7 @@ def main():
             callbacks=callbacks_l,
             num_sanity_val_steps=0,
             precision="16-mixed",
+            log_every_n_steps=1,
         )
     else:
         trainer = L.Trainer(
@@ -614,6 +841,7 @@ def main():
             callbacks=callbacks_l,
             num_sanity_val_steps=0,
             precision="16-mixed",
+            log_every_n_steps=1,
         )
 
     trainer.fit(model, ckpt_path=ckpt_path)

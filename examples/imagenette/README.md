@@ -35,16 +35,16 @@ $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-tab
 $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table imagenette.data_val --metadata-table imagenette.metadata_val
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train
+$ python3 cache_uuids.py --metadata-table=imagenette.metadata_train --rows-fn train.rows
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train
+$ python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train --use-gpu
+$ python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows --use-gpu
 
 # - Sharded, tight loop data loading test, using 2 processes via torchrun
-$ torchrun --nproc_per_node=2 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train
+$ torchrun --nproc_per_node=2 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
 ```
 
 ## Compare with DALI fn.readers.file
@@ -90,10 +90,10 @@ $ /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.p
   --split-subdir=val --data-table imagenet.data_val --metadata-table imagenet.metadata_val
 
 # Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train --rows-fn train.rows
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --data-table imagenet.data_train --metadata-table imagenet.metadata_train
+$ python3 loop_read.py --data-table imagenet.data_train --rows-fn train.rows
 ```
 
 ## Multi-GPU training
@@ -113,12 +113,12 @@ $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_file.py \
 while [our modified version](distrib_train_from_cassandra.py) with:
 ```bash
 # Read the lists of UUIDs and cache them to disk
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train
-$ python3 cache_uuids.py --metadata-table=imagenet.metadata_val
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_train --rows-fn train.rows
+$ python3 cache_uuids.py --metadata-table=imagenet.metadata_val --rows-fn val.rows
 
 # Modified script, reading from Cassandra:
 $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
   -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
-  --train-data-table imagenette.data_train --train-metadata-table imagenette.metadata_train \
-  --val-data-table imagenette.data_val --val-metadata-table imagenette.metadata_val
+  --train-data-table imagenette.data_train --train-rows-fn train.rows \
+  --val-data-table imagenette.data_val --val-rows-fn val.rows
 ```

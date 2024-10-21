@@ -7,15 +7,15 @@ CREATE KEYSPACE IF NOT EXISTS ade20k WITH replication = {'class': 'SimpleStrateg
 
 // Mapping patch uuid to data and label
 CREATE TABLE IF NOT EXISTS ade20k.data(
-  patch_id uuid,
+  id uuid,
   label blob,
   data blob,
-  PRIMARY KEY ((patch_id))
+  PRIMARY KEY ((id))
 );
 
 // Mapping patch uuid to metadata
 CREATE TABLE IF NOT EXISTS ade20k.metadata(
   filename text,
-  patch_id uuid,
-  PRIMARY KEY ((patch_id))
+  id uuid,
+  PRIMARY KEY ((id))
 );

@@ -41,6 +41,8 @@ import boto3
 import statistics
 import os
 from IPython import embed
+import numpy as np
+import pickle
 
 global_rank = int(os.getenv("RANK", default=0))
 local_rank = int(os.getenv("LOCAL_RANK", default=0))
@@ -50,30 +52,32 @@ world_size = int(os.getenv("WORLD_SIZE", default=1))
 def parse_s3_uri(s3_uri):
     if not s3_uri.startswith("s3://"):
         raise ValueError("Invalid S3 URI")
-    
+
     # Remove the "s3://" prefix
     s3_uri = s3_uri[5:]
-    
+
     # Split the remaining part into bucket and prefix
-    parts = s3_uri.split('/', 1)
+    parts = s3_uri.split("/", 1)
     bucket_name = parts[0]
-    prefix = parts[1] if len(parts) > 1 else ''
-    
+    prefix = parts[1] if len(parts) > 1 else ""
+
     return bucket_name, prefix
+
 
 def list_s3_files(s3_uri):
     bucket_name, prefix = parse_s3_uri(s3_uri)
-    s3 = boto3.client('s3')
-    paginator = s3.get_paginator('list_objects_v2')
+    s3 = boto3.client("s3")
+    paginator = s3.get_paginator("list_objects_v2")
     pages = paginator.paginate(Bucket=bucket_name, Prefix=prefix)
 
     paths = []
     for page in pages:
-        if 'Contents' in page:
-            for obj in page['Contents']:
+        if "Contents" in page:
+            for obj in page["Contents"]:
                 paths.append(f"s3://{bucket_name}/{obj['Key']}")
 
     return sorted(paths)
+
 
 def just_sleep(im1, im2):
     time.sleep(2e-5 * world_size)
@@ -83,26 +87,27 @@ def just_sleep(im1, im2):
 def read_data(
     *,
     data_table="imagenette.data_train",
-    metadata_table="imagenette.metadata_train",
-    ids_cache_dir="ids_cache",
+    rows_fn="train.rows",
     reader="cassandra",
     use_gpu=False,
     bs=128,
     epochs=10,
     file_root=None,
     index_root=None,
+    out_of_order=True,
+    slow_start=4,
+    log_fn=None,
 ):
     """Read images from DB or filesystem, in a tight loop
 
     :param data_table: Name of the data table (in the form: keyspace.tablename)
-    :param metadata_table: Name of the data metadata table (in the form: keyspace.tablename)
+    :param rows_fn: Filename of local copy of UUIDs (default: train.rows)
     :param reader: "cassandra", "file" or "tfrecord" (default: cassandra)
     :param use_gpu: enable output to GPU (default: False)
     :param bs: batch size (default: 128)
     :param epochs: Number of epochs (default: 10)
     :param file_root: File root to be used (only when reading files or tfrecords)
     :param index_root: Root path to index files (only when reading tfrecords)
-    :param ids_cache_dir: Directory containing the cached list of UUIDs (default: ./ids_cache)
     """
     if use_gpu:
         device_id = local_rank
@@ -111,8 +116,7 @@ def read_data(
 
     if reader == "cassandra":
         source_uuids = read_uuids(
-            metadata_table,
-            ids_cache_dir=ids_cache_dir,
+            rows_fn,
         )
         chosen_reader = get_cassandra_reader(
             data_table=data_table,
@@ -121,8 +125,8 @@ def read_data(
             name="Reader",
             comm_threads=1,
             copy_threads=4,
-            ooo=True,
-            slow_start=4,
+            ooo=out_of_order,
+            slow_start=slow_start,
             source_uuids=source_uuids,
             shard_id=global_rank,
             num_shards=world_size,
@@ -136,9 +140,9 @@ def read_data(
             num_shards=world_size,
             pad_last_batch=True,
             # speed up reading
-            prefetch_queue_depth=4,
+            prefetch_queue_depth=8,
             # dont_use_mmap=True,
-            read_ahead=True,
+            read_ahead=False,
         )
         chosen_reader = file_reader
     elif reader == "tfrecord":
@@ -162,7 +166,7 @@ def read_data(
             num_shards=world_size,
             pad_last_batch=True,
             # speed up reading
-            prefetch_queue_depth=4,
+            prefetch_queue_depth=8,
             # dont_use_mmap=True,
             read_ahead=True,
         )
@@ -173,9 +177,9 @@ def read_data(
     # create dali pipeline
     @pipeline_def(
         batch_size=bs,
-        num_threads=4,
+        num_threads=8,
         device_id=device_id,
-        prefetch_queue_depth=2,
+        prefetch_queue_depth=4,
         #########################
         # - uncomment to enable delay via just_sleep
         # exec_async=False,
@@ -210,27 +214,56 @@ def read_data(
     ########################################################################
     shard_size = math.ceil(pl.epoch_size()["Reader"] / world_size)
     steps = math.ceil(shard_size / bs)
-    speeds = []
+    timestamps_np = np.zeros((epochs, steps))
+    batch_bytes_np = np.zeros((epochs, steps))
     first_epoch = True
-    for _ in range(epochs):
+    for epoch in range(epochs):
         # read data for current epoch
         with trange(steps) as t:
-            for _ in t:
-                pl.run()
-            epoch_time = t.format_dict['elapsed']
-            if first_epoch:
-                # ignore first epoch for stats
-                first_epoch = False
-            else:
-                speeds.append(t.total/epoch_time)
+            start_ts = time.time()
+            for step in t:
+                images, labels = pl.run()
+                images_batch_bytes = np.sum(np.array(images.shape()).reshape(bs))
+
+                # Using tfrecord labels.shape is empty
+                if labels.shape()[0]:
+                    labels_batch_bytes = np.sum(np.array(labels.shape()).reshape(bs))
+                else:
+                    labels_batch_bytes = bs
+                batch_bytes = images_batch_bytes + labels_batch_bytes
+
+                batch_bytes_np[epoch][step] = batch_bytes
+                timestamps_np[epoch, step] = time.time() - start_ts
+                start_ts = time.time()
 
         pl.reset()
     # Calculate the average and standard deviation
     if epochs > 3:
-        average_speed = statistics.mean(speeds)
-        std_dev_speed = statistics.stdev(speeds)
-        print(f'Stats for epochs > 1')
-        print(f'  Average speed: {average_speed:.2f} ± {std_dev_speed:.2f} it/s')
+        # First epoch is skipped
+        ## Speed im/s
+        average_io_GBs_per_epoch = (
+            np.sum(batch_bytes_np[1:], axis=1) / np.sum(timestamps_np[1:], axis=1)
+        ) / 1e9
+        std_dev_io_GBs = np.std(average_io_GBs_per_epoch)
+        average_time_per_epoch = np.mean(timestamps_np[1:], axis=(1))
+        std_dev_time = np.std(average_time_per_epoch)
+        average_speed_per_epoch = bs / average_time_per_epoch
+        std_dev_speed = np.std(average_speed_per_epoch)
+
+        print(f"Stats for epochs > 1, batch_size = {bs}")
+        print(
+            f"  Average IO: {np.mean(average_io_GBs_per_epoch):.2e} ± {std_dev_io_GBs:.2e} GB/s"
+        )
+        print(
+            f"  Average batch time: {np.mean(average_time_per_epoch):.2e} ± {std_dev_time:.2e} s"
+        )
+        print(
+            f"  Average speed: {np.mean(average_speed_per_epoch):.2e} ± {std_dev_speed:.2e} im/s"
+        )
+
+    if log_fn:
+        data = (bs, timestamps_np, batch_bytes_np)
+        pickle.dump(data, open(log_fn, "wb"))
 
     ########################################################################
     # alternatively: use pytorch iterator

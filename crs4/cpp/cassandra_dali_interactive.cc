@@ -70,7 +70,7 @@ void CassandraInteractive::prefetch_one() {
   auto bs = uuids.num_samples();
   auto cass_uuids = std::vector<CassUuid>(bs);
   for (auto i=0; i != bs; ++i) {
-    auto d_ptr = uuids[i].data<dali::uint64>();
+    auto d_ptr = uuids[i].data<uint64_t>();
     auto c_uuid = &cass_uuids[i];
     c_uuid->time_and_version = *(d_ptr++);
     c_uuid->clock_seq_and_node = *d_ptr;

@@ -81,10 +81,10 @@ data retrieval information from the database
 
 ```python
 {'data_table': 'imagenette.data',
- 'data_id_col': 'patch_id',
+ 'data_id_col': 'id',
  'data_label_col': 'label',
  'metadata_table': 'imagenette.metadata',
- 'medadata_id_col': 'patch_id',
+ 'medadata_id_col': 'id',
  'metadata_label_col': 'label',
  'data_col': 'data',
  'label_type': 'int',

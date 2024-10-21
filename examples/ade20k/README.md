@@ -42,16 +42,16 @@ $ /cassandra/bin/cqlsh -f create_tables.cql
 # - Fill the tables with data and metadata
 $ python3 extract_serial.py /data/ade20k/images/training/ /data/ade20k/annotations/training/ --data-table=ade20k.data --metadata-table=ade20k.metadata
 # - Read the list of UUIDs and cache it to disk
-$ python3 cache_uuids.py --metadata-table=ade20k.metadata
+$ python3 cache_uuids.py --metadata-table=ade20k.metadata --rows-fn=ade20k.rows
 
 # - Tight loop data loading test in host memory
-$ python3 loop_read.py --data-table=ade20k.data --metadata-table=ade20k.metadata
+$ python3 loop_read.py --data-table=ade20k.data --rows-fn=ade20k.rows
 
 # - Tight loop data loading test in GPU memory (GPU:0)
-$ python3 loop_read.py --data-table=ade20k.data --metadata-table=ade20k.metadata --use-gpu
+$ python3 loop_read.py --data-table=ade20k.data --rows-fn=ade20k.rows --use-gpu
 
 # - Sharded, tight loop data loading test, using 2 processes via torchrun
-$ torchrun --nproc_per_node=2 loop_read.py --data-table=ade20k.data --metadata-table=ade20k.metadata
+$ torchrun --nproc_per_node=2 loop_read.py --data-table=ade20k.data --rows-fn=ade20k.rows
 ```
 
 ## Compare with DALI fn.readers.file

@@ -7,15 +7,15 @@ CREATE KEYSPACE IF NOT EXISTS corel5k WITH replication = {'class': 'SimpleStrate
 
 // Mapping patch uuid to data and label
 CREATE TABLE IF NOT EXISTS corel5k.data(
-  patch_id uuid,
+  id uuid,
   label blob,
   data blob,
-  PRIMARY KEY ((patch_id))
+  PRIMARY KEY ((id))
 );
 
 // Mapping patch uuid to metadata
 CREATE TABLE IF NOT EXISTS corel5k.metadata(
   filename text,
-  patch_id uuid,
-  PRIMARY KEY ((patch_id))
+  id uuid,
+  PRIMARY KEY ((id))
 );

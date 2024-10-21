@@ -17,30 +17,28 @@ pgrep -f spark || (/spark/sbin/start-master.sh  && /spark/sbin/start-worker.sh s
                         --split-subdir=val --data-table=imagenette.data_val \
                         --metadata-table=imagenette.metadata_val
 # read from db
-rm -f ids_cache/*
-python3 cache_uuids.py --metadata-table=imagenette.metadata_train
-python3 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train
-python3 cache_uuids.py --metadata-table=imagenette.metadata_val
-python3 loop_read.py --data-table imagenette.data_val --metadata-table imagenette.metadata_val
-python3 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train --use-gpu
+rm -f {train,val}.rows
+python3 cache_uuids.py --metadata-table=imagenette.metadata_train --rows-fn train.rows
+python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
+python3 cache_uuids.py --metadata-table=imagenette.metadata_val --rows-fn val.rows
+python3 loop_read.py --data-table imagenette.data_val --rows-fn val.rows
+python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows --use-gpu
 # recreate tables and insert serially
 SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE IF EXISTS imagenette;"
 SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -f create_tables.cql
 python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table imagenette.data_train --metadata-table imagenette.metadata_train
 python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table imagenette.data_val --metadata-table imagenette.metadata_val
 # read from db
-rm -f ids_cache/*
-python3 cache_uuids.py --metadata-table=imagenette.metadata_train
-python3 loop_read.py --data-table imagenette.data_train --metadata-table imagenette.metadata_train
-python3 cache_uuids.py --metadata-table=imagenette.metadata_val
-python3 loop_read.py --data-table imagenette.data_val --metadata-table imagenette.metadata_val
+rm -f {train,val}.rows
+python3 cache_uuids.py --metadata-table=imagenette.metadata_train --rows-fn train.rows
+python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
+python3 cache_uuids.py --metadata-table=imagenette.metadata_val --rows-fn val.rows
+python3 loop_read.py --data-table imagenette.data_val --rows-fn val.rows
 # read from filesystem
 python3 loop_read.py --reader=file --file-root=/tmp/imagenette2-320/train
 # train for one epoch
 torchrun --nproc_per_node=1 distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 \
          --workers 4 --lr=0.4 --opt-level O2 --epochs 1 \
-         --train-data-table imagenette.data_train --train-metadata-table imagenette.metadata_train \
-         --val-data-table imagenette.data_val --val-metadata-table imagenette.metadata_val
-### BEGIN COMMENT \
-### END COMMENT`
+         --train-data-table imagenette.data_train --train-rows-fn train.rows \
+         --val-data-table imagenette.data_val --val-rows-fn val.rows
 echo "--- OK ---"

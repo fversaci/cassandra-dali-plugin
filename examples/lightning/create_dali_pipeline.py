@@ -3,7 +3,7 @@
 # (Apache License, Version 2.0)
 
 # Cassandra Reader
-from cassandra_reader import get_cassandra_reader, read_uuids
+from cassandra_reader import get_cassandra_reader
 from s3_utils import list_s3_files
 import os
 
@@ -90,6 +90,8 @@ def create_dali_pipeline_cassandra(
     comm_threads=1,
     copy_threads=4,
     wait_threads=2,
+    ooo=False,
+    slow_start=4,
 ):
 
     cass_reader = get_cassandra_reader(
@@ -103,8 +105,8 @@ def create_dali_pipeline_cassandra(
         copy_threads=copy_threads,
         wait_threads=wait_threads,
         shuffle_every_epoch=shuffle_every_epoch,
-        ooo=False,
-        slow_start=4,
+        ooo=ooo,
+        slow_start=slow_start,
     )
 
     images, labels = cass_reader

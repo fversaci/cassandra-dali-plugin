@@ -7,10 +7,10 @@ CREATE KEYSPACE IF NOT EXISTS imagenette WITH replication = {'class': 'SimpleStr
 
 // Mapping patch uuid to data and label
 CREATE TABLE IF NOT EXISTS imagenette.data(
-  patch_id uuid,
+  id uuid,
   label int,
   data blob,
-  PRIMARY KEY ((patch_id))
+  PRIMARY KEY ((id))
 );
 
 // Mapping patch uuid to metadata
@@ -18,6 +18,6 @@ CREATE TABLE IF NOT EXISTS imagenette.metadata(
   label int,
   or_label text,
   or_split text,
-  patch_id uuid,
-  PRIMARY KEY ((patch_id))
+  id uuid,
+  PRIMARY KEY ((id))
 );

@@ -55,28 +55,22 @@ def parse():
         help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train)",
     )
     parser.add_argument(
-        "--train-metadata-table",
-        metavar="METADATA TABLE (training)",
-        default="imagenette.metadata_train",
-        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_train)",
+        "--train-rows-fn",
+        metavar="Local copy of UUIDs (training)",
+        default="train.rows",
+        help="Local copy of training UUIDs (default: train.rows)",
     )
     parser.add_argument(
         "--val-data-table",
         metavar="DATA TABLE (validation)",
         default="imagenette.data_val",
-        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò)",
+        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_val)",
     )
     parser.add_argument(
-        "--val-metadata-table",
-        metavar="METADATA TABLE (validation)",
-        default="imagenette.metadata_val",
-        help="cassandra training metadata table (i.e.: keyspace.tablename (default: imagenette.metadata_val)",
-    )
-    parser.add_argument(
-        "--ids-cache-dir",
-        metavar="CACH",
-        default="ids_cache",
-        help="Directory containing the cached list of UUIDs (default: ./ids_cache)",
+        "--val-rows-fn",
+        metavar="Local copy of UUIDs (validation)",
+        default="val.rows",
+        help="Local copy of training UUIDs (default: val.rows)",
     )
     parser.add_argument(
         "--arch",
@@ -423,10 +417,7 @@ def main():
         val_size = 256
 
     # train pipe
-    train_uuids = read_uuids(
-        metadata_table=args.train_metadata_table,
-        ids_cache_dir=args.ids_cache_dir,
-    )
+    train_uuids = read_uuids(rows_fn=args.train_rows_fn)
     pipe = create_dali_pipeline(
         data_table=args.train_data_table,
         batch_size=args.batch_size,
@@ -448,10 +439,7 @@ def main():
     )
 
     # val pipe
-    val_uuids = read_uuids(
-        metadata_table=args.val_metadata_table,
-        ids_cache_dir=args.ids_cache_dir,
-    )
+    val_uuids = read_uuids(rows_fn=args.val_rows_fn)
     pipe = create_dali_pipeline(
         data_table=args.val_data_table,
         batch_size=args.batch_size,

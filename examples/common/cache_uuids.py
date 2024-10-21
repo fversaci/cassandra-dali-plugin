@@ -21,16 +21,15 @@ from private_data import cass_conf as CC
 def cache_uuids(
     *,
     metadata_table,
-    id_col="patch_id",
+    rows_fn,
+    id_col="id",
 ):
     """Cache uuids from DB to local file (via pickle)
 
     :param metadata_table: Cassandra metadata table (i.e., keyspace.name_of_the_metadata_table)
+    :param rows_fn: Filename of local copy of UUIDs
     :param id_col: Column containing the UUIDs
     """
-    # set uuids cache directory
-    ids_cache = "ids_cache"
-    rows_fn = os.path.join(ids_cache, f"{metadata_table}.rows")
 
     # Load list of uuids from Cassandra DB...
     lm = MiniListManager(
@@ -47,8 +46,6 @@ def cache_uuids(
     uuids = stuff["row_keys"]
     real_sz = len(uuids)
     print(f" {real_sz} images")
-    if not os.path.exists(ids_cache):
-        os.makedirs(ids_cache)
     lm.save_rows(rows_fn)
     print(f"Saved as {rows_fn}.")
 

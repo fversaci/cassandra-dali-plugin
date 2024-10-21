@@ -1,0 +1,3 @@
+FROM harbor.crs4.it/cesco-public/cassandra-dali-plugin:pap
+
+RUN echo -e 'data_file_directories:\n  - /data/cassandra/data\ncommitlog_directory: /data/cassandra/commitlog' >> /cassandra/conf/cassandra.yaml

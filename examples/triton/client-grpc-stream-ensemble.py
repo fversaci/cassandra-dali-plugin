@@ -52,10 +52,7 @@ def start_inferring():
 
     model_name = "cass_to_inference_decoupled"
 
-    uuids = read_uuids(
-        metadata_table="imagenette.metadata_train",
-        ids_cache_dir="ids_cache",
-    )
+    uuids = read_uuids(rows_fn="train.rows")
     bs = 2048  # megabatch size
     mbs = 64  # minibatch size
     uuids, real_sz = get_shard(

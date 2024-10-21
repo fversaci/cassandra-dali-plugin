@@ -49,7 +49,7 @@ void CassandraDecoupled::prefetch_one() {
   auto cass_uuids = std::vector<CassUuid>(bs);
   size_t ci = 0;
   for (auto i=start; i != end; ++i, ++ci) {
-    auto d_ptr = uuids[i].data<dali::uint64>();
+    auto d_ptr = uuids[i].data<uint64_t>();
     auto c_uuid = &cass_uuids[ci];
     c_uuid->time_and_version = *(d_ptr++);
     c_uuid->clock_seq_and_node = *d_ptr;
