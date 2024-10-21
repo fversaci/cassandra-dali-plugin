@@ -94,8 +94,8 @@ def parse():
     parser.add_argument(
         "--train-data-table",
         metavar="DATA TABLE (training)",
-        default="imagenette.data_train_orig",
-        help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train_orig)",
+        default="imagenette.data_train",
+        help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train)",
     )
     parser.add_argument(
         "--train-rows-fn",
@@ -106,8 +106,8 @@ def parse():
     parser.add_argument(
         "--val-data-table",
         metavar="DATA TABLE (validation)",
-        default="imagenette.data_val_orig",
-        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò_orig)",
+        default="imagenette.data_val",
+        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_val)",
     )
     parser.add_argument(
         "--val-rows-fn",
