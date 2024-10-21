@@ -107,7 +107,7 @@ def parse():
         "--val-data-table",
         metavar="DATA TABLE (validation)",
         default="imagenette.data_val",
-        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_vaò)",
+        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_val)",
     )
     parser.add_argument(
         "--val-rows-fn",
