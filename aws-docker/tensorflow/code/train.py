@@ -4,6 +4,7 @@ from tensorflow.keras import layers, models
 from tensorflow.keras.applications import ResNet50
 from tqdm import tqdm
 import tensorflow as tf
+from tensorflow.keras import mixed_precision
 
 
 def preprocess_image(image):
@@ -42,6 +43,10 @@ def train(*, bs=128, shuffle_batches=16, tfr=False):
 
     # Multi-GPU strategy
     strategy = tf.distribute.MirroredStrategy()
+
+    # Set precision
+    policy = mixed_precision.Policy('mixed_float16')
+    mixed_precision.set_global_policy(policy)
 
     with strategy.scope():
         # Define the model
