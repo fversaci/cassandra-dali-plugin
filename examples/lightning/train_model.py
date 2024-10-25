@@ -28,9 +28,6 @@ import torchvision.models as models
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
-from streaming.vision import StreamingImageNet
-import streaming
-
 import lightning as L
 from lightning.pytorch.profilers import PyTorchProfiler
 from lightning.pytorch.loggers import TensorBoardLogger
@@ -126,24 +123,6 @@ def parse():
         metavar="Local copy of UUIDs (validation)",
         default="val.rows",
         help="Local copy of training UUIDs (default: val.rows)",
-    )
-    parser.add_argument(
-        "--streaming-remote",
-        metavar="S3 ADDRESS",
-        default="",
-        help="S3 remote address of the streaming dataset",
-    )
-    parser.add_argument(
-        "--streaming-local",
-        metavar="PATH",
-        default="/tmp/streamingdata_loopread/",
-        help="Streaming local cache patch",
-    )
-    parser.add_argument(
-        "--streaming-local-size",
-        metavar="SIZE (bytes)",
-        default=20e9,
-        help="StreamingData local cache size (default:20GB)",
     )
     parser.add_argument(
         "--arch",
@@ -447,9 +426,9 @@ class ImageNetLightningModel(L.LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        pass
+        images = batch[0]["data"]
+        target = batch[0]["label"].squeeze(-1).long()
 
-    def training_step_core(self, images, target, batch_idx):
         # Get output from the model
         output = self(images)
 
@@ -489,9 +468,9 @@ class ImageNetLightningModel(L.LightningModule):
         return loss_train
 
     def eval_step(self, batch, batch_idx, prefix: str):
-        pass
+        images = batch[0]["data"]
+        target = batch[0]["label"].squeeze(-1).long()
 
-    def eval_step_core(self, images, target, batch_idx, prefix: str):
         output = self(images)
 
         loss_val = F.cross_entropy(output, target)
@@ -640,16 +619,6 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
     def on_validation_epoch_end(self):
         self.val_loader.reset()
 
-    def training_step(self, batch, batch_idx):
-        images = batch[0]["data"]
-        target = batch[0]["label"].squeeze(-1).long()
-        super().training_step_core(images, target, batch_idx)
-
-    def eval_step(self, batch, batch_idx, prefix: str):
-        images = batch[0]["data"]
-        target = batch[0]["label"].squeeze(-1).long()
-        super().eval_step_core(images, target, batch_idx, prefix)
-
     @staticmethod
     def GetPipeline(
         args,
@@ -743,132 +712,6 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         return pipe
 
 
-### StreamingDataset
-class Streaming_ImageNetLightningModel(ImageNetLightningModel):
-    def __init__(
-        self,
-        args,
-    ):
-        super().__init__(**vars(args))
-
-    def prepare_data(self):
-        # no preparation is needed in DALI
-        # All the preprocessing steps are performed within the DALI pipeline
-        pass
-
-    def setup(self, stage=None):
-        ## Get info for distributed setup
-        device_id = self.local_rank
-        shard_id = self.global_rank
-        num_shards = self.trainer.world_size
-
-        bs = args.batch_size
-        remote_s3 = args.streaming_remote
-        local_cache = args.streaming_local
-        predownload_batches = 8
-        cache_limit = args.streaming_local_size
-        shuffle_batches = 16
-        shuffle_block_size = bs * shuffle_batches
-
-        # Transformations
-        normalize = transforms.Normalize(
-            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-        )
-        train_transform = transforms.Compose(
-            [
-                transforms.RandomResizedCrop(args.val_size),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Lambda(lambda x: x.repeat(int(3 / x.shape[0]), 1, 1)),
-                normalize,
-            ]
-        )
-
-        val_transform = transforms.Compose(
-            [
-                transforms.Resize(args.val_size),
-                transforms.CenterCrop(args.crop_size),
-                transforms.ToTensor(),
-                transforms.Lambda(lambda x: x.repeat(int(3 / x.shape[0]), 1, 1)),
-                normalize,
-            ]
-        )
-        # remove previous cache file if any
-
-        try:
-            if device_id == 0:
-                shutil.rmtree(local_cache)
-                # streaming.base.util.clean_stale_shared_memory()
-        except:
-            print("local cache does not exist")
-
-        # Create Streaming Datasets for training and validation
-        train_dataset = StreamingImageNet(
-            remote=remote_s3,
-            local=local_cache,
-            split="train",
-            predownload=predownload_batches * bs,
-            cache_limit=cache_limit,
-            batch_size=bs,
-            shuffle=True,
-            shuffle_algo="py1e",
-            shuffle_seed=9176,
-            shuffle_block_size=shuffle_block_size,
-            transform=train_transform,
-        )
-
-        val_dataset = StreamingImageNet(
-            remote=remote_s3,
-            local=local_cache,
-            split="val",
-            predownload=predownload_batches * bs,
-            cache_limit=cache_limit,
-            batch_size=bs,
-            shuffle=True,
-            shuffle_algo="py1e",
-            shuffle_seed=9176,
-            shuffle_block_size=shuffle_block_size,
-            transform=val_transform,
-        )
-
-        # Creatind actual loaders used by the lightning module to get data (train_dataloader and val_dataloader methods)
-        self.train_loader = DataLoader(
-            train_dataset,
-            batch_size=bs,
-            num_workers=8,
-            pin_memory=True,
-        )
-
-        self.val_loader = DataLoader(
-            val_dataset,
-            batch_size=bs,
-            num_workers=8,
-            pin_memory=True,
-        )
-
-    def train_dataloader(self):
-        return self.train_loader
-
-    def val_dataloader(self):
-        return self.val_loader
-
-    def on_train_epoch_end(self):
-        pass
-
-    def on_validation_epoch_end(self):
-        pass
-
-    def training_step(self, batch, batch_idx):
-        images = batch[0]
-        target = batch[1]
-        super().training_step_core(images, target, batch_idx)
-
-    def eval_step(self, batch, batch_idx, prefix: str):
-        images = batch[0]
-        target = batch[1].squeeze(-1).long()
-        super().eval_step_core(images, target, batch_idx, prefix)
-
-
 ### model with no dataloader
 class NoIO_ImageNetLightningModel(ImageNetLightningModel):
     def __init__(
@@ -925,10 +768,8 @@ def main():
     # create lightning model
     if args.no_io:
         model = NoIO_ImageNetLightningModel(args)
-    elif not args.streaming_remote:
-        model = DALI_ImageNetLightningModel(args)
     else:
-        model = Streaming_ImageNetLightningModel(args)
+        model = DALI_ImageNetLightningModel(args)
 
     # Optionally resume from a checkpoint
     if args.resume:
