@@ -52,7 +52,7 @@ def parse():
     parser.add_argument(
         "--streaming-remote",
         metavar="S3 ADDRESS",
-        default="",
+        default=None,
         help="S3 remote address of the streaming dataset",
     )
     parser.add_argument(
@@ -512,8 +512,10 @@ class Streaming_ImageNetLightningModel(ImageNetLightningModel):
 
         try:
             streaming.base.util.clean_stale_shared_memory()
-            if device_id == 0:
-                shutil.rmtree(local_cache)
+            if device_id == 0 and remote_s3 and os.path.exists(local_cache):
+                flag = input (f"Local path {local_cache} exists and should be deleted. Do you want to delete it (y/N)?")
+                if flag == 'y':
+                    shutil.rmtree(local_cache)
         except:
             print("local cache does not exist")
 
