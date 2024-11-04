@@ -513,9 +513,9 @@ class Streaming_ImageNetLightningModel(ImageNetLightningModel):
         try:
             streaming.base.util.clean_stale_shared_memory()
             if device_id == 0 and remote_s3 and os.path.exists(local_cache):
-                flag = input (f"Local path {local_cache} exists and should be deleted. Do you want to delete it (y/N)?")
-                if flag == 'y':
-                    shutil.rmtree(local_cache)
+                # flag = input (f"Local path {local_cache} exists and should be deleted. Do you want to delete it (y/N)?")
+                # if flag == 'y':
+                shutil.rmtree(local_cache)
         except:
             print("local cache does not exist")
 
