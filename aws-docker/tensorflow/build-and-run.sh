@@ -1,3 +1,4 @@
+#! /usr/bin/env fish
 docker build --progress=plain -t tensorflow:pap -f Dockerfile . ; \
 and docker run \
     --cap-add=sys_admin --cap-add=net_admin --shm-size 200GB \

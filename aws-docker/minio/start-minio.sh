@@ -1,3 +1,5 @@
+#! /usr/bin/env fish
+
 docker run \
    --rm -it \
    -p 9000:9000 \

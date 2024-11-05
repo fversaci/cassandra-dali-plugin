@@ -1,6 +1,7 @@
-docker build --progress=plain -t dali:aws -f Dockerfile.dali .
+#! /usr/bin/env fish
 
-docker run \
+docker build --progress=plain -t dali:aws -f Dockerfile.dali . ; \
+and docker run \
     --cap-add=sys_admin --cap-add=net_admin --shm-size 200GB \
     --rm -it \
     --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
