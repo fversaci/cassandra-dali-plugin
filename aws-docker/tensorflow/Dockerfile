@@ -1,8 +1,8 @@
 FROM nvcr.io/nvidia/tensorflow:24.08-tf2-py3
 # FROM tensorflow/tensorflow:2.17.0-gpu
 
-ENV EXT_UID 1000
-ENV EXT_GID 1000
+ARG EXT_UID=1000
+ARG EXT_GID=1000
 RUN groupadd -g $EXT_GID user
 RUN useradd -m --uid $EXT_UID --gid $EXT_GID user
 
