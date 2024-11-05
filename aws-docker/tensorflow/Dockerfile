@@ -17,7 +17,5 @@ RUN pip install IPython tqdm clize
 EXPOSE 5050
 EXPOSE 5051
 
-COPY ./code /home/user/code
-RUN chown -R user:user /home/user/code
-WORKDIR /home/user/code
+WORKDIR /home/user/
 USER user
