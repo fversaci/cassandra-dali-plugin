@@ -17,6 +17,6 @@ RUN sed -i 's/# cass_conf.cassandra_port/cass_conf.cassandra_port/' /home/user/c
 ARG TIMESTAMP
 RUN git pull origin paper-dev
 RUN mkdir -p ~/bin
-RUN wget https://dl.min.io/client/mc/release/linux-amd64/mc -o ~/bin/mc
+RUN wget https://dl.min.io/client/mc/release/linux-amd64/mc -O ~/bin/mc
 RUN chmod +x ~/bin/mc
 
