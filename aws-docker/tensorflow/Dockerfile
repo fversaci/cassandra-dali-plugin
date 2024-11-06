@@ -13,9 +13,11 @@ RUN \
        iproute2 vim fish nmon htop less \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install IPython tqdm clize
+RUN pip install IPython tqdm clize pillow
 EXPOSE 5050
 EXPOSE 5051
 
 WORKDIR /home/user/
 USER user
+RUN git clone -b paper-dev https://github.com/fversaci/cassandra-dali-plugin.git
+WORKDIR /home/user/cassandra-dali-plugin/examples/tf.data.service
