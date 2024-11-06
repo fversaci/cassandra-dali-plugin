@@ -56,10 +56,15 @@ set PORT_CASS $_flag_pc
 # create log dir
 mkdir -p $LOG
 
-## Local filesystem
+# create minio alias
+~/bin/mc alias set myminio http://$IP:9000 root passpass
+
+## Loopread test
+~/bin/mc mv myminio/imagenet/streaming/train/index_bytes.json myminio/imagenet/streaming/train/index.json
 cd ~/cassandra-dali-plugin/examples/imagenette
 source ./test_loop_read_all.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --ip $IP --logdir "$LOG/loopread"
 
-## Hi latency
+## Training test
+~/bin/mc mv myminio/imagenet/streaming/train/index_jpeg.json myminio/imagenet/streaming/train/index.json
 cd ~/cassandra-dali-plugin/examples/lightning
 source ./test_all.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT  --ip $IP --logdir "$LOG/training"
