@@ -58,7 +58,7 @@ set PORT_CASS $_flag_pc
 mkdir -p $LOG
 
 ## Local filesystem
-test_loop_read_local.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --logdir $LOG
+source ./test_loop_read_local.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --logdir $LOG
 
 ## Hi latency
-test_loop_read_hi_lat.fish --host $HOST --epochs $EPOCHS --bs $BS --ip $IP --pc $PORT_CASS --ps $POST_SCYLLA --logdir $LOG
+source ./test_loop_read_hi_lat.fish --host $HOST --epochs $EPOCHS --bs $BS --ip $IP --pc $PORT_CASS --ps $POST_SCYLLA --logdir $LOG
