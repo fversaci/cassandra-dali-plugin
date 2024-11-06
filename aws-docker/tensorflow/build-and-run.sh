@@ -17,7 +17,10 @@ if not set -q _flag_logdir
     exit
 end
 
-docker build --progress=plain -t tensorflow:pap -f Dockerfile . ; \
+set TIMESTAMP (date +%s)
+echo $TIMESTAMP
+
+docker build --build-arg="TIMESTAMP=$TIMESTAMP" --progress=plain -t tensorflow:pap -f Dockerfile . ; \
 and docker run \
     --cap-add=sys_admin --cap-add=net_admin --shm-size 200GB \
     -e NVIDIA_VISIBLE_DEVICES="none" \

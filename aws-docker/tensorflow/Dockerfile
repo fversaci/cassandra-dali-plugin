@@ -19,5 +19,7 @@ EXPOSE 5051
 
 WORKDIR /home/user/
 USER user
+
+ARG TIMESTAMP
 RUN git clone -b paper-dev https://github.com/fversaci/cassandra-dali-plugin.git
-WORKDIR /home/user/cassandra-dali-plugin/examples/tf.data.service
+WORKDIR /home/user/cassandra-dali-plugin/examples/tensorflow
