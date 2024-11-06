@@ -17,7 +17,10 @@ if not set -q _flag_logdir
     exit
 end
 
-docker build --progress=plain -t dali:aws -f Dockerfile.dali . ; \
+set TIMESTAMP (date +%s)
+echo $TIMESTAMP
+
+docker build --build-arg="TIMESTAMP=$TIMESTAMP" --progress=plain -t dali:aws -f Dockerfile.dali . ; \
 and docker run \
     --cap-add=sys_admin --cap-add=net_admin --shm-size 200GB \
     --rm -it \
