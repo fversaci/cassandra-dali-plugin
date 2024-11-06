@@ -10,7 +10,8 @@ from tensorflow.keras import mixed_precision
 def preprocess_image(image):
     image = tf.image.decode_jpeg(image, channels=3)
     image = tf.image.resize(image, [224, 224])
-    image = tf.keras.applications.resnet50.preprocess_input(image)
+    # image = tf.keras.applications.resnet50.preprocess_input(image)
+    image = tf.keras.applications.imagenet_utils.preprocess_input(image, mode="torch")
     return image
 
 
