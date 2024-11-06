@@ -17,7 +17,7 @@ if not set -q _flag_host
 end
 
 if not set -q _flag_logdir
-    set _flag_logdir "log"
+    set _flag_logdir "/log/loopread"
 end
 
 if not set -q _flag_bs
