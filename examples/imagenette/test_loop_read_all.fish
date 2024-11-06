@@ -21,7 +21,7 @@ if not set -q _flag_rootdir
 end
 
 if not set -q _flag_logdir
-    set _flag_logdir "log"
+    set _flag_logdir "/log"
 end
 
 if not set -q _flag_bs
@@ -61,4 +61,4 @@ mkdir -p $LOG
 source ./test_loop_read_local.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --logdir $LOG
 
 ## Hi latency
-source ./test_loop_read_hi_lat.fish --host $HOST --epochs $EPOCHS --bs $BS --ip $IP --pc $PORT_CASS --ps $POST_SCYLLA --logdir $LOG
+source ./test_loop_read_hi_lat.fish --host $HOST --epochs $EPOCHS --bs $BS --ip $IP --logdir $LOG
