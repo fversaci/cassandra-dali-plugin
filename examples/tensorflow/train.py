@@ -37,6 +37,11 @@ def preprocess_image(image):
 
 
 def train(*, bs=1024, epochs=4, shuffle_batches=16, tfr=False, log_fn=None):
+
+    # tf dataservice expects the global batchsize
+    num_gpus = len(tf.config.experimental.list_physical_devices("GPU"))
+    bs = bs * num_gpus
+
     # Choose if files or tfrecords
     if tfr:
         dataset_id = "imagenet_tfr"
