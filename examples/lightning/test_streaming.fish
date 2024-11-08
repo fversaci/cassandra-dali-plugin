@@ -49,7 +49,9 @@ mkdir -p $LOG
 
 ### S3, files with DALI
 echo "-- S3 STREAMING TRAINING --"
+~/bin/mc alias set myminio http://$S3_IP:9000 root passpass
+~/bin/mc cp myminio/imagenet/streaming/train/index_jpeg.json myminio/imagenet/streaming/train/index.json
 
-python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_STREAMING_BS_"$BS"
+#python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_STREAMING_BS_"$BS"
 
 python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g $MAX_GPUS -b $BS --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_CASSANDRA_BS_"$BS"
