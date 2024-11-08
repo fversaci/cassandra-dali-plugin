@@ -54,12 +54,19 @@ set PORT_SCYLLA $_flag_ps
 set PORT_CASS $_flag_pc
 
 # create log dir
-mkdir -p "$LOG/torch"
+set LOG_TORCH "$LOG/torch"
+mkdir -p $LOG_TORCH
 
 ## Loopread test
+echo "---------------------"
+echo "--- LOOPREAD TEST ---"
+echo "---------------------"
 cd ~/cassandra-dali-plugin/examples/imagenette
-source ./test_loop_read_all.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --ip $IP --logdir "$LOG/loopread"
+source ./test_loop_read_all.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --ip $IP --logdir "$LOG_TORCH/loopread"
 
 ## Training test
+echo "---------------------"
+echo "--- TRAINING TEST ---"
+echo "---------------------"
 cd ~/cassandra-dali-plugin/examples/lightning
-source ./test_all.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT  --ip $IP --logdir "$LOG/training"
+source ./test_all.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT  --ip $IP --logdir "$LOG_TORCH/training"
