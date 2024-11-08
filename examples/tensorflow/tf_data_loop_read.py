@@ -130,9 +130,8 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, shuffle_batches=16, log_fn
 
     first_epoch = True
     
-    if log_fn:
-        fd = open(log_fn+".csv", "w")
-        fd.write("epoch,batch,batch_bytes,batch_time\n")
+    fd = open(log_fn+".csv", "w")
+    fd.write("epoch,batch,batch_bytes,batch_time\n")
 
     for epoch in range(epochs):
         # read data for current epoch
@@ -179,10 +178,9 @@ def scan(*, root_dir="", tfr=False, epochs=4, bs=128, shuffle_batches=16, log_fn
             f"  Average speed: {np.mean(average_speed_per_epoch):.2e} ± {std_dev_speed:.2e} im/s"
         )
 
-    if log_fn:
-        data = (bs, timestamps_np, batch_bytes_np)
-        pickle.dump(data, open(log_fn, "wb"))
-        fd.close()
+    data = (bs, timestamps_np, batch_bytes_np)
+    pickle.dump(data, open(log_fn, "wb"))
+    fd.close()
 
 if __name__ == "__main__":
     run(scan)
