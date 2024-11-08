@@ -96,7 +96,7 @@ def read_data(
     index_root=None,
     out_of_order=True,
     slow_start=4,
-    log_fn=None,
+    log_fn,
 ):
     """Read images from DB or filesystem, in a tight loop
 
@@ -217,6 +217,10 @@ def read_data(
     timestamps_np = np.zeros((epochs, steps))
     batch_bytes_np = np.zeros((epochs, steps))
     first_epoch = True
+
+    fd = open(log_fn + ".csv", "w")
+    fd.write("epoch,batch,batch_bytes,batch_time\n")
+
     for epoch in range(epochs):
         # read data for current epoch
         with trange(steps) as t:
@@ -235,6 +239,8 @@ def read_data(
                 batch_bytes_np[epoch][step] = batch_bytes
                 timestamps_np[epoch, step] = time.time() - start_ts
                 start_ts = time.time()
+
+                fd.write(f"{epoch},{step},{batch_bytes},{timestamps_np[epoch, step]}\n")
 
         pl.reset()
     # Calculate the average and standard deviation
@@ -261,9 +267,9 @@ def read_data(
             f"  Average speed: {np.mean(average_speed_per_epoch):.2e} ± {std_dev_speed:.2e} im/s"
         )
 
-    if log_fn:
-        data = (bs, timestamps_np, batch_bytes_np)
-        pickle.dump(data, open(log_fn, "wb"))
+    data = (bs, timestamps_np, batch_bytes_np)
+    pickle.dump(data, open(log_fn, "wb"))
+    fd.close()
 
     ########################################################################
     # alternatively: use pytorch iterator

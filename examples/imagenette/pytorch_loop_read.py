@@ -118,7 +118,7 @@ class ImageNetDataset(Dataset):
         return img, label
 
 
-def scan(*, root_dir=None, epochs=10, bs=128, log_fn=None):
+def scan(*, root_dir=None, epochs=10, bs=128, log_fn):
     if "s3://" in root_dir:
         # Create pytorch file loader from s3
         print("Reading from S3")
@@ -150,6 +150,9 @@ def scan(*, root_dir=None, epochs=10, bs=128, log_fn=None):
 
     first_epoch = True
 
+    fd = open(log_fn+".csv", "w")
+    fd.write("epoch,batch,batch_bytes,batch_time\n")
+
     for epoch in range(epochs):
         # read data for current epoch
         with tqdm(data_loader) as t:
@@ -166,7 +169,8 @@ def scan(*, root_dir=None, epochs=10, bs=128, log_fn=None):
                 timestamps_np[epoch, step] = time.time() - start_ts
                 start_ts = time.time()
                 
-                
+                fd.write(f"{epoch},{step},{batch_bytes},{timestamps_np[epoch, step]}\n")
+
     # Calculate the average and standard deviation
     if epochs > 3:
         # First epoch is skipped
@@ -191,10 +195,9 @@ def scan(*, root_dir=None, epochs=10, bs=128, log_fn=None):
             f"  Average speed: {np.mean(average_speed_per_epoch):.2e} ± {std_dev_speed:.2e} im/s"
         )
 
-    if log_fn:
-        data = (bs, timestamps_np, batch_bytes_np)
-        pickle.dump(data, open(log_fn, "wb"))
-
+    data = (bs, timestamps_np, batch_bytes_np)
+    pickle.dump(data, open(log_fn, "wb"))
+    fd.close()
 
 if __name__ == "__main__":
     run(scan)

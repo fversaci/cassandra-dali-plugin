@@ -39,9 +39,9 @@ def scan(
     split="train",
     bs=1024,
     epochs=4,
-    log_fn=None,
     local_cache="/tmp/streamingdata_loopread",
     shuffle_batches=16,
+    log_fn,
 ):
     # Set up distributed environment
     rank = local_rank
@@ -83,6 +83,9 @@ def scan(
 
     first_epoch = True
 
+    fd = open(log_fn + ".csv", "w")
+    fd.write("epoch,batch,batch_bytes,batch_time\n")
+
     for epoch in range(epochs):
         # read data for current epoch
         with tqdm(data_loader) as t:
@@ -100,6 +103,8 @@ def scan(
                 batch_bytes_np[epoch][step] = batch_bytes
                 timestamps_np[epoch, step] = time.time() - start_ts
                 start_ts = time.time()
+
+                fd.write(f"{epoch},{step},{batch_bytes},{timestamps_np[epoch, step]}\n")
 
     # Calculate the average and standard deviation
     if epochs > 3 and rank == 0:
@@ -125,10 +130,9 @@ def scan(
             f"  Average speed: {np.mean(average_speed_per_epoch):.2e} ± {std_dev_speed:.2e} im/s"
         )
 
-    if log_fn:
-        log_fn = f"{log_fn}_rank_{rank}.pickle"
-        data = (bs, timestamps_np, batch_bytes_np)
-        pickle.dump(data, open(log_fn, "wb"))
+    data = (bs, timestamps_np, batch_bytes_np)
+    pickle.dump(data, open(log_fn, "wb"))
+    fd.close()
 
     if world_size > 1:
         cleanup()
