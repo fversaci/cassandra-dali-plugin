@@ -84,7 +84,7 @@ def scan_directory(directory_path):
 
 
 ## Loop read
-def scan(*, tfr=False, epochs=4, bs=1024, shuffle_batches=16, log_fn=None):
+def scan(*, tfr=False, epochs=4, bs=1024, shuffle_batches=16, log_fn):
     print("Reading by using tensorflow data.service")
 
     """

@@ -108,7 +108,7 @@ def scan_directory(directory_path):
 
 
 ## Loop read
-def scan(*, root_dir="", tfr=False, epochs=4, bs=128, shuffle_batches=16, log_fn=None):
+def scan(*, root_dir="", tfr=False, epochs=4, bs=128, shuffle_batches=16, log_fn):
     print("Reading from a local filesystem")
 
     if tfr:
