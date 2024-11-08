@@ -54,7 +54,7 @@ set PORT_SCYLLA $_flag_ps
 set PORT_CASS $_flag_pc
 
 # create log dir
-mkdir -p $LOG
+mkdir -p "$LOG/torch"
 
 ## Loopread test
 cd ~/cassandra-dali-plugin/examples/imagenette
