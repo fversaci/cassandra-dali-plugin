@@ -78,9 +78,9 @@ python3 cache_uuids.py --metadata-table=$VAL_METADATA --rows-fn=$VAL_ROWS
 
 echo "CASSANDRA TEST"
 
-#python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_CASSANDRA_BS_"$BS"
+#python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --out-of-order --slow-start 4 --log-csv "$LOG/$HOST"_1_GPU_CASSANDRA_BS_"$BS"
 
-python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_CASSANDRA_BS_"$BS"
+python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --out-of-order --slow-start 4 --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_CASSANDRA_BS_"$BS"
 
 
 ### SCYLLA
@@ -100,6 +100,6 @@ python3 cache_uuids.py --metadata-table=$VAL_METADATA --rows-fn=$VAL_ROWS
 
 echo "SCYLLA TEST"
 
-#python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_SCYLLA_BS_"$BS"
+#python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --out-of-order --slow-start 4 --log-csv "$LOG/$HOST"_1_GPU_SCYLLA_BS_"$BS"
 
-python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_SCYLLA_BS_"$BS"
+python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --out-of-order --slow-start 4 --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_SCYLLA_BS_"$BS"
