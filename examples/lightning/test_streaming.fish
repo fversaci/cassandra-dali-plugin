@@ -54,4 +54,4 @@ echo "-- S3 STREAMING TRAINING --"
 
 #python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_STREAMING_BS_"$BS"
 
-python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g $MAX_GPUS -b $BS --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_CASSANDRA_BS_"$BS"
+python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g $MAX_GPUS -b $BS --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_STREAMING_BS_"$BS"
