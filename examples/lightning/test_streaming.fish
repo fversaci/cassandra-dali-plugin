@@ -51,6 +51,7 @@ mkdir -p $LOG
 echo "-- S3 STREAMING TRAINING --"
 ~/bin/mc alias set myminio http://$S3_IP:9000 root passpass
 ~/bin/mc cp myminio/imagenet/streaming/train/index_jpeg.json myminio/imagenet/streaming/train/index.json
+~/bin/mc cp myminio/imagenet/streaming/val/index_jpeg.json myminio/imagenet/streaming/val/index.json
 
 #python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_STREAMING_BS_"$BS"
 
