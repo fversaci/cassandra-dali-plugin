@@ -33,6 +33,7 @@ set BS $_flag_bs
 set EPOCHS $_flag_epochs
 set MAX_GPUS (nvidia-smi -L | wc -l)
 set LOG $_flag_logdir
+set LOCAL_CACHE /tmp/streamingdata_loopread/
 echo $HOST
 
 # Set environment variables to test S3
@@ -53,6 +54,8 @@ echo "-- S3 STREAMING TRAINING --"
 ~/bin/mc cp myminio/imagenet/streaming/train/index_jpeg.json myminio/imagenet/streaming/train/index.json
 ~/bin/mc cp myminio/imagenet/streaming/val/index_jpeg.json myminio/imagenet/streaming/val/index.json
 
+#rm -rf "$LOCAL_CACHE"
 #python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_STREAMING_BS_"$BS"
 
-python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g $MAX_GPUS -b $BS --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_STREAMING_BS_"$BS"
+rm -rf "$LOCAL_CACHE"
+python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g $MAX_GPUS -b $BS --streaming-local "$LOCAL_CACHE" --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_STREAMING_BS_"$BS"
