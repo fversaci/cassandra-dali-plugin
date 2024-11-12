@@ -39,7 +39,7 @@ set HOST $_flag_host
 set BS $_flag_bs
 set EPOCHS $_flag_epochs
 set ROOT $_flag_rootdir
-set LOG $_flag_logdir
+set LOG "$_flag_logdir/tensorflow"
 set IP $_flag_ip
 
 cd /home/user/cassandra-dali-plugin/examples/tensorflow
