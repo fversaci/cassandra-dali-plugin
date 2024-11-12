@@ -53,10 +53,6 @@ set IP $_flag_ip
 set PORT_SCYLLA $_flag_ps
 set PORT_CASS $_flag_pc
 
-#set TEST_CMD /home/user/cassandra-dali-plugin/aws-docker/torch-client/test_all.fish --host "$HOST" --bs="$BS" --epochs="$EPOCHS" --ip "$IP" --rootdir /data  --logdir /logs 2>&1 | tee /logs/test_all_torch_output.txt | tee /dev/stderr
-set TEST_CMD ./aws-docker/torch-client/test_all.fish --host "$HOST" --bs="$BS" --epochs="$EPOCHS" --ip "$IP" --rootdir /data  --logdir /logs
-#set TEST_CMD pwd 
-
 set TIMESTAMP (date +%s)
 echo $TIMESTAMP
 
