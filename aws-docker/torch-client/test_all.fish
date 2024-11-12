@@ -70,3 +70,9 @@ echo "--- TRAINING TEST ---"
 echo "---------------------"
 cd ~/cassandra-dali-plugin/examples/lightning
 source ./test_all.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT  --ip $IP --logdir "$LOG_TORCH/training"
+
+echo "----------------------"
+echo "--- STREAMING TEST ---"
+echo "----------------------"
+cd ~/cassandra-dali-plugin/examples/lightning
+source ./test_streaming.fish --host $HOST --epochs $EPOCHS --bs $BS --ip $IP --logdir "$LOG_TORCH/training"

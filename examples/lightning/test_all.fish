@@ -84,12 +84,12 @@ echo "HILAT TEST"
 source ./test_hi_lat.fish --host $HOST --bs $BS --epochs $EPOCHS --ip $_flag_ip --pc $PORT_CASS --ps $PORT_SCYLLA --logdir $LOG
 set hilat_test_end_time (date "+%Y-%m-%d %H:%M:%S")
 
-echo "STREAMING TEST"
-source ./test_streaming.fish --host $HOST --bs $BS --epochs $EPOCHS --ip $_flag_ip --logdir $LOG
-set stop_time (date "+%Y-%m-%d %H:%M:%S")
+#echo "STREAMING TEST"
+#source ./test_streaming.fish --host $HOST --bs $BS --epochs $EPOCHS --ip $_flag_ip --logdir $LOG
+#set stop_time (date "+%Y-%m-%d %H:%M:%S")
 
 echo "Start time: $start_time"
 echo "no IO stop time: $no_io_test_end_time"
 echo "local stop time: $local_test_end_time"
 echo "hilat stop time: $hilat_test_end_time"
-echo "streaming stop time: $stop_time"
+#echo "streaming stop time: $stop_time"
