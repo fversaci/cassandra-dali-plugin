@@ -28,6 +28,5 @@ and docker run \
     --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
     -v $_flag_rootdir:/data:rw \
     -v $_flag_logdir:/logs:rw \
-    # -v /mnt/bla:/ebs:rw \
     --entrypoint fish \
     --name client dali:aws
