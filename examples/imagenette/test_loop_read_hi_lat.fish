@@ -109,7 +109,6 @@ echo "-- STREAMINGDATA TEST --"
 # create minio alias
 ~/bin/mc alias set myminio http://$S3_IP:9000 root passpass
 ~/bin/mc cp myminio/imagenet/streaming/train/index_bytes.json myminio/imagenet/streaming/train/index.json
-python streaming_
 python streamingdataset_loopread.py --root-dir s3://imagenet/streaming/ --split train --bs $BS --epochs $EPOCHS --log-fn "$LOG/$HOST"_loop_read_S3_Streaming_BS_"$BS"
 
 # disable debug print
