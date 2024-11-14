@@ -43,4 +43,4 @@ set LOG "$_flag_logdir/tensorflow"
 set IP $_flag_ip
 
 cd /home/user/cassandra-dali-plugin/examples/tensorflow
-source ./test_tf_all_loopread.fish --host $HOST --bs $BS --epochs $EPOCHS --rootdir $ROOT --ip $IP --logdir $LOG
+source ./test_tf_loopread.fish --host $HOST --bs $BS --epochs $EPOCHS --rootdir $ROOT --ip $IP --logdir $LOG
