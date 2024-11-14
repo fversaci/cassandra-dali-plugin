@@ -58,7 +58,7 @@ echo "--------------"
 set start_time (date "+%Y-%m-%d %H:%M:%S")
 
 cd ./tensorflow
-./build-and-run-tensorflow-tests.fish --host $HOST --bs $BS --epochs $EPOCHS --rootdir $ROOT --logdir $LOG --ip $IPTF
+./build-and-run-tensorflow-loopread.fish --host $HOST --bs $BS --epochs $EPOCHS --rootdir $ROOT --logdir $LOG --ip $IPTF
 
 set stop_tf_time (date "+%Y-%m-%d %H:%M:%S")
 
@@ -70,7 +70,7 @@ echo "-- TORCH tests --"
 echo "-----------------"
 
 cd ../torch-client
-./build-and-run-dali-torch-tests.fish --host $HOST --bs=1024 --epochs=4 --ip $IPTORCH --rootdir $ROOT --logdir $LOG
+./build-and-run-dali-torch-loopread.fish --host $HOST --bs=1024 --epochs=4 --ip $IPTORCH --rootdir $ROOT --logdir $LOG
 
 set stop_torch_time (date "+%Y-%m-%d %H:%M:%S")
 
