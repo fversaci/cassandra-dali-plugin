@@ -28,6 +28,5 @@ and docker run \
     --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
     -v $_flag_rootdir:/data:rw \
     -v $_flag_logdir:/logs:rw \
-    -p 5050:5050 -p 5051:5051 \
     --entrypoint fish \
     --name tensorflow tensorflow:pap

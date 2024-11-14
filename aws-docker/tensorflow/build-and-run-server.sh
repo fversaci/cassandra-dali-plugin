@@ -20,13 +20,13 @@ end
 set TIMESTAMP (date +%s)
 echo $TIMESTAMP
 
-docker build --build-arg="TIMESTAMP=$TIMESTAMP" --progress=plain -t dali:aws -f Dockerfile.dali . ; \
+docker build --build-arg="TIMESTAMP=$TIMESTAMP" --progress=plain -t tensorflow:pap -f Dockerfile . ; \
 and docker run \
     --cap-add=sys_admin --cap-add=net_admin --shm-size 200GB \
     --rm -it \
-    --gpus=all \
     --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
     -v $_flag_rootdir:/data:rw \
     -v $_flag_logdir:/logs:rw \
+    -p 5050:5050 -p 5051:5051 \
     --entrypoint fish \
-    --name client dali:aws
+    --name tensorflow tensorflow:pap
