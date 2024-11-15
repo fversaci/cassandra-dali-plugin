@@ -55,4 +55,7 @@ echo "-----------"
 echo "TF Training"
 echo "-----------"
 
+echo "Tensorflow tf data service remote test"
+sed -i "s/10.12.0.2/$IP/g" mynet.py
+
 python3 train.py --tfr --bs $BS --epochs $EPOCHS --log-fn "$LOG/train/$HOST"_Train_TF_tfdataservice_tfr_BS_"$BS"
