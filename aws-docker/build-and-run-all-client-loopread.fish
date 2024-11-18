@@ -50,6 +50,12 @@ set LOG $_flag_logdir
 set IPTF $_flag_iptf
 set IPTORCH $_flag_iptorch
 
+## DOOL log
+set -Ux TODAY (date -u +"%Y-%m-%d")
+dool -taf --output "$LOG/dool_loopread_$TODAY.csv" &
+set dool_pid $last_pid
+
+
 ## Tensorflow tests
 echo "--------------"
 echo "-- TF tests --"
@@ -77,3 +83,5 @@ set stop_torch_time (date "+%Y-%m-%d %H:%M:%S")
 echo "Start time: $start_time"
 echo "Stop time tensorflow tests: $stop_tf_time"
 echo "Stop time torch tests: $stop_torch_time"
+
+kill -1 $dool_pid
