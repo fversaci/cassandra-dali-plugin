@@ -70,7 +70,7 @@ echo "-- TORCH tests --"
 echo "-----------------"
 
 cd ../torch-client
-./build-and-run-dali-torch-loopread.fish --host $HOST --bs=1024 --epochs=4 --ip $IPTORCH --rootdir $ROOT --logdir $LOG
+./build-and-run-dali-torch-loopread.fish --host $HOST --bs=$BS --epochs=$EPOCHS --ip $IPTORCH --rootdir $ROOT --logdir $LOG
 
 set stop_torch_time (date "+%Y-%m-%d %H:%M:%S")
 
