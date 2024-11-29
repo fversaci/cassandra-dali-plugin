@@ -51,7 +51,7 @@ echo $TIMESTAMP
 docker build --build-arg="TIMESTAMP=$TIMESTAMP" --progress=plain -t tensorflow:pap -f Dockerfile . ; \
 and docker run \
     --cap-add=sys_admin --cap-add=net_admin --shm-size 200GB \
-    --gpus=all \
+    #--gpus=all \
     --rm -it \
     --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
     -v $_flag_rootdir:/data:rw \
