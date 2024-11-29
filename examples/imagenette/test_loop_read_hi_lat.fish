@@ -66,7 +66,9 @@ sed -i --follow-symlinks "/cassandra_port/s/= \(.*\)/= $SCYLLA_PORT/" private_da
 
 rm -f $TRAIN_ROWS
 python3 cache_uuids.py --metadata-table=$TRAIN_METADATA --rows-fn=$TRAIN_ROWS
-python3 loop_read.py --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_BS_"$BS"
+python3 loop_read.py --ooo False --slow_start 0 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_no_OOO_SLSTART_0_BS_"$BS"
+python3 loop_read.py --slow_start 0 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_OOO_SLSTART_0_BS_"$BS"
+python3 loop_read.py --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_OOO_SLSTART_4_BS_"$BS"
 
 ### CASSANDRA
 echo "-- CASSANDRA TEST --"
@@ -93,15 +95,15 @@ set -x S3_ENDPOINT_URL "http://$S3_IP:$S3_PORT"
 
 ### S3, files with DALI
 echo "-- S3 DALI FILES TEST --"
-python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_file_BS_"$BS"
+timeout -s SIGTERM 40m  python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_file_BS_"$BS"
 	
 ### S3, TFRecords with DALI
 echo "-- S3 DALI TFRECORDS TEST --"
-python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root s3://imagenet/tfrecords/train/ --index-root s3://imagenet/tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_tfrecord_BS_"$BS"
+timeout -s SIGTERM 50m python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root s3://imagenet/tfrecords/train/ --index-root s3://imagenet/tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_tfrecord_BS_"$BS"
 
 ### S3 files with Pytorch
 echo "-- S3 PYTORCH FILES TEST --"
-python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_pytorch_files_BS_"$BS"
+timeout -s SIGTERM 60m python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_pytorch_files_BS_"$BS"
 
 ### STREAMING
 echo "-- STREAMINGDATA TEST --"
@@ -109,7 +111,7 @@ echo "-- STREAMINGDATA TEST --"
 # create minio alias
 ~/bin/mc alias set myminio http://$S3_IP:9000 root passpass
 ~/bin/mc cp myminio/imagenet/streaming/train/index_bytes.json myminio/imagenet/streaming/train/index.json
-python streamingdataset_loopread.py --root-dir s3://imagenet/streaming/ --split train --bs $BS --epochs $EPOCHS --log-fn "$LOG/$HOST"_loop_read_S3_Streaming_BS_"$BS"
+timeout -s SIGTERM 80m python streamingdataset_loopread.py --root-dir s3://imagenet/streaming/ --split train --bs $BS --epochs $EPOCHS --log-fn "$LOG/$HOST"_loop_read_S3_Streaming_BS_"$BS"
 
 # disable debug print
 set -e fish_trace
