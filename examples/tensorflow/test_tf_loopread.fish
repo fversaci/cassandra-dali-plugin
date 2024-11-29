@@ -69,4 +69,4 @@ python3 tf_data_loop_read.py --epochs $EPOCHS --bs $BS --root-dir $ROOT/imagenet
 echo "Tensorflow tf data service remote test"
 sed -i "s/10.12.0.2/$IP/g" mynet.py
 
-python3 tf_data_service_loop_read.py --tfr --bs $BS --epochs $EPOCHS --log-fn "$LOG/loopread/$HOST"_loop_read_TF_tfdataservice_tfr_BS_"$BS"
+timeout -s SIGTERM 50m python3 tf_data_service_loop_read.py --tfr --bs $BS --epochs $EPOCHS --log-fn "$LOG/loopread/$HOST"_loop_read_TF_tfdataservice_tfr_BS_"$BS"
