@@ -219,7 +219,7 @@ def read_data(
     first_epoch = True
 
     fd = open(log_fn + ".csv", "w")
-    fd.write("epoch,batch,batch_bytes,batch_time\n")
+    fd.write("epoch,batch,batch_bytes,batch_time,timestamp,bs\n")
 
     for epoch in range(epochs):
         # read data for current epoch
@@ -240,7 +240,7 @@ def read_data(
                 timestamps_np[epoch, step] = time.time() - start_ts
                 start_ts = time.time()
 
-                fd.write(f"{epoch},{step},{batch_bytes},{timestamps_np[epoch, step]}\n")
+                fd.write(f"{epoch},{step},{batch_bytes},{timestamps_np[epoch, step]},{start_ts},{bs}\n")
 
         pl.reset()
     # Calculate the average and standard deviation
