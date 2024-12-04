@@ -55,6 +55,7 @@ def plot_data(
     xlabel_str="batch time(ms)",
     y_label_str="occurencies",
     plot_type="hist",
+    um="ms",
 ):
     n_cols = n_epochs + 1
     n_rows = 1
@@ -77,7 +78,7 @@ def plot_data(
         if plot_type == "hist":
             _ = ax.hist(tmp_data, bins=30)
             ax.axvline(
-                tmp_data_mean, label=(f"mean={tmp_data_mean:.1f} ms"), c="r", lw=1
+                tmp_data_mean, label=(f"mean={tmp_data_mean:.1f} {um}"), c="r", lw=1
             )
             ax.set_xlabel(xlabel_str)
             ax.set_ylabel(y_label_str)
@@ -86,7 +87,7 @@ def plot_data(
             batch_index_xx = np.arange(0, len(tmp_data))
             ax.plot(batch_index_xx, tmp_data)
             ax.axhline(
-                tmp_data_mean, label=(f"mean={tmp_data_mean:.2} ms"), c="r", lw=2
+                tmp_data_mean, label=(f"mean={tmp_data_mean:.2} {um}"), c="r", lw=2
             )
             ax.set_xlabel(xlabel_str)
             ax.set_ylabel(y_label_str)
@@ -170,6 +171,7 @@ avg_batch_time_list = plot_data(
     xlabel_str="batch time(ms)",
     y_label_str="occurencies",
     plot_type="hist",
+    um="ms",
 )
 print(avg_batch_time_list)
 
@@ -180,6 +182,7 @@ plot_data(
     xlabel_str="batch_index",
     y_label_str="batch time(ms)",
     plot_type="line",
+    um="ms",
 )
 
 # ## DATA
@@ -191,6 +194,7 @@ data_size_avg_list = plot_data(
     xlabel_str="data size(MB)",
     y_label_str="occurencies",
     plot_type="hist",
+    um="MB",
 )
 print(data_size_avg_list)
 
@@ -201,6 +205,7 @@ plot_data(
     xlabel_str="batch_index",
     y_label_str="data size(MB)",
     plot_type="line",
+    um="MB",
 )
 
 # ## Data Rate
@@ -212,6 +217,7 @@ data_rate_avg = plot_data(
     xlabel_str="data rate(GB/s)",
     y_label_str="occurencies",
     plot_type="hist",
+    um="GB/s",
 )
 print(data_rate_avg)
 
@@ -222,6 +228,7 @@ plot_data(
     xlabel_str="batch_index",
     y_label_str="data rate(GB/s)",
     plot_type="line",
+    um="GB/s",
 )
 
 # ## Image rate
@@ -233,6 +240,7 @@ img_rate_avg = plot_data(
     xlabel_str="image rate(img/s)",
     y_label_str="occurencies",
     plot_type="hist",
+    um="img/s",
 )
 print(img_rate_avg)
 
@@ -243,6 +251,7 @@ plot_data(
     xlabel_str="batch_index",
     y_label_str="image rate(img/s)",
     plot_type="line",
+    um="img/s",
 )
 
 # ### Tests on all files
@@ -255,7 +264,10 @@ img_rate_dict = {}
 
 ep = 0
 x_bar = []
-y_bar = []
+y_bt_bar = []
+y_ds_bar = []
+y_dr_bar = []
+y_ir_bar = []
 x_tick_lab = []
 
 for i, fn in enumerate(csv_file_list):
@@ -268,12 +280,43 @@ for i, fn in enumerate(csv_file_list):
     avg_batch_time_list, std_batch_time_list = get_per_epoch_avg_values(
         n_epochs, data_grp_per_epoch, data_field="batch_time_ms"
     )
+    avg_data_size_list, std_data_size_list = get_per_epoch_avg_values(
+        n_epochs, data_grp_per_epoch, data_field="batch_bytes_MB"
+    )
+    avg_data_rate_list, std_data_rate_list = get_per_epoch_avg_values(
+        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs"
+    )
+    avg_img_rate_list, std_img_rate_list = get_per_epoch_avg_values(
+        n_epochs, data_grp_per_epoch, data_field="img_rate"
+    )
+
     batch_time_dict[name] = (avg_batch_time_list, std_batch_time_list)
+    data_size_dict[name] = (avg_data_size_list, std_data_size_list)
+    data_rate_dict[name] = (avg_data_rate_list, std_data_rate_list)
+    img_rate_dict[name] = (avg_img_rate_list, std_img_rate_list)
 
     x_bar.append(i)
-    y_bar.append(avg_batch_time_list[ep])
+    y_bt_bar.append(avg_batch_time_list[ep])
+    y_ds_bar.append(avg_data_size_list[ep])
+    y_dr_bar.append(avg_data_rate_list[ep])
+    y_ir_bar.append(avg_img_rate_list[ep])
     x_tick_lab.append(name)
 # -
 
-_ = plt.bar(x_bar, y_bar)
+_ = plt.bar(x_bar, y_bt_bar)
 _ = plt.xticks(x_bar, x_tick_lab, rotation=90)
+plt.ylabel("average batch time (ms)")
+
+_ = plt.bar(x_bar, y_ds_bar)
+_ = plt.xticks(x_bar, x_tick_lab, rotation=90)
+plt.ylabel("average batch size (MB)")
+
+_ = plt.bar(x_bar, y_dr_bar)
+_ = plt.xticks(x_bar, x_tick_lab, rotation=90)
+plt.ylabel("average batch data rate (GB/s)")
+
+_ = plt.bar(x_bar, y_ir_bar)
+_ = plt.xticks(x_bar, x_tick_lab, rotation=90)
+plt.ylabel("average batch image rate (img/s)")
+
+img_rate_dict
