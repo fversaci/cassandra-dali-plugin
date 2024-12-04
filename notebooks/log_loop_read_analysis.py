@@ -23,63 +23,96 @@ import pandas as pd
 
 # #### Functions
 
+
 # +
-def plot_hist(n_epochs, data_grp_per_epoch, data_field='batch_time_ms', xlabel_str="batch time(ms)", y_label_str="occurencies"):
-    n_cols = n_epochs+1
+def load_loopread_csv(fn):
+    try:
+        data_df = pd.read_csv(fn)
+
+        bs = 1024
+        n_epochs = data_df["epoch"].iloc[-1]
+
+        data_df["batch_time_ms"] = data_df["batch_time"] * 1e3  # in milliseconds
+        data_df["batch_bytes_MB"] = data_df["batch_bytes"] / 1e6  # batch size in MB
+        data_df["data_rate_GBs"] = data_df["batch_bytes"] / data_df["batch_time"] / 1e9
+        data_df["img_rate"] = bs / data_df["batch_time"]
+
+        data_grp_per_epoch = data_df.groupby("epoch")
+    except:
+        print(f"cannot read csv file {fn}")
+        n_epochs = None
+        bs = None
+        data_df = None
+        data_grp_per_epoch = None
+
+    return n_epochs, bs, data_df, data_grp_per_epoch
+
+
+def plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="batch_time_ms",
+    xlabel_str="batch time(ms)",
+    y_label_str="occurencies",
+    plot_type="hist",
+):
+    n_cols = n_epochs + 1
     n_rows = 1
     subfig_size = 3
     f, axs = plt.subplots(
         1, n_cols, figsize=(n_cols * subfig_size, n_rows * subfig_size)
     )
-    
+
+    avg_list = []
+
     for epoch, data_group in enumerate(data_grp_per_epoch):
         ax = axs[epoch]
         # Remove the first and last batch because they have overhead due
         # to prefetch and reshuffle
         tmp_data = data_group[1].iloc[1:-1][data_field]
-        
-        tbatch_ms_mean = tmp_data.mean()
-    
-        _ = ax.hist(tmp_data, bins=30)
-    
-        ax.axvline(tbatch_ms_mean, label=(f"mean={tbatch_ms_mean:.1f} ms"), c="r", lw=1)
-        
-        ax.set_xlabel(xlabel_str)
-        ax.set_ylabel(y_label_str)
-        ax.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+
+        tmp_data_mean = tmp_data.mean()
+        avg_list.append(tmp_data_mean)
+
+        if plot_type == "hist":
+            _ = ax.hist(tmp_data, bins=30)
+            ax.axvline(
+                tmp_data_mean, label=(f"mean={tmp_data_mean:.1f} ms"), c="r", lw=1
+            )
+            ax.set_xlabel(xlabel_str)
+            ax.set_ylabel(y_label_str)
+            ax.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
+        elif plot_type == "line":
+            batch_index_xx = np.arange(0, len(tmp_data))
+            ax.plot(batch_index_xx, tmp_data)
+            ax.axhline(
+                tmp_data_mean, label=(f"mean={tmp_data_mean:.2} ms"), c="r", lw=2
+            )
+            ax.set_xlabel(xlabel_str)
+            ax.set_ylabel(y_label_str)
+
         ax.set_title(f"Epoch {epoch}")
         ax.legend()
-        
-    plt.tight_layout()
 
-def plot_line(n_epochs, data_grp_per_epoch, data_field='batch_time_ms', xlabel_str="batch_index", y_label_str="batch time(ms)"):
-    n_cols = n_epochs+1
-    n_rows = 1
-    subfig_size = 3
-    f, axs = plt.subplots(
-        1, n_cols, figsize=(n_cols * subfig_size, n_rows * subfig_size)
-    )
-    
+    plt.tight_layout()
+    return avg_list
+
+
+def get_per_epoch_avg_values(n_epochs, data_grp_per_epoch, data_field="batch_time_ms"):
+    avg_list = []
+    std_list = []
+
     for epoch, data_group in enumerate(data_grp_per_epoch):
-        ax = axs[epoch]
         # Remove the first and last batch because they have overhead due
         # to prefetch and reshuffle
         tmp_data = data_group[1].iloc[1:-1][data_field]
-        batch_index_xx = np.arange(0, len(tmp_data))
-        
-        tbatch_ms_mean = tmp_data.mean()
-    
-        ax.plot(batch_index_xx, tmp_data)
 
-        ax.axhline(tbatch_ms_mean, label=(f"mean={tbatch_ms_mean:.2} ms"), c="r", lw=2)
+        tmp_data_mean = tmp_data.mean()
+        tmp_data_std = tmp_data.std()
+        avg_list.append(tmp_data_mean)
+        std_list.append(tmp_data_std)
 
-        ax.set_xlabel(xlabel_str)
-        ax.set_ylabel(y_label_str)
-        #ax.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
-        ax.set_title(f"Epoch {epoch}")
-        ax.legend()
-        
-    plt.tight_layout()
+    return avg_list, std_list
 
 
 # -
@@ -95,7 +128,11 @@ dool_fn = glob.glob(os.path.join(parent, "dool_loopread*"))[0]
 dool_df = pd.read_csv(dool_fn, header=5, index_col=False)
 
 # Add unix epoch column
-dool_df['timestamp'] = pd.to_datetime(dool_df['time'],format="%b-%d %H:%M:%S").apply(lambda dt: dt.replace(year=2024).timestamp()).astype(int)
+dool_df["timestamp"] = (
+    pd.to_datetime(dool_df["time"], format="%b-%d %H:%M:%S")
+    .apply(lambda dt: dt.replace(year=2024).timestamp())
+    .astype(int)
+)
 dool_df.columns
 # -
 
@@ -105,7 +142,10 @@ dool_df
 
 # +
 
-csv_folder_list = [os.path.join(parent, "tensorflow/loopread/"), os.path.join(parent, "torch/loopread/")]
+csv_folder_list = [
+    os.path.join(parent, "tensorflow/loopread/"),
+    os.path.join(parent, "torch/loopread/"),
+]
 
 csv_file_list = [glob.glob(i + "*.csv") for i in csv_folder_list]
 
@@ -114,45 +154,126 @@ csv_file_list = list(itertools.chain.from_iterable(csv_file_list))
 csv_file_list
 # -
 
-fn = csv_file_list[1]
+# ### Tests on single file
 
-# +
-data_df = pd.read_csv(fn)
+fn = csv_file_list[3]
 
-bs = 1024
-n_epochs = data_df['epoch'].iloc[-1]
-
-data_df['batch_time_ms'] = data_df['batch_time'] * 1e3  # in milliseconds
-data_df['data_rate_GBs'] = data_df['batch_bytes'] / data_df['batch_time'] / 1e9
-data_df['img_rate'] = bs / data_df['batch_time']
-
-data_grp_per_epoch = data_df.groupby('epoch') 
-
+n_epochs, bs, data_df, data_grp_per_epoch = load_loopread_csv(fn)
 data_df
-# -
 
 # ## Batch Time
 
-plot_hist(n_epochs, data_grp_per_epoch, data_field='batch_time_ms', xlabel_str="batch time(ms)", y_label_str="occurencies")
+avg_batch_time_list = plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="batch_time_ms",
+    xlabel_str="batch time(ms)",
+    y_label_str="occurencies",
+    plot_type="hist",
+)
+print(avg_batch_time_list)
 
-plot_line(n_epochs, data_grp_per_epoch, data_field='batch_time_ms', xlabel_str="batch_index", y_label_str="batch time(ms)")
+plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="batch_time_ms",
+    xlabel_str="batch_index",
+    y_label_str="batch time(ms)",
+    plot_type="line",
+)
 
 # ## DATA
 
-plot_hist(n_epochs, data_grp_per_epoch, data_field='batch_bytes', xlabel_str="data size(GB)", y_label_str="occurencies")
+data_size_avg_list = plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="batch_bytes_MB",
+    xlabel_str="data size(MB)",
+    y_label_str="occurencies",
+    plot_type="hist",
+)
+print(data_size_avg_list)
 
-plot_line(n_epochs, data_grp_per_epoch, data_field='batch_bytes', xlabel_str="batch_index", y_label_str="data size(GB)")
+plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="batch_bytes_MB",
+    xlabel_str="batch_index",
+    y_label_str="data size(MB)",
+    plot_type="line",
+)
 
 # ## Data Rate
 
-plot_hist(n_epochs, data_grp_per_epoch, data_field='data_rate_GBs', xlabel_str="data rate(GB/s)", y_label_str="occurencies")
+data_rate_avg = plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="data_rate_GBs",
+    xlabel_str="data rate(GB/s)",
+    y_label_str="occurencies",
+    plot_type="hist",
+)
+print(data_rate_avg)
 
-plot_line(n_epochs, data_grp_per_epoch, data_field='data_rate_GBs', xlabel_str="batch_index", y_label_str="data rate(GB/s)")
+plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="data_rate_GBs",
+    xlabel_str="batch_index",
+    y_label_str="data rate(GB/s)",
+    plot_type="line",
+)
 
 # ## Image rate
 
-plot_hist(n_epochs, data_grp_per_epoch, data_field='img_rate', xlabel_str="image rate(img/s)", y_label_str="occurencies")
+img_rate_avg = plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="img_rate",
+    xlabel_str="image rate(img/s)",
+    y_label_str="occurencies",
+    plot_type="hist",
+)
+print(img_rate_avg)
 
-plot_line(n_epochs, data_grp_per_epoch, data_field='img_rate', xlabel_str="batch_index", y_label_str="image rate(img/s)")
+plot_data(
+    n_epochs,
+    data_grp_per_epoch,
+    data_field="img_rate",
+    xlabel_str="batch_index",
+    y_label_str="image rate(img/s)",
+    plot_type="line",
+)
 
+# ### Tests on all files
 
+# +
+batch_time_dict = {}
+data_size_dict = {}
+data_rate_dict = {}
+img_rate_dict = {}
+
+ep = 0
+x_bar = []
+y_bar = []
+x_tick_lab = []
+
+for i, fn in enumerate(csv_file_list):
+    print(fn)
+    n_epochs, bs, data_df, data_grp_per_epoch = load_loopread_csv(fn)
+    if bs == None:
+        continue
+    name = "_".join(os.path.basename(fn).split("_")[3:-2])
+    print(f"{name}")
+    avg_batch_time_list, std_batch_time_list = get_per_epoch_avg_values(
+        n_epochs, data_grp_per_epoch, data_field="batch_time_ms"
+    )
+    batch_time_dict[name] = (avg_batch_time_list, std_batch_time_list)
+
+    x_bar.append(i)
+    y_bar.append(avg_batch_time_list[ep])
+    x_tick_lab.append(name)
+# -
+
+_ = plt.bar(x_bar, y_bar)
+_ = plt.xticks(x_bar, x_tick_lab, rotation=90)
