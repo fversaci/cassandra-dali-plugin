@@ -1,3 +1,4 @@
+import shutil
 import os
 import torch
 import torch.nn as nn
@@ -13,8 +14,8 @@ from tqdm import tqdm, trange
 from IPython import embed
 from clize import run
 import numpy as np
-import time 
-import pickle 
+import time
+import pickle
 
 global_rank = int(os.getenv("RANK", default=0))
 local_rank = int(os.getenv("LOCAL_RANK", default=0))
@@ -32,37 +33,46 @@ def cleanup():
     dist.destroy_process_group()
 
 
-def scan(*, root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=4, log_fn=None, local_cache="/tmp/streamingdata_loopread/", shuffle_batches=16):
+def scan(
+    *,
+    root_dir="s3://imagenet/streaming/",
+    split="train",
+    bs=1024,
+    epochs=4,
+    local_cache="/tmp/streamingdata_loopread",
+    shuffle_batches=16,
+    log_fn,
+):
     # Set up distributed environment
     rank = local_rank
     setup(rank, world_size)
 
-    #os.environ["MOSAICML_STREAMING_AWS_REQUESTER_PAYS"] = "1"
     # remove previous cache file if any
     try:
-        os.rmdir(os.path.join(local_cache, split))
+        if rank == 0:
+            shutil.rmtree(local_cache)
     except:
-        print ("local cache does not exist")
+        print("local cache does not exist")
 
     dataset = StreamingDataset(
-    remote=root_dir,  # Your remote storage
-    local=local_cache, # Local cache
-    split=split,                       # Training split
-    batch_size=bs,
-    shuffle=True,
-    shuffle_block_size=bs*shuffle_batches,
-    cache_limit=10e9,
-    predownload=2,
+        remote=root_dir,  # Your remote storage
+        local=local_cache,  # Local cache
+        split=split,  # Training split
+        batch_size=bs,
+        shuffle=False,
+        shuffle_block_size=bs * shuffle_batches,
+        cache_limit=20e9,
+        predownload=2,
     )
 
     # Create the DataLoader for distributed training
     data_loader = DataLoader(
         dataset,
-        batch_size = bs,
+        batch_size=bs,
         num_workers=8,
-        #pin_memory=True,
+        # pin_memory=True,
     )
-    
+
     steps = len(data_loader)
 
     ### Start scanning
@@ -73,26 +83,29 @@ def scan(*, root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=
 
     first_epoch = True
 
+    fd = open(log_fn + ".csv", "w")
+    fd.write("epoch,batch,batch_bytes,batch_time,timestamp,bs\n")
+
     for epoch in range(epochs):
         # read data for current epoch
         with tqdm(data_loader) as t:
             start_ts = time.time()
             for step, data in enumerate(t):
-                images = data['x']
-                labels = data['y']
-                
-                #if step == 0:
-                #    embed()
-                
+                images = data["x"]
+                labels = data["y"]
+
                 images_batch_bytes = sum([len(dd) for dd in images])
-                labels_batch_bytes = labels.shape[0] * 8 # label is longtensor (int 64bit)
+                labels_batch_bytes = (
+                    labels.shape[0] * 8
+                )  # label is longtensor (int 64bit)
                 batch_bytes = images_batch_bytes + labels_batch_bytes
 
                 batch_bytes_np[epoch][step] = batch_bytes
                 timestamps_np[epoch, step] = time.time() - start_ts
                 start_ts = time.time()
-                
-                
+
+                fd.write(f"{epoch},{step},{batch_bytes},{timestamps_np[epoch, step]},{start_ts},{bs}\n")
+
     # Calculate the average and standard deviation
     if epochs > 3 and rank == 0:
         # First epoch is skipped
@@ -117,13 +130,13 @@ def scan(*, root_dir="s3://imagenet/streaming/", split="train", bs=1024, epochs=
             f"  Average speed: {np.mean(average_speed_per_epoch):.2e} ± {std_dev_speed:.2e} im/s"
         )
 
-    if log_fn:
-        log_fn = f"{log_fn}_rank_{rank}.pickle"
-        data = (bs, timestamps_np, batch_bytes_np)
-        pickle.dump(data, open(log_fn, "wb"))
+    data = (bs, timestamps_np, batch_bytes_np)
+    pickle.dump(data, open(log_fn, "wb"))
+    fd.close()
 
     if world_size > 1:
         cleanup()
+
 
 if __name__ == "__main__":
     run(scan)

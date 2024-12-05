@@ -1,6 +1,5 @@
 #!/usr/bin/env fish
 
-
 function usage
     echo "Usage: script_name.fish --host <host> --bs <batch size> --epochs <num_epochs> --ip <ip_server> --pc <port_cassandra> --ps <port_scylla> --rootdir <root data dir> --logdir <log dir> --debug"
 end
@@ -55,10 +54,12 @@ set PORT_SCYLLA $_flag_ps
 set PORT_CASS $_flag_pc
 
 # create log dir
-mkdir -p $LOG
+set LOG_TORCH "$LOG/torch"
+mkdir -p $LOG_TORCH
 
-## Local filesystem
-source ./test_loop_read_local.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --logdir $LOG
-
-## Hi latency
-source ./test_loop_read_hi_lat.fish --host $HOST --epochs $EPOCHS --bs $BS --ip $IP --logdir $LOG
+## Loopread test
+echo "---------------------"
+echo "--- LOOPREAD TEST ---"
+echo "---------------------"
+cd ~/cassandra-dali-plugin/examples/imagenette
+source ./test_loop_read_all.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --ip $IP --logdir "$LOG_TORCH/loopread"

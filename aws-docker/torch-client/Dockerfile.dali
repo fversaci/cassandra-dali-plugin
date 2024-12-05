@@ -1,0 +1,21 @@
+FROM harbor.crs4.it/cesco-public/cassandra-dali-plugin:pap
+
+# if needed, change ids
+USER root
+ARG EXT_UID=1000
+ARG EXT_GID=1000
+RUN usermod -u ${EXT_UID} user
+RUN groupmod -g ${EXT_GID} user
+RUN chown -R ${EXT_UID}:${EXT_GID} /cassandra/ /home/user/ /spark/ /data/
+
+# install deps for testing
+RUN pip install torchdata mosaicml-streaming
+
+USER user
+RUN sed -i 's/# cass_conf.cassandra_port/cass_conf.cassandra_port/' /home/user/cassandra-dali-plugin/examples/common/private_data.py
+
+RUN mkdir -p ~/bin
+RUN wget https://dl.min.io/client/mc/release/linux-amd64/mc -O ~/bin/mc
+RUN chmod +x ~/bin/mc
+ARG TIMESTAMP
+RUN git pull origin paper-dev

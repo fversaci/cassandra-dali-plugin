@@ -2,14 +2,7 @@
 # https://github.com/NVIDIA/DALI/blob/main/docs/examples/use_cases/pytorch/resnet50/main.py
 # (Apache License, Version 2.0)
 
-# cassandra reader
-from cassandra_reader import get_cassandra_reader, read_uuids
-from create_dali_pipeline import (
-    create_dali_pipeline_from_file,
-    create_dali_pipeline_cassandra,
-    create_dali_pipeline_from_tfrecord,
-)
-
+import os
 import argparse
 import shutil
 
@@ -28,6 +21,9 @@ import torchvision.models as models
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 
+from streaming.vision import StreamingImageNet
+import streaming
+
 import lightning as L
 from lightning.pytorch.profilers import PyTorchProfiler
 from lightning.pytorch.loggers import TensorBoardLogger
@@ -42,17 +38,6 @@ from IPython import embed
 
 from s3_utils import list_s3_files
 
-try:
-    from nvidia.dali.plugin.pytorch import (
-        DALIClassificationIterator,
-        DALIGenericIterator,
-        LastBatchPolicy,
-    )
-except ImportError:
-    raise ImportError(
-        "Please install DALI from https://www.github.com/NVIDIA/DALI to run this example."
-    )
-
 
 def parse():
     model_names = sorted(
@@ -65,64 +50,22 @@ def parse():
 
     parser = argparse.ArgumentParser(description="PyTorch ImageNet Training")
     parser.add_argument(
-        "--train-folder",
-        metavar="DIRECTORY (training)",
-        default="",
-        help="training folder with a subfolder for each class. This override cassandra and tfrecord",
+        "--streaming-remote",
+        metavar="S3 ADDRESS",
+        default=None,
+        help="S3 remote address of the streaming dataset",
     )
     parser.add_argument(
-        "--val-folder",
-        metavar="DIRECTORY (validation)",
-        default="",
-        help="validation folder with a subfolder for each class. This override cassandra and tfrecord",
+        "--streaming-local",
+        metavar="PATH",
+        default="/tmp/streamingdata_loopread/",
+        help="Streaming local cache patch",
     )
     parser.add_argument(
-        "--train-tfr-folder",
-        metavar="TFRECORD DIRECTORY (training)",
-        default="",
-        help="training folder with tfrecords. This override cassandra",
-    )
-    parser.add_argument(
-        "--val-tfr-folder",
-        metavar="TFRECORD DIRECTORY (validation)",
-        default="",
-        help="validation folder with tfrecords. This override cassandra",
-    )
-    parser.add_argument(
-        "--train-index-folder",
-        metavar="TFRECORD INDEX DIRECTORY (training)",
-        default="",
-        help="training folder with tfrecord index. This override cassandra",
-    )
-    parser.add_argument(
-        "--val-index-folder",
-        metavar="TFRECORD INDEX DIRECTORY (validation)",
-        default="",
-        help="validation folder with tfrecord index. This override cassandra",
-    )
-    parser.add_argument(
-        "--train-data-table",
-        metavar="DATA TABLE (training)",
-        default="imagenette.data_train",
-        help="cassandra training data table (i.e.: keyspace.tablename (default: imagenette.data_train)",
-    )
-    parser.add_argument(
-        "--train-rows-fn",
-        metavar="Local copy of UUIDs (training)",
-        default="train.rows",
-        help="Local copy of training UUIDs (default: train.rows)",
-    )
-    parser.add_argument(
-        "--val-data-table",
-        metavar="DATA TABLE (validation)",
-        default="imagenette.data_val",
-        help="cassandra validation data table (i.e.: keyspace.tablename (default: imagenette.data_val)",
-    )
-    parser.add_argument(
-        "--val-rows-fn",
-        metavar="Local copy of UUIDs (validation)",
-        default="val.rows",
-        help="Local copy of training UUIDs (default: val.rows)",
+        "--streaming-local-size",
+        metavar="SIZE (bytes)",
+        default=20e9,
+        help="StreamingData local cache size (default:20GB)",
     )
     parser.add_argument(
         "--arch",
@@ -297,47 +240,6 @@ def parse():
     return args
 
 
-#######################
-### TENSOR ITERATOR ###
-#######################
-
-## This iterator is used to feed GPU with the same tensor without loading data
-## It is used to evaluate the upper bound performance of the GPU training a specific model
-## It is activated by the command line argument --no-io
-
-
-class TensorIterator:
-    def __init__(self, model, size=(3, 224, 224), batch_size=256, data_size=10000):
-        self.size = size
-        self.bs = batch_size
-        self.model = model
-        self.data_size = data_size
-        self.cnt = 0
-
-        t = torch.rand(
-            self.bs, self.size[0], self.size[1], self.size[2], device=self.model.device
-        )
-        fake_label = torch.randint(0, 999, (self.bs,), device=self.model.device)
-        self.batch = [{"data": t, "label": fake_label}]
-
-    def __len__(self):
-        return self.data_size // self.bs
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if self.cnt == self.data_size // self.bs:
-            self.cnt = 0
-            raise StopIteration
-        else:
-            self.cnt += 1
-            return self.batch
-
-    def reset(self):
-        self.cnt = 0
-
-
 ##################################
 ### CALLBACKS TO LOG TIMESTAMP ###
 ##################################
@@ -426,8 +328,8 @@ class ImageNetLightningModel(L.LightningModule):
         return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        images = batch[0]["data"]
-        target = batch[0]["label"].squeeze(-1).long()
+        images = batch[0]
+        target = batch[1]
 
         # Get output from the model
         output = self(images)
@@ -468,8 +370,8 @@ class ImageNetLightningModel(L.LightningModule):
         return loss_train
 
     def eval_step(self, batch, batch_idx, prefix: str):
-        images = batch[0]["data"]
-        target = batch[0]["label"].squeeze(-1).long()
+        images = batch[0]
+        target = batch[1]
 
         output = self(images)
 
@@ -543,17 +445,14 @@ class ImageNetLightningModel(L.LightningModule):
         return [optimizer]
 
 
-############################################################################################################################
-## Derived class to use either DALI (file reader, tfrecord reader, Cassandra plugin reader) or the no-io Lightning module ##
-############################################################################################################################
-
-
-class DALI_ImageNetLightningModel(ImageNetLightningModel):
+### StreamingDataset
+class Streaming_ImageNetLightningModel(ImageNetLightningModel):
     def __init__(
         self,
         args,
     ):
         super().__init__(**vars(args))
+        self.rank_set = False
 
     def prepare_data(self):
         # no preparation is needed in DALI
@@ -561,50 +460,107 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         pass
 
     def setup(self, stage=None):
+        ## Set environment for distributed execution
+        if not self.rank_set:
+            world_size = self.trainer.num_devices
+            local_rank = self.trainer.strategy.local_rank
+
+            os.environ["WORLD_SIZE"] = str(world_size)
+            os.environ["LOCAL_WORLD_SIZE"] = str(world_size)
+            os.environ["LOCAL_RANK"] = str(local_rank)
+            os.environ["RANK"] = str(local_rank)
+
+            self.rank_set = True
+
         ## Get info for distributed setup
         device_id = self.local_rank
         shard_id = self.global_rank
         num_shards = self.trainer.world_size
 
-        # Create DALI pipelines (with cassandra plugins)
-        train_pipeline = self.GetPipeline(
-            args,
-            is_training=True,
-            device_id=device_id,
-            shard_id=shard_id,
-            num_shards=num_shards,
+        bs = args.batch_size
+        remote_s3 = args.streaming_remote
+        local_cache = args.streaming_local
+        predownload_batches = 8
+        cache_limit = args.streaming_local_size
+        shuffle_batches = 16
+        shuffle_block_size = bs * shuffle_batches
+
+        # Transformations
+        normalize = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         )
-        val_pipeline = self.GetPipeline(
-            args,
-            is_training=False,
-            device_id=device_id,
-            shard_id=shard_id,
-            num_shards=num_shards,
+        train_transform = transforms.Compose(
+            [
+                transforms.RandomResizedCrop(args.val_size),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Lambda(lambda x: x.repeat(int(3 / x.shape[0]), 1, 1)),
+                normalize,
+            ]
         )
 
-        # Wrapper class to allow for adding code to the methods
-        class LightningWrapper(DALIClassificationIterator):
-            def __init__(self, *kargs, **kvargs):
-                super().__init__(*kargs, **kvargs)
+        val_transform = transforms.Compose(
+            [
+                transforms.Resize(args.val_size),
+                transforms.CenterCrop(args.crop_size),
+                transforms.ToTensor(),
+                transforms.Lambda(lambda x: x.repeat(int(3 / x.shape[0]), 1, 1)),
+                normalize,
+            ]
+        )
+        # remove previous cache file if any
 
-            def __next__(self):
-                out = super().__next__()
-                return out
+        try:
+            streaming.base.util.clean_stale_shared_memory()
+            #if device_id == 0 and remote_s3 and os.path.exists(local_cache):
+            #    # flag = input (f"Local path {local_cache} exists and should be deleted. Do you want to delete it (y/N)?")
+            #    # if flag == 'y':
+            #    shutil.rmtree(local_cache)
+        except:
+            print("local cache does not exist")
+
+        # Create Streaming Datasets for training and validation
+        train_dataset = StreamingImageNet(
+            remote=remote_s3,
+            local=local_cache,
+            split="train",
+            predownload=predownload_batches * bs,
+            cache_limit=cache_limit,
+            batch_size=bs,
+            shuffle=True,
+            shuffle_algo="py1e",
+            shuffle_seed=9176,
+            shuffle_block_size=shuffle_block_size,
+            transform=train_transform,
+        )
+
+        val_dataset = StreamingImageNet(
+            remote=remote_s3,
+            local=local_cache,
+            split="val",
+            predownload=predownload_batches * bs,
+            cache_limit=cache_limit,
+            batch_size=bs,
+            shuffle=True,
+            shuffle_algo="py1e",
+            shuffle_seed=9176,
+            shuffle_block_size=shuffle_block_size,
+            transform=val_transform,
+        )
 
         # Creatind actual loaders used by the lightning module to get data (train_dataloader and val_dataloader methods)
-        self.train_loader = LightningWrapper(
-            train_pipeline,
-            # last_batch_policy=LastBatchPolicy.PARTIAL,
-            last_batch_policy=LastBatchPolicy.DROP,
-            auto_reset=True,
-            reader_name="Reader",
+        self.train_loader = DataLoader(
+            train_dataset,
+            batch_size=bs,
+            num_workers=8,
+            pin_memory=True,
         )
-        self.val_loader = LightningWrapper(
-            val_pipeline,
-            # last_batch_policy=LastBatchPolicy.PARTIAL,
-            last_batch_policy=LastBatchPolicy.DROP,
-            auto_reset=True,
-            reader_name="Reader",
+
+        self.val_loader = DataLoader(
+            val_dataset,
+            batch_size=bs,
+            num_workers=8,
+            pin_memory=True,
         )
 
     def train_dataloader(self):
@@ -614,135 +570,10 @@ class DALI_ImageNetLightningModel(ImageNetLightningModel):
         return self.val_loader
 
     def on_train_epoch_end(self):
-        self.train_loader.reset()
-
-    def on_validation_epoch_end(self):
-        self.val_loader.reset()
-
-    @staticmethod
-    def GetPipeline(
-        args,
-        is_training,
-        device_id,
-        shard_id,
-        num_shards,
-    ):
-
-        if args.train_folder:
-            # Data come from files
-            if is_training:
-                folder = args.train_folder
-            else:
-                folder = args.val_folder
-
-            pipe = create_dali_pipeline_from_file(
-                batch_size=args.batch_size,
-                crop=args.crop_size,
-                dali_cpu=args.dali_cpu,
-                data_dir=folder,
-                device_id=device_id,
-                is_training=is_training,
-                num_shards=num_shards,
-                num_threads=args.workers,
-                prefetch_queue_depth=2,
-                seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
-                shard_id=shard_id,
-                size=args.val_size,
-            )
-
-        elif args.train_tfr_folder:
-            # Data from TFRecord
-            if is_training:
-                folder = args.train_tfr_folder
-                index_folder = args.train_index_folder
-            else:
-                folder = args.val_tfr_folder
-                index_folder = args.val_index_folder
-
-            pipe = create_dali_pipeline_from_tfrecord(
-                batch_size=args.batch_size,
-                crop=args.crop_size,
-                dali_cpu=args.dali_cpu,
-                file_root=folder,
-                index_root=index_folder,
-                device_id=device_id,
-                is_training=is_training,
-                num_shards=num_shards,
-                num_threads=args.workers,
-                prefetch_queue_depth=2,
-                seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
-                shard_id=shard_id,
-                size=args.val_size,
-            )
-
-        else:
-            # Data come from cassandra
-            if is_training:
-                data_table = args.train_data_table
-                rows_fn = args.train_rows_fn
-            else:
-                data_table = args.val_data_table
-                rows_fn = args.val_rows_fn
-
-            in_uuids = read_uuids(rows_fn=rows_fn)
-
-            pipe = create_dali_pipeline_cassandra(
-                batch_size=args.batch_size,
-                crop=args.crop_size,
-                dali_cpu=args.dali_cpu,
-                data_table=data_table,
-                device_id=device_id,
-                is_training=is_training,
-                num_shards=num_shards,
-                num_threads=args.workers,
-                prefetch_queue_depth=2,
-                seed=1234,  # must be a fixed number for all the ranks to have the same reshuffle across epochs and ranks
-                shard_id=shard_id,
-                shuffle_every_epoch=True,
-                size=args.val_size,
-                source_uuids=in_uuids,
-                ooo=args.ooo,
-                slow_start=args.slow_start,
-                io_threads=args.n_io_threads,
-                prefetch_buffers=args.n_prefetch_buffers,
-            )
-
-        pipe.build()
-
-        return pipe
-
-
-### model with no dataloader
-class NoIO_ImageNetLightningModel(ImageNetLightningModel):
-    def __init__(
-        self,
-        args,
-    ):
-        super().__init__(**vars(args))
-
-    def setup(self, stage=None):
-        self.data_size = 131072 // self.trainer.world_size
-
-    def prepare_data(self):
-        # no preparation is needed in DALI
-        # All the preprocessing steps are performed within the DALI pipeline
         pass
 
-    def train_dataloader(self):
-        return TensorIterator(
-            model=self, batch_size=self.batch_size, data_size=self.data_size
-        )
-
-    def val_dataloader(self):
-        return TensorIterator(
-            model=self, batch_size=self.batch_size, data_size=self.data_size
-        )
-
-    def on_train_epoch_end(self):
-        self.trainer.train_dataloader.reset()
-
     def on_validation_epoch_end(self):
-        self.trainer.val_dataloaders.reset()
+        pass
 
 
 def main():
@@ -766,10 +597,7 @@ def main():
         args.val_size = 256
 
     # create lightning model
-    if args.no_io:
-        model = NoIO_ImageNetLightningModel(args)
-    else:
-        model = DALI_ImageNetLightningModel(args)
+    model = Streaming_ImageNetLightningModel(args)
 
     # Optionally resume from a checkpoint
     if args.resume:

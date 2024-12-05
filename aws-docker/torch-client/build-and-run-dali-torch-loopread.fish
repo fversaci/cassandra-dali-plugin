@@ -1,5 +1,4 @@
-#!/usr/bin/env fish
-
+#! /usr/bin/env fish
 
 function usage
     echo "Usage: script_name.fish --host <host> --bs <batch size> --epochs <num_epochs> --ip <ip_server> --pc <port_cassandra> --ps <port_scylla> --rootdir <root data dir> --logdir <log dir> --debug"
@@ -54,11 +53,17 @@ set IP $_flag_ip
 set PORT_SCYLLA $_flag_ps
 set PORT_CASS $_flag_pc
 
-# create log dir
-mkdir -p $LOG
+set TIMESTAMP (date +%s)
+echo $TIMESTAMP
 
-## Local filesystem
-source ./test_loop_read_local.fish --host $HOST --epochs $EPOCHS --bs $BS --rootdir $ROOT --logdir $LOG
-
-## Hi latency
-source ./test_loop_read_hi_lat.fish --host $HOST --epochs $EPOCHS --bs $BS --ip $IP --logdir $LOG
+docker build --build-arg="TIMESTAMP=$TIMESTAMP" --progress=plain -t dali:aws -f Dockerfile.dali . ; \
+and docker run \
+    --cap-add=sys_admin --cap-add=net_admin --shm-size 200GB \
+    --rm -it \
+    --gpus=all \
+    --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+    -v $ROOT:/data:rw \
+    -v $LOG:/logs:rw \
+    # -v /mnt/bla:/ebs:rw \
+    --name client dali:aws \
+    aws-docker/torch-client/test_all_loopread.fish --host $HOST --bs=$BS --epochs=$EPOCHS --ip $IP --rootdir /data  --logdir /logs

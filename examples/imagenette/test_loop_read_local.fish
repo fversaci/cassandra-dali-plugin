@@ -38,18 +38,19 @@ set BS $_flag_bs
 set EPOCHS $_flag_epochs
 set ROOT $_flag_rootdir
 set LOG $_flag_logdir
+
 # create log dir
 mkdir -p $LOG
 
 ## Local filesystem
 ### files with DALI
 echo "-- DALI FILES TEST --"
-python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root $ROOT/imagenet-files/train/ --log-fn "$LOG/$HOST"_loop_read_DALI_file_BS_"$BS".pickle
+python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root $ROOT/imagenet-files/train/ --log-fn "$LOG/$HOST"_loop_read_DALI_file_BS_"$BS"
 	
 ### TFRecords with DALI
 echo "-- DALI TFRECORDS TEST --"
-python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root $ROOT/imagenet-tfrecords/train/ --index-root $ROOT/imagenet-tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_DALI_tfrecord_BS_"$BS".pickle
+python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root $ROOT/imagenet-tfrecords/train/ --index-root $ROOT/imagenet-tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_DALI_tfrecord_BS_"$BS"
 
 ### files with Pytorch
 echo "-- PYTORCH FILES TEST --"
-python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir $ROOT/imagenet-files/train/ --log-fn "$LOG/$HOST"_loop_read_pytorch_files_BS_"$BS".pickle
+python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir $ROOT/imagenet-files/train/ --log-fn "$LOG/$HOST"_loop_read_pytorch_files_BS_"$BS"
