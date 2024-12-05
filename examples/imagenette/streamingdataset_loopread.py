@@ -62,7 +62,7 @@ def scan(
         shuffle=False,
         shuffle_block_size=bs * shuffle_batches,
         cache_limit=20e9,
-        predownload=2,
+        predownload=32,
     )
 
     # Create the DataLoader for distributed training

@@ -83,14 +83,14 @@ def create_dali_pipeline_cassandra(
     shuffle_every_epoch=True,
     dali_cpu=False,
     is_training=True,
-    prefetch_buffers=2,
+    prefetch_buffers=32,
     shard_id=0,
     num_shards=1,
-    io_threads=4,
-    comm_threads=1,
+    io_threads=32,
+    comm_threads=4,
     copy_threads=4,
     wait_threads=2,
-    ooo=False,
+    ooo=True,
     slow_start=4,
 ):
 
