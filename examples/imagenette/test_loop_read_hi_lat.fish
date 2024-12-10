@@ -95,15 +95,15 @@ set -x S3_ENDPOINT_URL "http://$S3_IP:$S3_PORT"
 
 ### S3, files with DALI
 echo "-- S3 DALI FILES TEST --"
-timeout -s SIGTERM 60m  python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_file_BS_"$BS"
+timeout -s SIGTERM 30m  python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_file_BS_"$BS"
 	
 ### S3, TFRecords with DALI
 echo "-- S3 DALI TFRECORDS TEST --"
-timeout -s SIGTERM 60m python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root s3://imagenet/tfrecords/train/ --index-root s3://imagenet/tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_tfrecord_BS_"$BS"
+timeout -s SIGTERM 30m python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root s3://imagenet/tfrecords/train/ --index-root s3://imagenet/tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_tfrecord_BS_"$BS"
 
 ### S3 files with Pytorch
 echo "-- S3 PYTORCH FILES TEST --"
-timeout -s SIGTERM 60m python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_pytorch_files_BS_"$BS"
+timeout -s SIGTERM 30m python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_pytorch_files_BS_"$BS"
 
 ### STREAMING
 echo "-- STREAMINGDATA TEST --"
@@ -111,7 +111,7 @@ echo "-- STREAMINGDATA TEST --"
 # create minio alias
 ~/bin/mc alias set myminio http://$S3_IP:9000 root passpass
 ~/bin/mc cp myminio/imagenet/streaming/train/index_bytes.json myminio/imagenet/streaming/train/index.json
-timeout -s SIGTERM 60m python streamingdataset_loopread.py --root-dir s3://imagenet/streaming/ --split train --bs $BS --epochs $EPOCHS --log-fn "$LOG/$HOST"_loop_read_S3_Streaming_BS_"$BS"
+timeout -s SIGTERM 30m python streamingdataset_loopread.py --root-dir s3://imagenet/streaming/ --split train --bs $BS --epochs $EPOCHS --log-fn "$LOG/$HOST"_loop_read_S3_Streaming_BS_"$BS"
 
 # disable debug print
 set -e fish_trace

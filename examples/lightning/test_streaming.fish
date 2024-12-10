@@ -58,4 +58,4 @@ echo "-- S3 STREAMING TRAINING --"
 #python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_STREAMING_BS_"$BS"
 
 rm -rf "$LOCAL_CACHE"
-timeout -s SIGTERM 60m python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g $MAX_GPUS -b $BS --streaming-local "$LOCAL_CACHE" --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_STREAMING_BS_"$BS"
+timeout -s SIGTERM 45m python3 train_model_streaming.py --epoch $EPOCHS --streaming-remote s3://imagenet/streaming/ -g $MAX_GPUS -b $BS --streaming-local "$LOCAL_CACHE" --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_STREAMING_BS_"$BS"
