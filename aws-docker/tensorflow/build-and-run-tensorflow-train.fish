@@ -56,6 +56,6 @@ and docker run \
     --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
     -v $_flag_rootdir:/data:rw \
     -v $_flag_logdir:/logs:rw \
-    -p 5050:5050 -p 5051:5051 \
+    #-p 5050:5050 -p 5051:5051 \
     --name tensorflow tensorflow:pap \
     /home/user/cassandra-dali-plugin/aws-docker/tensorflow/test_all_train.fish --host $HOST --bs $BS --epochs $EPOCHS --rootdir /data --ip $IP --logdir /logs --debug
