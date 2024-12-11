@@ -67,8 +67,8 @@ sed -i --follow-symlinks "/cassandra_port/s/= \(.*\)/= $SCYLLA_PORT/" private_da
 rm -f $TRAIN_ROWS
 python3 cache_uuids.py --metadata-table=$TRAIN_METADATA --rows-fn=$TRAIN_ROWS
 timeout -s SIGTERM 30m python3 loop_read.py --out-of-order True --slow-start 4 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_OOO_SLSTART_4_BS_"$BS"
-timeout -s SIGTERM 30m python3 loop_read.py --out-of-order True --slow-start 0 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_OOO_SLSTART_0_BS_"$BS"
-timeout -s SIGTERM 30m python3 loop_read.py --out-of-order False --slow-start 0 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_no_OOO_SLSTART_0_BS_"$BS"
+#timeout -s SIGTERM 30m python3 loop_read.py --out-of-order True --slow-start 0 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_OOO_SLSTART_0_BS_"$BS"
+#timeout -s SIGTERM 30m python3 loop_read.py --out-of-order False --slow-start 0 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_scylla_no_OOO_SLSTART_0_BS_"$BS"
 
 ### CASSANDRA
 echo "-- CASSANDRA TEST --"
@@ -77,12 +77,12 @@ set PREFETCH_BUFF 2
 set CASSANDRA_IP $_flag_ip
 set CASSANDRA_PORT $_flag_pc
 
-sed -i --follow-symlinks "/cassandra_ips/s/\(\[.*\]\)/\[\"$CASSANDRA_IP\"\]/" private_data.py
-sed -i --follow-symlinks "/cassandra_port/s/= \(.*\)/= $CASSANDRA_PORT/" private_data.py
+#sed -i --follow-symlinks "/cassandra_ips/s/\(\[.*\]\)/\[\"$CASSANDRA_IP\"\]/" private_data.py
+#sed -i --follow-symlinks "/cassandra_port/s/= \(.*\)/= $CASSANDRA_PORT/" private_data.py
 
-rm -f $TRAIN_ROWS
-python3 cache_uuids.py --metadata-table=$TRAIN_METADATA --rows-fn=$TRAIN_ROWS
-timeout -s SIGTERM 30m python3 loop_read.py --out-of-order True --slow-start 4 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_cassandra_OOO_SLSTART_4_BS_"$BS"
+#rm -f $TRAIN_ROWS
+#python3 cache_uuids.py --metadata-table=$TRAIN_METADATA --rows-fn=$TRAIN_ROWS
+#timeout -s SIGTERM 30m python3 loop_read.py --out-of-order True --slow-start 4 --bs=$BS --epochs=$EPOCHS --data-table=$TRAIN_DATA --rows-fn=$TRAIN_ROWS --log-fn "$LOG/$HOST"_loop_read_cassandra_OOO_SLSTART_4_BS_"$BS"
 
 # Set environment variables to test S3
 set S3_IP $_flag_ip
@@ -94,16 +94,16 @@ set -x AWS_SECRET_ACCESS_KEY passpass
 set -x S3_ENDPOINT_URL "http://$S3_IP:$S3_PORT"
 
 ### S3, files with DALI
-echo "-- S3 DALI FILES TEST --"
-timeout -s SIGTERM 30m  python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_file_BS_"$BS"
+#echo "-- S3 DALI FILES TEST --"
+#timeout -s SIGTERM 30m  python3 loop_read.py --epochs $EPOCHS --bs $BS --reader file --file-root s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_file_BS_"$BS"
 	
 ### S3, TFRecords with DALI
-echo "-- S3 DALI TFRECORDS TEST --"
-timeout -s SIGTERM 30m python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root s3://imagenet/tfrecords/train/ --index-root s3://imagenet/tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_tfrecord_BS_"$BS"
+#echo "-- S3 DALI TFRECORDS TEST --"
+#timeout -s SIGTERM 30m python3 loop_read.py --epochs $EPOCHS --bs $BS --reader tfrecord --file-root s3://imagenet/tfrecords/train/ --index-root s3://imagenet/tfrecords/train_idx/ --log-fn "$LOG/$HOST"_loop_read_S3_DALI_tfrecord_BS_"$BS"
 
 ### S3 files with Pytorch
-echo "-- S3 PYTORCH FILES TEST --"
-timeout -s SIGTERM 30m python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_pytorch_files_BS_"$BS"
+#echo "-- S3 PYTORCH FILES TEST --"
+#timeout -s SIGTERM 30m python3 pytorch_loop_read.py --epochs $EPOCHS --bs $BS --root-dir s3://imagenet/files/train/ --log-fn "$LOG/$HOST"_loop_read_S3_pytorch_files_BS_"$BS"
 
 ### STREAMING
 echo "-- STREAMINGDATA TEST --"
