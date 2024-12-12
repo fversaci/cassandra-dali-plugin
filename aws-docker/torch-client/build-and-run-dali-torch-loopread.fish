@@ -60,7 +60,7 @@ docker build --build-arg="TIMESTAMP=$TIMESTAMP" --progress=plain -t dali:aws -f 
 and docker run \
     --cap-add=sys_admin --cap-add=net_admin --shm-size 200GB \
     --rm -it \
-    --gpus=all \
+    #--gpus=all \
     --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
     -v $ROOT:/data:rw \
     -v $LOG:/logs:rw \

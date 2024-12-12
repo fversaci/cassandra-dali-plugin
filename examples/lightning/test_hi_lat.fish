@@ -67,20 +67,20 @@ set PREFETCH_BUFF 2
 set CASSANDRA_IP $_flag_ip
 set CASSANDRA_PORT $_flag_pc
 
-echo "Editing private_data.py"
-sed -i --follow-symlinks "/cassandra_ips/s/\(\[.*\]\)/\[\"$CASSANDRA_IP\"\]/" private_data.py
-sed -i --follow-symlinks "/cassandra_port/s/= \(.*\)/= $CASSANDRA_PORT/" private_data.py
+#echo "Editing private_data.py"
+#sed -i --follow-symlinks "/cassandra_ips/s/\(\[.*\]\)/\[\"$CASSANDRA_IP\"\]/" private_data.py
+#sed -i --follow-symlinks "/cassandra_port/s/= \(.*\)/= $CASSANDRA_PORT/" private_data.py
 
-rm $TRAIN_ROWS
-rm $VAL_ROWS
-python3 cache_uuids.py --metadata-table=$TRAIN_METADATA --rows-fn=$TRAIN_ROWS
-python3 cache_uuids.py --metadata-table=$VAL_METADATA --rows-fn=$VAL_ROWS
+#rm $TRAIN_ROWS
+#rm $VAL_ROWS
+#python3 cache_uuids.py --metadata-table=$TRAIN_METADATA --rows-fn=$TRAIN_ROWS
+#python3 cache_uuids.py --metadata-table=$VAL_METADATA --rows-fn=$VAL_ROWS
 
-echo "CASSANDRA TEST"
+#echo "CASSANDRA TEST"
 
 #python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g 1 -b $BS --out-of-order --slow-start 4 --log-csv "$LOG/$HOST"_1_GPU_CASSANDRA_BS_"$BS"
 
-python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --out-of-order --slow-start 4 --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_CASSANDRA_BS_"$BS"
+#python3 train_model.py --epoch $EPOCHS --train-data-table $TRAIN_DATA --train-rows-fn $TRAIN_ROWS --val-data-table $VAL_DATA --val-rows-fn $VAL_ROWS --n-io-threads $IO_THREADS --n-prefetch-buffers $PREFETCH_BUFF -g $MAX_GPUS -b $BS --out-of-order --slow-start 4 --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_CASSANDRA_BS_"$BS"
 
 
 ### SCYLLA

@@ -73,11 +73,11 @@ echo "Log dir: $LOG"
 set start_time (date "+%Y-%m-%d %H:%M:%S")
 
 echo "NO DATALOADER TEST"
-source ./test_no_io.fish --host $HOST --bs $BS --epochs $EPOCHS --logdir $LOG
+#source ./test_no_io.fish --host $HOST --bs $BS --epochs $EPOCHS --logdir $LOG
 set no_io_test_end_time (date "+%Y-%m-%d %H:%M:%S")
 
 echo "LOCAL FS TEST"
-source ./test_local.fish --host $HOST --bs $BS --epochs $EPOCHS --rootdir $ROOT --logdir $LOG
+#source ./test_local.fish --host $HOST --bs $BS --epochs $EPOCHS --rootdir $ROOT --logdir $LOG
 set local_test_end_time (date "+%Y-%m-%d %H:%M:%S")
 
 echo "HILAT TEST"

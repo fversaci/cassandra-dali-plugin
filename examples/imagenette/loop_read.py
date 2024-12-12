@@ -120,10 +120,10 @@ def read_data(
         )
         chosen_reader = get_cassandra_reader(
             data_table=data_table,
-            prefetch_buffers=4,
-            io_threads=12,
+            prefetch_buffers=32,
+            io_threads=32,
             name="Reader",
-            comm_threads=1,
+            comm_threads=4,
             copy_threads=4,
             ooo=out_of_order,
             slow_start=slow_start,

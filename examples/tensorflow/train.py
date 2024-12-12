@@ -26,6 +26,7 @@ class BatchEpochTimeLogger(Callback):
     def on_train_batch_begin(self, batch, logs=None):
         ts = time.time()
         self.fd.write(f"{self.epoch},{batch},,,{ts},,,,,\n")
+        self.fd.flush()
 
 
 def preprocess_image(image):
