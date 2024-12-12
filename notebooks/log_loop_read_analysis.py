@@ -29,7 +29,7 @@ def load_loopread_csv(fn):
     try:
         data_df = pd.read_csv(fn)
 
-        bs = 1024
+        bs = data_df['bs'].iloc[0]
         n_epochs = data_df["epoch"].iloc[-1]
 
         data_df["batch_time_ms"] = data_df["batch_time"] * 1e3  # in milliseconds
@@ -56,6 +56,7 @@ def plot_data(
     y_label_str="occurencies",
     plot_type="hist",
     um="ms",
+    mean_type='mean'
 ):
     n_cols = n_epochs + 1
     n_rows = 1
@@ -67,14 +68,21 @@ def plot_data(
     avg_list = []
 
     for epoch, data_group in enumerate(data_grp_per_epoch):
-        ax = axs[epoch]
+        if n_epochs == 0:
+            ax = axs
+        else:
+            ax = axs[epoch]
         # Remove the first and last batch because they have overhead due
         # to prefetch and reshuffle
         tmp_data = data_group[1].iloc[1:-1][data_field]
 
-        tmp_data_mean = tmp_data.mean()
-        avg_list.append(tmp_data_mean)
-
+        if mean_type == 'mean':
+            tmp_data_mean = tmp_data.mean()
+            avg_list.append(tmp_data_mean)
+        elif mean_type == 'harmonic':
+            tmp_data_mean = hmean(tmp_data)
+            avg_list.append(tmp_data_mean)
+            
         if plot_type == "hist":
             _ = ax.hist(tmp_data, bins=30)
             ax.axvline(
@@ -99,7 +107,7 @@ def plot_data(
     return avg_list
 
 
-def get_per_epoch_avg_values(n_epochs, data_grp_per_epoch, data_field="batch_time_ms"):
+def get_per_epoch_avg_values(n_epochs, data_grp_per_epoch, data_field="batch_time_ms", mean_type='mean'):
     avg_list = []
     std_list = []
 
@@ -108,8 +116,13 @@ def get_per_epoch_avg_values(n_epochs, data_grp_per_epoch, data_field="batch_tim
         # to prefetch and reshuffle
         tmp_data = data_group[1].iloc[1:-1][data_field]
 
-        tmp_data_mean = tmp_data.mean()
-        tmp_data_std = tmp_data.std()
+        if mean_type == 'mean':
+            tmp_data_mean = tmp_data.mean()
+            tmp_data_std = tmp_data.std()
+        elif mean_type == 'harmonic':
+            tmp_data_mean = hmean(tmp_data)
+            tmp_data_std = tmp_data.std()
+            
         avg_list.append(tmp_data_mean)
         std_list.append(tmp_data_std)
 
@@ -120,7 +133,9 @@ def get_per_epoch_avg_values(n_epochs, data_grp_per_epoch, data_field="batch_tim
 
 # #### Log parent folder
 
-parent = "./logs/TEST/"
+parent_hi = "/home/giovanni/AWS_MAIN_TEST_HI_LAT/loopread/"
+parent_low = "/home/giovanni/AWS_MAIN_TEST_LOW_LAT/"
+parent_med = "/home/giovanni/AWS_MAIN_TEST_MED_LAT/"
 
 # #### Read Dool as dataframe
 
@@ -142,10 +157,13 @@ dool_df
 # #### Read loopread csv logs
 
 # +
-
 csv_folder_list = [
-    os.path.join(parent, "tensorflow/loopread/"),
-    os.path.join(parent, "torch/loopread/"),
+    os.path.join(parent_hi, "tensorflow/loopread/"),
+    os.path.join(parent_low, "tensorflow/loopread/"),
+    os.path.join(parent_med, "tensorflow/loopread/"),
+    os.path.join(parent_hi, "torch/loopread/"),
+    os.path.join(parent_low, "torch/loopread/"),
+    os.path.join(parent_med, "torch/loopread/"),
 ]
 
 csv_file_list = [glob.glob(i + "*.csv") for i in csv_folder_list]
@@ -155,11 +173,14 @@ csv_file_list = list(itertools.chain.from_iterable(csv_file_list))
 csv_file_list
 # -
 
+
+
 # ### Tests on single file
 
-fn = csv_file_list[3]
+fn = csv_file_list[11]
 
 n_epochs, bs, data_df, data_grp_per_epoch = load_loopread_csv(fn)
+print (n_epochs, bs)
 data_df
 
 # ## Batch Time
@@ -218,6 +239,7 @@ data_rate_avg = plot_data(
     y_label_str="occurencies",
     plot_type="hist",
     um="GB/s",
+    mean_type='harmonic'
 )
 print(data_rate_avg)
 
@@ -229,6 +251,7 @@ plot_data(
     y_label_str="data rate(GB/s)",
     plot_type="line",
     um="GB/s",
+    mean_type='harmonic'
 )
 
 # ## Image rate
@@ -241,6 +264,7 @@ img_rate_avg = plot_data(
     y_label_str="occurencies",
     plot_type="hist",
     um="img/s",
+    mean_type='harmonic'
 )
 print(img_rate_avg)
 
@@ -252,6 +276,7 @@ plot_data(
     y_label_str="image rate(img/s)",
     plot_type="line",
     um="img/s",
+    mean_type='harmonic'
 )
 
 # ### Tests on all files
@@ -284,10 +309,10 @@ for i, fn in enumerate(csv_file_list):
         n_epochs, data_grp_per_epoch, data_field="batch_bytes_MB"
     )
     avg_data_rate_list, std_data_rate_list = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs"
+        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs", mean_type='harmonic'
     )
     avg_img_rate_list, std_img_rate_list = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="img_rate"
+        n_epochs, data_grp_per_epoch, data_field="img_rate", mean_type='harmonic'
     )
 
     batch_time_dict[name] = (avg_batch_time_list, std_batch_time_list)
@@ -319,4 +344,8 @@ _ = plt.bar(x_bar, y_ir_bar)
 _ = plt.xticks(x_bar, x_tick_lab, rotation=90)
 plt.ylabel("average batch image rate (img/s)")
 
-img_rate_dict
+
+
+
+
+
