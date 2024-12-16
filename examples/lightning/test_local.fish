@@ -59,5 +59,5 @@ set VAL_INDEX $ROOT/imagenet-tfrecords/val_idx/
 
 #python3 train_model.py --epoch $EPOCHS --train-tfr-folder $TRAIN_TFR --train-index-folder $TRAIN_INDEX --val-tfr-folder $VAL_TFR --val-index-folder $VAL_INDEX -g 1 -b $BS --log-csv "$LOG/$HOST"_1_GPU_TFR_BS_"$BS"
 
-python3 train_model.py --epoch $EPOCHS --train-tfr-folder $TRAIN_TFR --train-index-folder $TRAIN_INDEX --val-tfr-folder $VAL_TFR --val-index-folder $VAL_INDEX -g $MAX_GPUS -b $BS --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_TFR_BS_"$BS"
+#python3 train_model.py --epoch $EPOCHS --train-tfr-folder $TRAIN_TFR --train-index-folder $TRAIN_INDEX --val-tfr-folder $VAL_TFR --val-index-folder $VAL_INDEX -g $MAX_GPUS -b $BS --log-csv "$LOG/$HOST"_"$MAX_GPUS"_GPU_TFR_BS_"$BS"
 

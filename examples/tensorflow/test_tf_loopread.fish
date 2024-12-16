@@ -58,15 +58,15 @@ echo "-----------"
 ## Local filesystem
 echo "Tensorflow tf data local test"
 ### Files
-echo "-- READING REGULAR FILES WITH TF-DATA --"
-python3 tf_data_loop_read.py --epochs $EPOCHS --bs $BS --root-dir $ROOT/imagenet-files/train/ --log-fn "$LOG/loopread/$HOST"_loop_read_TF_tfdata_files_BS_"$BS"
+#echo "-- READING REGULAR FILES WITH TF-DATA --"
+#python3 tf_data_loop_read.py --epochs $EPOCHS --bs $BS --root-dir $ROOT/imagenet-files/train/ --log-fn "$LOG/loopread/$HOST"_loop_read_TF_tfdata_files_BS_"$BS"
 
 ### TFRecords
-echo "-- READING TFRECORDS --"
-python3 tf_data_loop_read.py --epochs $EPOCHS --bs $BS --root-dir $ROOT/imagenet-tfrecords/train/ --tfr --log-fn "$LOG/loopread/$HOST"_loop_read_TF_tfdata_tfr_BS_"$BS"
+#echo "-- READING TFRECORDS --"
+#python3 tf_data_loop_read.py --epochs $EPOCHS --bs $BS --root-dir $ROOT/imagenet-tfrecords/train/ --tfr --log-fn "$LOG/loopread/$HOST"_loop_read_TF_tfdata_tfr_BS_"$BS"
 
 ## Hilat 
 echo "Tensorflow tf data service remote test"
 sed -i "s/10.12.0.2/$IP/g" mynet.py
 
-timeout -s SIGTERM 60m python3 tf_data_service_loop_read.py --tfr --bs $BS --epochs $EPOCHS --log-fn "$LOG/loopread/$HOST"_loop_read_TF_tfdataservice_tfr_BS_"$BS"
+timeout -s SIGTERM 30m python3 tf_data_service_loop_read.py --tfr --bs $BS --epochs $EPOCHS --log-fn "$LOG/loopread/$HOST"_loop_read_TF_tfdataservice_tfr_BS_"$BS"
