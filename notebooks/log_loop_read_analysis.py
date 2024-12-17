@@ -499,10 +499,6 @@ for i, fn in enumerate(sel_csv_file_list):
     x_color.append(barcolor)
 # -
 
-y_bar_np
-
-
-
 # ### Figure 3
 
 # +
@@ -518,11 +514,12 @@ x_bar_low_index = np.array([3, 6, 9])
 x_ticks_indexes = [0,2,5,8]
 x_offset = 0.2
 
+norm_fact = np.max(y_bar_np)
 
-_ = plt.bar(x_bar_np[x_bar_loc_index], y_bar_np[x_bar_loc_index] / np.max(y_bar_np), color=x_color_np[x_bar_loc_index], label="Loc", zorder=3)
-_ = plt.bar(x_bar_np[x_bar_hi_index] + x_offset, y_bar_np[x_bar_hi_index] / np.max(y_bar_np), color=x_color_np[x_bar_hi_index], label="Hi", zorder=3)
-_ = plt.bar(x_bar_np[x_bar_med_index], y_bar_np[x_bar_med_index] / np.max(y_bar_np), color=x_color_np[x_bar_med_index], label="Med", zorder=3)
-_ = plt.bar(x_bar_np[x_bar_low_index] - x_offset, y_bar_np[x_bar_low_index] / np.max(y_bar_np), color=x_color_np[x_bar_low_index], label="Low", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_loc_index], y_bar_np[x_bar_loc_index] / norm_fact, color=x_color_np[x_bar_loc_index], label="Loc", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_hi_index] + x_offset, y_bar_np[x_bar_hi_index] / norm_fact, color=x_color_np[x_bar_hi_index], label="Hi", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_med_index], y_bar_np[x_bar_med_index] / norm_fact, color=x_color_np[x_bar_med_index], label="Med", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_low_index] - x_offset, y_bar_np[x_bar_low_index] / norm_fact, color=x_color_np[x_bar_low_index], label="Low", zorder=3)
 
 _ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0)
 
@@ -531,6 +528,34 @@ plt.legend(loc='upper center')
 plt.grid(axis='y', alpha=0.8, zorder=0)
 
 plt.savefig("figures/normalized_loopread.pdf", bbox_inches="tight")
+
+# +
+x_bar_np = np.array(x_bar)
+y_bar_np = np.array(y_dr_bar)
+x_color_np = np.array(x_color)
+x_tick_lab_np = ['DALI tfr', 'MosaicML SD', 'tf.data service', 'Cassandra-DALI']
+
+x_bar_loc_index = np.array([0])
+x_bar_hi_index = np.array([1, 4, 7])
+x_bar_med_index = np.array([2, 5, 8])
+x_bar_low_index = np.array([3, 6, 9])
+x_ticks_indexes = [0,2,5,8]
+x_offset = 0.2
+
+norm_fact = 1.0
+
+_ = plt.bar(x_bar_np[x_bar_loc_index], y_bar_np[x_bar_loc_index] / norm_fact, color=x_color_np[x_bar_loc_index], label="Loc", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_hi_index] + x_offset, y_bar_np[x_bar_hi_index] / norm_fact, color=x_color_np[x_bar_hi_index], label="Hi", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_med_index], y_bar_np[x_bar_med_index] / norm_fact, color=x_color_np[x_bar_med_index], label="Med", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_low_index] - x_offset, y_bar_np[x_bar_low_index] / norm_fact, color=x_color_np[x_bar_low_index], label="Low", zorder=3)
+
+_ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0)
+
+plt.ylabel("Data rate (GB/s)")
+plt.legend(loc='upper center')
+plt.grid(axis='y', alpha=0.8, zorder=0)
+
+plt.savefig("figures/loopread_rate.pdf", bbox_inches="tight")
 # -
 
 batch_time_dict
@@ -615,8 +640,7 @@ plt.savefig("figures/throughput_ooo_vs_noooo.pdf", bbox_inches="tight")
 
 data_rate_dict['HIlat - Scylla with OOO and SS=4']
 
-
-
+## Dool log to get server disk throughput 
 fn = 'AWS_logs/server/stockholm/2024-12-10/general.csv'
 df_log = pd.read_csv(fn, header=5, index_col=False)
 df_log['time'] = '2024-' + df_log['time']
@@ -625,8 +649,6 @@ df_log = df_log.set_index('time')
 df_log.index = pd.to_datetime(df_log.index)
 #df_log.sort_index(inplace=True)
 df_log.columns
-
-len(df_log.columns)
 
 # +
 test_time_intervals_d = {'HI_scylla_ooo_start': '2024-12-10 16:03:31.660300032', 'HI_scylla_ooo_stop': '2024-12-10 16:05:58.601401856',
@@ -637,6 +659,8 @@ stop_scylla = test_time_intervals_d['HI_scylla_ooo_stop']
 
 start_cass = test_time_intervals_d['HI_cassandra_ooo_start']
 stop_cass = test_time_intervals_d['HI_cassandra_ooo_stop']
+
+sel_epoch = 1
 # -
 
 # #### Scylla
@@ -654,11 +678,17 @@ print (scylla_disk_IO_mean, scylla_disk_IO_interval)
 
 #plt.plot(df_log_scylla[f"disk_IO:read"])
 
-##### Loopread Data rate 
+##### Loopread mean Data rate 
+n_epochs, bs, data_df, data_grp_per_epoch, name = load_loopread_csv(csv_file_list[8], test_name_dict)
+scylla_avg_data_rate_list, _ = get_per_epoch_avg_values(
+        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs", mean_type='harmonic',
+    )
+
+print (scylla_avg_data_rate_list)
 
 # -
 
-# #### Cass
+# #### Cass ooo
 
 # +
 ##### Disk
@@ -672,7 +702,46 @@ print (cass_disk_IO_mean, cass_disk_IO_interval)
 
 #plt.plot(df_log_cass[f"disk_IO:read"])
 
-##### Loopread Data rate
+##### Loopread mean Data rate
+n_epochs, bs, data_df, data_grp_per_epoch, name = load_loopread_csv(csv_file_list[7], test_name_dict)
+cass_avg_data_rate_list, _ = get_per_epoch_avg_values(
+        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs", mean_type='harmonic',
+    )
+
+print (cass_avg_data_rate_list)
+
+# +
+plt.figure(figsize=(5,5))
+x_bar_np = np.array([0,1,2,3])
+y_bar_np = np.array([scylla_disk_IO_mean, scylla_avg_data_rate_list[sel_epoch], 
+                      cass_disk_IO_mean, cass_avg_data_rate_list[sel_epoch]])
+
+x_color_np = np.array(['r','k', 'r', 'k'])
+x_tick_lab_np = ['Scylla', 'Cassandra']
+
+x_bar_disk_index = np.array([0, 2])
+x_bar_reader_index = np.array([1, 3])
+x_bar_low_index = np.array([3, 6, 9])
+x_ticks_indexes = [0.5, 2.5]
+x_offset = 0.1
+
+
+#_ = plt.bar(x_bar_np[x_bar_disk_index], y_bar_np[x_bar_disk_index] / np.max(y_bar_np), color=x_color_np[x_bar_disk_index], label="Disk IO", zorder=3)
+#_ = plt.bar(x_bar_np[x_bar_reader_index] + x_offset, y_bar_np[x_bar_reader_index] / np.max(y_bar_np), color=x_color_np[x_bar_reader_index], label="Reader throughput", zorder=3)
+
+_ = plt.bar(x_bar_np[x_bar_disk_index] + x_offset, y_bar_np[x_bar_disk_index], color=x_color_np[x_bar_disk_index], label="Disk IO", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_reader_index] - x_offset, y_bar_np[x_bar_reader_index], color=x_color_np[x_bar_reader_index], label="Reader throughput", zorder=3)
+
+_ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0)
+
+plt.ylim(0,4.5)
+plt.ylabel("Data rate (GB/s)")
+plt.legend(loc='upper right')
+plt.grid(axis='y', alpha=0.8, zorder=0)
+
+plt.savefig("figures/scylla_vs_cassandra.pdf", bbox_inches="tight")
 # -
+
+
 
 
