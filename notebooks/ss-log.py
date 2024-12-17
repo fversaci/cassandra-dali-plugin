@@ -302,7 +302,7 @@ plt.rcParams.update({'font.size': 12})
 _ = df_tmp_smoothed.plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), lw=2, legend=False, sharex=True, sharey=True, xlabel='seconds', ylabel='MB/s')
 
 plt.tight_layout()
-plt.savefig("figures/scyllaOOO_sentbytes.pdf", bbox_inches="tight")
+plt.savefig("figures/scylla_OOO_sentbytes.pdf", bbox_inches="tight")
 # -
 
 # ### Fig 6

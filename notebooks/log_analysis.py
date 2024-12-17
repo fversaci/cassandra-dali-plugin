@@ -312,8 +312,9 @@ x_color=[]
 
 for i, (test_name, label, color) in enumerate(test_name_list):    
     df, batch_size, num_gpu, df_group = data_dict[test_name]
-    
-    df = df_group.get_group(ep)
+
+    #df = df[df["epoch"] >= 1] # decomment to exclude epoch 0
+    #df = df_group.get_group(ep)
     
     y = df["train_im_sec"]
     m = hmean(y[~np.isnan(y)])

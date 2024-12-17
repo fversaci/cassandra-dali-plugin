@@ -487,7 +487,9 @@ for i, fn in enumerate(sel_csv_file_list):
     x_bar.append(i)
     y_bt_bar.append(avg_batch_time_list[ep])
     y_ds_bar.append(avg_data_size_list[ep])
-    y_dr_bar.append(avg_data_rate_list[ep])
+    #y_dr_bar.append(avg_data_rate_list[ep]) ### FIXME: Prova a mettere la media armonica di tutte le epoche
+    print (len(avg_data_rate_list), avg_data_rate_list)
+    y_dr_bar.append(hmean(avg_data_rate_list[0:]))
     y_ir_bar.append(avg_img_rate_list[ep])
     
     y_bt_yerr.append(std_batch_time_list[ep])
@@ -498,6 +500,8 @@ for i, fn in enumerate(sel_csv_file_list):
     x_tick_lab.append(name)
     x_color.append(barcolor)
 # -
+
+y_dr_bar
 
 # ### Figure 3
 
@@ -671,10 +675,8 @@ sel_epoch = 1
 df_log_scylla = df_log.loc[start_scylla:stop_scylla].iloc[:]
 df_log_scylla['disk_IO:read'] = df_log_scylla[["dsk/nvm11:read", "dsk/nvm31:read", "dsk/nvm31:read", "dsk/nvm41:read"]].sum(axis=1) / 8e9
 
-scylla_disk_IO_mean = hmean(df_log_scylla['disk_IO:read'].values)
-scylla_disk_IO_interval = get_conf_interval_hmean(df_log_scylla['disk_IO:read'].values)
-
-print (scylla_disk_IO_mean, scylla_disk_IO_interval)
+scylla_disk_IO_mean = np.mean(df_log_scylla['disk_IO:read'].values)
+print (scylla_disk_IO_mean)
 
 #plt.plot(df_log_scylla[f"disk_IO:read"])
 
@@ -695,10 +697,9 @@ print (scylla_avg_data_rate_list)
 df_log_cass = df_log.loc[start_cass:stop_cass]
 df_log_cass['disk_IO:read'] = df_log_cass[["dsk/nvm11:read", "dsk/nvm31:read", "dsk/nvm31:read", "dsk/nvm41:read"]].sum(axis=1) / 8e9
 
-cass_disk_IO_mean = hmean(df_log_cass['disk_IO:read'].values)
-cass_disk_IO_interval = get_conf_interval_hmean(df_log_cass['disk_IO:read'].values)
+cass_disk_IO_mean = np.mean(df_log_cass['disk_IO:read'].values)
 
-print (cass_disk_IO_mean, cass_disk_IO_interval)
+print (cass_disk_IO_mean)
 
 #plt.plot(df_log_cass[f"disk_IO:read"])
 
@@ -713,8 +714,8 @@ print (cass_avg_data_rate_list)
 # +
 plt.figure(figsize=(5,5))
 x_bar_np = np.array([0,1,2,3])
-y_bar_np = np.array([scylla_disk_IO_mean, scylla_avg_data_rate_list[sel_epoch], 
-                      cass_disk_IO_mean, cass_avg_data_rate_list[sel_epoch]])
+y_bar_np = np.array([scylla_disk_IO_mean, hmean(scylla_avg_data_rate_list), 
+                      cass_disk_IO_mean, hmean(cass_avg_data_rate_list)])
 
 x_color_np = np.array(['r','k', 'r', 'k'])
 x_tick_lab_np = ['Scylla', 'Cassandra']
