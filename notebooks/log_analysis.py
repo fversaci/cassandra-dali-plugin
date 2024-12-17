@@ -284,4 +284,100 @@ f.savefig("training_timeseries.png", dpi=300)
 
 # ### Fig 4
 
+data_dict.keys()
+
+barcolor_dict = {'HIlat': 'red',
+             'MEDlat': 'green',
+             'LOWlat': 'blue',
+             '': 'k'
+            }
+
+test_name_list = [('8_GPU_NO_IO', 'NO_IO', 'k'),
+                  ('HI_STREAMING', 'MosaicML SD', 'red'), ('MED_STREAMING', 'MosaicML SD', 'green'), ('LOW_STREAMING', 'MosaicML SD', 'blue'),
+                  ('HI_SCYLLA', 'Cassandra-DALI', 'red'), ('MED_SCYLLA', 'Cassandra-DALI', 'green'), ('LOW_SCYLLA', 'Cassandra-DALI', 'blue')] 
+
+# +
+batch_time_dict = {}
+data_size_dict = {}
+data_rate_dict = {}
+img_rate_dict = {}
+df_dict = {}
+
+ep = 1 # Epoch to take
+
+x_bar = []
+y_bar = []
+x_tick_lab = []
+x_color=[]
+
+for i, (test_name, label, color) in enumerate(test_name_list):    
+    df, batch_size, num_gpu, df_group = data_dict[test_name]
+    
+    df = df_group.get_group(ep)
+    
+    y = df["train_im_sec"]
+    m = hmean(y[~np.isnan(y)])
+
+    x_bar.append(i)
+    x_tick_lab.append(label)
+    y_bar.append(m)
+    x_color.append(color)
+
+# +
+x_bar_np = np.array(x_bar)
+y_bar_np = np.array(y_bar)
+x_color_np = np.array(x_color)
+x_tick_lab_np = ['No IO', 'MosaicML SD', 'Cassandra-DALI']
+
+x_bar_loc_index = np.array([0])
+x_bar_hi_index = np.array([1, 4])
+x_bar_med_index = np.array([2, 5])
+x_bar_low_index = np.array([3, 6])
+x_ticks_indexes = [0,2,5]
+x_offset = 0.2
+
+norm_factor = np.max(y_bar_np)
+
+_ = plt.bar(x_bar_np[x_bar_loc_index], y_bar_np[x_bar_loc_index] / norm_factor, color=x_color_np[x_bar_loc_index], label="Loc", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_hi_index] + x_offset, y_bar_np[x_bar_hi_index] / norm_factor, color=x_color_np[x_bar_hi_index], label="Hi", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_med_index], y_bar_np[x_bar_med_index] / norm_factor, color=x_color_np[x_bar_med_index], label="Med", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_low_index] - x_offset, y_bar_np[x_bar_low_index] / norm_factor, color=x_color_np[x_bar_low_index], label="Low", zorder=3)
+
+_ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0)
+
+plt.ylabel("Normalized image rate")
+plt.legend(loc='upper center')
+plt.grid(axis='y', alpha=0.8, zorder=0)
+
+plt.savefig("figures/normalized_train_rate.pdf", bbox_inches="tight")
+
+# +
+x_bar_np = np.array(x_bar)
+y_bar_np = np.array(y_bar)
+x_color_np = np.array(x_color)
+x_tick_lab_np = ['No IO', 'MosaicML SD', 'Cassandra-DALI']
+
+x_bar_loc_index = np.array([0])
+x_bar_hi_index = np.array([1, 4])
+x_bar_med_index = np.array([2, 5])
+x_bar_low_index = np.array([3, 6])
+x_ticks_indexes = [0,2,5]
+x_offset = 0.2
+
+norm_factor = 1.0
+
+_ = plt.bar(x_bar_np[x_bar_loc_index], y_bar_np[x_bar_loc_index] / norm_factor, color=x_color_np[x_bar_loc_index], label="Loc", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_hi_index] + x_offset, y_bar_np[x_bar_hi_index] / norm_factor, color=x_color_np[x_bar_hi_index], label="Hi", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_med_index], y_bar_np[x_bar_med_index] / norm_factor, color=x_color_np[x_bar_med_index], label="Med", zorder=3)
+_ = plt.bar(x_bar_np[x_bar_low_index] - x_offset, y_bar_np[x_bar_low_index] / norm_factor, color=x_color_np[x_bar_low_index], label="Low", zorder=3)
+
+_ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0)
+
+plt.ylabel("image rate (img/sec)")
+plt.legend(loc='upper center')
+plt.grid(axis='y', alpha=0.8, zorder=0)
+
+plt.savefig("figures/train_rate.pdf", bbox_inches="tight")
+# -
+
 
