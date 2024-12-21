@@ -282,6 +282,8 @@ f.savefig("training_timeseries.png", dpi=300)
 # -
 
 
+
+
 # ### Fig 4
 
 data_dict.keys()
@@ -323,6 +325,9 @@ for i, (test_name, label, color) in enumerate(test_name_list):
     x_tick_lab.append(label)
     y_bar.append(m)
     x_color.append(color)
+# -
+
+y_bar_np
 
 # +
 x_bar_np = np.array(x_bar)

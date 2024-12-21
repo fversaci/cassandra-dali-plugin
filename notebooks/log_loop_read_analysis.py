@@ -25,7 +25,7 @@ import pandas as pd
 
 
 # +
-def get_conf_interval_hmean(data, interval=95):
+def get_conf_interval_hmean(data, interval=68):
     l_perc = (100.0-interval) / 2
     h_perc = 100 - ((100.0-interval) / 2)
     
@@ -152,6 +152,18 @@ def get_per_epoch_avg_values(n_epochs, data_grp_per_epoch, data_field="batch_tim
 
     return avg_list, std_list
 
+def get_avg_values(df, data_field="batch_time_ms", mean_type='mean'):
+    tmp_data = df.iloc[1:-1][data_field]
+
+    if mean_type == 'mean':
+        tmp_data_mean = tmp_data.mean()
+        tmp_data_std = tmp_data.std()
+    elif mean_type == 'harmonic':
+        tmp_data_mean = hmean(tmp_data)
+        tmp_data_std = get_conf_interval_hmean(tmp_data)
+        
+    return tmp_data_mean, tmp_data_std
+
 def moving_average(a, n=10):
     a = a.values
     ret = np.cumsum(a, dtype=float)
@@ -230,7 +242,7 @@ test_name_dict = {
 
 # ### Tests on single file
 
-fn = csv_file_list[12]
+fn = csv_file_list[8]
 
 n_epochs, bs, data_df, data_grp_per_epoch, test_name = load_loopread_csv(fn, test_name_dict)
 print (test_name, n_epochs, bs)
@@ -238,6 +250,20 @@ data_df
 
 print (f"Start: {data_df['datetime'].iloc[0]}")
 print (f"Stop: {data_df['datetime'].iloc[-1]}")
+
+data_df.describe()
+
+# +
+cesco_grp = data_df.groupby("epoch")
+
+zz = np.empty(4)
+for i in range(4):
+    zz[i] = cesco_grp.get_group(i)['batch_time'].iloc[1:-1].sum()
+    print (zz[i])
+
+print(np.mean(zz))
+print(np.std(zz))
+# -
 
 # ## Batch Time
 
@@ -261,6 +287,8 @@ plot_data(
     plot_type="line",
     um="ms",
 )
+
+
 
 # ## DATA
 
@@ -430,6 +458,62 @@ barcolor_dict = {'HIlat': 'red',
             }
 
 # +
+batch_time_all_epochs_dict = {}
+data_size_all_epochs_dict = {}
+
+for i, fn in enumerate(sel_csv_file_list):
+    print('-'*100)
+    print(fn)
+    n_epochs, bs, data_df, data_grp_per_epoch, name = load_loopread_csv(fn, test_name_dict)
+    
+    test_type = name.split('-')[0].rstrip()
+    barcolor = "k"
+    
+    if test_type in list(barcolor_dict.keys()):
+        barcolor = barcolor_dict[test_type]
+
+    if bs == None:
+        continue
+    
+    avg_batch_time, std_batch_time = get_avg_values(data_df, data_field="batch_time_ms")
+    avg_data_size, std_data_size = get_avg_values(data_df, data_field="batch_bytes")
+        
+    batch_time_all_epochs_dict[name] = (avg_batch_time, std_batch_time)
+    data_size_all_epochs_dict[name] = (avg_data_size, std_data_size)
+
+    batch_time_min = avg_batch_time - std_batch_time
+    batch_time_max = avg_batch_time + std_batch_time
+
+    min_data_rate = avg_data_size / batch_time_max
+    max_data_rate = avg_data_size / batch_time_min
+    
+    print (avg_batch_time, std_batch_time)
+    print (avg_data_size, std_data_size)
+    print (avg_data_size / avg_batch_time /1e6, max_data_rate / 1e6, min_data_rate / 1e6)
+    
+    # x_bar.append(i)
+    # y_bt_bar.append(avg_batch_time_list[ep])
+    # print (avg_batch_time_list)
+    # print (std_batch_time_list)
+    # y_ds_bar.append(avg_data_size_list[ep])
+    # #y_dr_bar.append(avg_data_rate_list[ep]) ### FIXME: Prova a mettere la media armonica di tutte le epoche
+    # #print (len(avg_data_rate_list), avg_data_rate_list)
+    # y_dr_bar.append(hmean(avg_data_rate_list[0:]))
+    # #y_dr_bar.append(np.mean(avg_data_rate_list[0:]))
+    # y_ir_bar.append(avg_img_rate_list[ep])
+    
+    # y_bt_yerr.append(std_batch_time_list[ep])
+    # y_ds_yerr.append(std_data_size_list[ep])
+    # y_dr_yerr.append(std_data_rate_list[ep])
+    # y_ir_yerr.append(std_img_rate_list[ep])
+    
+    # x_tick_lab.append(name)
+    # x_color.append(barcolor)
+# -
+
+pickle.dump((batch_time_all_epochs_dict, data_size_all_epochs_dict), open("batch_time_data_size_dict.pickle", "wb"))
+
+# +
 batch_time_dict = {}
 data_size_dict = {}
 data_rate_dict = {}
@@ -486,10 +570,13 @@ for i, fn in enumerate(sel_csv_file_list):
     
     x_bar.append(i)
     y_bt_bar.append(avg_batch_time_list[ep])
+    print (avg_batch_time_list)
+    print (std_batch_time_list)
     y_ds_bar.append(avg_data_size_list[ep])
     #y_dr_bar.append(avg_data_rate_list[ep]) ### FIXME: Prova a mettere la media armonica di tutte le epoche
-    print (len(avg_data_rate_list), avg_data_rate_list)
+    #print (len(avg_data_rate_list), avg_data_rate_list)
     y_dr_bar.append(hmean(avg_data_rate_list[0:]))
+    #y_dr_bar.append(np.mean(avg_data_rate_list[0:]))
     y_ir_bar.append(avg_img_rate_list[ep])
     
     y_bt_yerr.append(std_batch_time_list[ep])
@@ -502,6 +589,13 @@ for i, fn in enumerate(sel_csv_file_list):
 # -
 
 y_dr_bar
+
+y_dr_yerr
+
+import pickle
+pickle.dump(batch_time_dict, open("batch_time_dict.pickle", "wb"))
+
+batch_time_dict
 
 # ### Figure 3
 
@@ -584,18 +678,19 @@ print (no_ooo_dr_series.sum())
 m_no_ooo = np.mean(no_ooo_dr_series)
 
 f, axs = plt.subplots(2, 1, figsize=(10,7), sharex=True)
-axs[0].plot(ooo_dr_series_smoothed, label=f"OOO", c='k')
-axs[0].axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} ms")
+axs[0].plot(no_ooo_dr_series_smoothed, label=f"in-order", c='k', )
+axs[0].axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} ms")
+axs[0].set_xlabel("batch index", fontsize=14)
 axs[0].set_ylabel("milliseconds", fontsize=14)
 axs[0].grid(True)
 axs[0].legend(loc='upper center')
 
-axs[1].plot(no_ooo_dr_series_smoothed, label=f"no OOO", c='k', )
-axs[1].axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} ms")
-axs[1].set_xlabel("batch index", fontsize=14)
+axs[1].plot(ooo_dr_series_smoothed, label=f"out-of-order", c='k')
+axs[1].axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} ms")
 axs[1].set_ylabel("milliseconds", fontsize=14)
 axs[1].grid(True)
 axs[1].legend(loc='upper center')
+
 plt.tight_layout()
 
 plt.savefig("figures/batchtime_ooo_vs_noooo.pdf", bbox_inches="tight")
@@ -623,22 +718,26 @@ no_ooo_dr_series_smoothed = moving_average(no_ooo_dr_series, n=1)
 m_no_ooo = hmean(no_ooo_dr_series)
 
 f, axs = plt.subplots(2, 1, figsize=(10,7), sharex=True)
-axs[0].plot(ooo_dr_series_smoothed, label="OOO", c='k')
-axs[0].axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} GB/s")
+axs[0].plot(no_ooo_dr_series_smoothed, label="no OOO", c='k')
+axs[0].axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} GB/s")
+axs[0].set_xlabel("batch index", fontsize=14)
 axs[0].set_ylabel("GB/s", fontsize=14)
 axs[0].grid(True)
 axs[0].legend(loc='upper center')
 
-axs[1].plot(no_ooo_dr_series_smoothed, label="no OOO", c='k')
-axs[1].axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} GB/s")
-axs[1].set_xlabel("batch index", fontsize=14)
+axs[1].plot(ooo_dr_series_smoothed, label="OOO", c='k')
+axs[1].axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} GB/s")
 axs[1].set_ylabel("GB/s", fontsize=14)
 axs[1].grid(True)
 axs[1].legend(loc='upper center')
+
+
 plt.tight_layout()
 
 plt.savefig("figures/throughput_ooo_vs_noooo.pdf", bbox_inches="tight")
 # -
+
+print(np.max(no_ooo_dr_series), np.min(no_ooo_dr_series))
 
 # ### Figure 8
 
@@ -741,8 +840,3 @@ plt.legend(loc='upper right')
 plt.grid(axis='y', alpha=0.8, zorder=0)
 
 plt.savefig("figures/scylla_vs_cassandra.pdf", bbox_inches="tight")
-# -
-
-
-
-
