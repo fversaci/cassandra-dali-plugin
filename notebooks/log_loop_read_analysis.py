@@ -19,26 +19,13 @@ import matplotlib.pyplot as plt
 import os, glob
 import itertools
 import pandas as pd
+import pickle
 
 
 # #### Functions
 
 
 # +
-def get_conf_interval_hmean(data, interval=95):
-    l_perc = (100.0-interval) / 2
-    h_perc = 100 - ((100.0-interval) / 2)
-    
-    #print ("Percentile")
-    
-    data_l = np.percentile(data, l_perc)
-    data_h = np.percentile(data, h_perc)
-    
-    #print (np.min(data), np.max(data), l_perc, h_perc, data_l, data_h)
-    
-    return data_l, data_h
-
-
 def load_loopread_csv(log_fn, test_name_dict):
     try:
         data_df = pd.read_csv(log_fn, dtype={'timestamp': np.float64})
@@ -48,7 +35,7 @@ def load_loopread_csv(log_fn, test_name_dict):
 
         data_df["batch_time_ms"] = data_df["batch_time"] * 1e3  # in milliseconds
         data_df["batch_bytes_MB"] = data_df["batch_bytes"] / 1e6  # batch size in MB
-        data_df["data_rate_GBs"] = data_df["batch_bytes"] / data_df["batch_time"] / 1e9
+        data_df["data_rate_MBs"] = data_df["batch_bytes"] / data_df["batch_time"] / 1e6
         data_df["img_rate"] = bs / data_df["batch_time"]
         data_df["datetime"] = pd.to_datetime(data_df.timestamp, unit='s')
         
@@ -106,7 +93,10 @@ def plot_data(
         elif mean_type == 'harmonic':
             tmp_data_mean = hmean(tmp_data)
             avg_list.append(tmp_data_mean)
-            
+        elif mean_type == 'integral':
+            tmp_data_mean = tmp_data.sum() / data_group[1].iloc[1:-1]["batch_time"].sum()
+            avg_list.append(tmp_data_mean)
+
         if plot_type == "hist":
             _ = ax.hist(tmp_data, bins=30)
             ax.axvline(
@@ -119,7 +109,7 @@ def plot_data(
             batch_index_xx = np.arange(0, len(tmp_data))
             ax.plot(batch_index_xx, tmp_data)
             ax.axhline(
-                tmp_data_mean, label=(f"mean={tmp_data_mean:.2} {um}"), c="r", lw=2
+                tmp_data_mean, label=(f"mean={tmp_data_mean:.1f} {um}"), c="r", lw=2
             )
             ax.set_xlabel(xlabel_str)
             ax.set_ylabel(y_label_str)
@@ -145,12 +135,16 @@ def get_per_epoch_avg_values(n_epochs, data_grp_per_epoch, data_field="batch_tim
             tmp_data_std = tmp_data.std()
         elif mean_type == 'harmonic':
             tmp_data_mean = hmean(tmp_data)
-            tmp_data_std = get_conf_interval_hmean(tmp_data)
+            tmp_data_std = None
+        elif mean_type == 'integral':
+            tmp_data_mean = tmp_data.sum() / data_group[1].iloc[1:-1]["batch_time"].sum()
+            tmp_data_std = None
             
         avg_list.append(tmp_data_mean)
         std_list.append(tmp_data_std)
 
     return avg_list, std_list
+
 
 def moving_average(a, n=10):
     a = a.values
@@ -230,7 +224,7 @@ test_name_dict = {
 
 # ### Tests on single file
 
-fn = csv_file_list[12]
+fn = csv_file_list[5]
 
 n_epochs, bs, data_df, data_grp_per_epoch, test_name = load_loopread_csv(fn, test_name_dict)
 print (test_name, n_epochs, bs)
@@ -238,6 +232,20 @@ data_df
 
 print (f"Start: {data_df['datetime'].iloc[0]}")
 print (f"Stop: {data_df['datetime'].iloc[-1]}")
+
+data_df.describe()
+
+# +
+cesco_grp = data_df.groupby("epoch")
+
+zz = np.empty(3)
+for i in range(3):
+    zz[i] = cesco_grp.get_group(i)['batch_time'].iloc[1:-1].sum()
+    print (zz[i])
+
+print(np.mean(zz))
+print(np.std(zz))
+# -
 
 # ## Batch Time
 
@@ -287,14 +295,26 @@ plot_data(
 
 # ## Data Rate
 
+# +
+tmp_list = []
+for epoch, data_group in enumerate(data_grp_per_epoch):
+    tmp = data_group[1]
+    tmp_batch_tot_data = tmp['batch_bytes'].iloc[1:-1].sum() / 1e6
+    tmp_batch_tot_time = tmp['batch_time'].iloc[1:-1].sum()
+    tmp_list.append(tmp_batch_tot_data / tmp_batch_tot_time)
+
+print (tmp_list)
+print (np.mean(tmp_list))
+# -
+
 data_rate_avg = plot_data(
     n_epochs,
     data_grp_per_epoch,
-    data_field="data_rate_GBs",
-    xlabel_str="data rate(GB/s)",
+    data_field="data_rate_MBs",
+    xlabel_str="data rate(MB/s)",
     y_label_str="occurencies",
     plot_type="hist",
-    um="GB/s",
+    um="MB/s",
     mean_type='harmonic'
 )
 print(data_rate_avg)
@@ -302,11 +322,11 @@ print(data_rate_avg)
 plot_data(
     n_epochs,
     data_grp_per_epoch,
-    data_field="data_rate_GBs",
+    data_field="data_rate_MBs",
     xlabel_str="batch_index",
-    y_label_str="data rate(GB/s)",
+    y_label_str="data rate(MB/s)",
     plot_type="line",
-    um="GB/s",
+    um="MB/s",
     mean_type='harmonic'
 )
 
@@ -335,93 +355,9 @@ plot_data(
     mean_type='harmonic'
 )
 
-# ### Tests on all files
-
-barcolor_dict = {'HIlat': 'r',
-             'MEDlat': 'g',
-             'LOWlat': 'b',
-             '': 'k'
-            }
-
-# +
-batch_time_dict = {}
-data_size_dict = {}
-data_rate_dict = {}
-img_rate_dict = {}
-df_dict = {}
-
-ep = 0
-x_bar = []
-y_bt_bar = []
-y_ds_bar = []
-y_dr_bar = []
-y_ir_bar = []
-x_tick_lab = []
-x_color=[]
-
-for i, fn in enumerate(sel_csv_file_list):
-    #print(fn)
-    n_epochs, bs, data_df, data_grp_per_epoch, name = load_loopread_csv(fn, test_name_dict)
-    
-    test_type = name.split('-')[0].rstrip()
-    barcolor = "k"
-    
-    if test_type in list(barcolor_dict.keys()):
-        barcolor = barcolor_dict[test_type]
-        
-    print (test_type, list(barcolor_dict.keys()), barcolor)
-    
-    if bs == None:
-        continue
-        
-    print(f"{name}")
-    
-    avg_batch_time_list, std_batch_time_list = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="batch_time_ms"
-    )
-    avg_data_size_list, std_data_size_list = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="batch_bytes_MB"
-    )
-    avg_data_rate_list, std_data_rate_list = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs", mean_type='harmonic'
-    )
-    avg_img_rate_list, std_img_rate_list = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="img_rate", mean_type='harmonic'
-    )
-    
-    batch_time_dict[name] = (avg_batch_time_list, std_batch_time_list)
-    data_size_dict[name] = (avg_data_size_list, std_data_size_list)
-    data_rate_dict[name] = (avg_data_rate_list, std_data_rate_list)
-    img_rate_dict[name] = (avg_img_rate_list, std_img_rate_list)
-    df_dict[name] = data_df
-
-    
-    x_bar.append(i)
-    y_bt_bar.append(avg_batch_time_list[ep])
-    y_ds_bar.append(avg_data_size_list[ep])
-    y_dr_bar.append(avg_data_rate_list[ep])
-    y_ir_bar.append(avg_img_rate_list[ep])
-    x_tick_lab.append(name)
-    x_color.append(barcolor)
-# -
-
-_ = plt.bar(x_bar, y_bt_bar / np.max(y_bt_bar), color=x_color)
-_ = plt.xticks(x_bar, x_tick_lab, rotation=90)
-plt.ylabel("average batch time (ms)")
-
-_ = plt.bar(x_bar, y_ds_bar)
-_ = plt.xticks(x_bar, x_tick_lab, rotation=90)
-plt.ylabel("average batch size (MB)")
-
-_ = plt.bar(x_bar, y_dr_bar / np.max(y_dr_bar), color=x_color)
-_ = plt.xticks(x_bar, x_tick_lab, rotation=90)
-plt.ylabel("average batch data rate (GB/s)")
-
-_ = plt.bar(x_bar, y_ir_bar / np.max(y_ir_bar), color=x_color)
-_ = plt.xticks(x_bar, x_tick_lab, rotation=90)
-plt.ylabel("average batch image rate (img/s)")
-
 # # Paper figures
+
+# Data rates are assessed for each epoch, with an epoch representing a single "experiment" that measures the performance of transferring the entire dataset. The epoch data rate is determined by calculating the harmonic mean of the batch data rates. When applicable (i.e., for three or more epochs), the distribution of epoch data rates is analyzed to extract the mean and standard deviation, which are used to characterize the experiment.
 
 barcolor_dict = {'HIlat': 'red',
              'MEDlat': 'green',
@@ -436,17 +372,14 @@ data_rate_dict = {}
 img_rate_dict = {}
 df_dict = {}
 
+data_rate_epoch_mean_std_dict = {}
+
 ep = 0 # Epoch to take
 
 x_bar = []
-y_bt_bar = []
-y_ds_bar = []
 y_dr_bar = []
-y_ir_bar = []
-y_bt_yerr = []
-y_ds_yerr = []
 y_dr_yerr = []
-y_ir_yerr = []
+
 x_tick_lab = []
 x_color=[]
 
@@ -471,7 +404,7 @@ for i, fn in enumerate(sel_csv_file_list):
         n_epochs, data_grp_per_epoch, data_field="batch_bytes_MB"
     )
     avg_data_rate_list, std_data_rate_list = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs", mean_type='harmonic'
+        n_epochs, data_grp_per_epoch, data_field="batch_bytes_MB", mean_type='integral'
     )
     avg_img_rate_list, std_img_rate_list = get_per_epoch_avg_values(
         n_epochs, data_grp_per_epoch, data_field="img_rate", mean_type='harmonic'
@@ -483,27 +416,34 @@ for i, fn in enumerate(sel_csv_file_list):
     img_rate_dict[name] = (avg_img_rate_list, std_img_rate_list)
     df_dict[name] = data_df
 
+    # Compute datarate average and std among epoch results if applicable 
     
+    avg_list = np.array(data_rate_dict[name][0]) # it takes the list of epoch means
+    avg_mean = np.round(np.mean(avg_list)) #MB/s
+    avg_std = np.round(np.std(avg_list)) #MB/s
+    data_rate_epoch_mean_std_dict[name]={'mean':avg_mean, 'std':avg_std}
+
+    print(avg_list)
+    
+    # 
+
+    # set x attributes
     x_bar.append(i)
-    y_bt_bar.append(avg_batch_time_list[ep])
-    y_ds_bar.append(avg_data_size_list[ep])
-    #y_dr_bar.append(avg_data_rate_list[ep]) ### FIXME: Prova a mettere la media armonica di tutte le epoche
-    print (len(avg_data_rate_list), avg_data_rate_list)
-    y_dr_bar.append(hmean(avg_data_rate_list[0:]))
-    y_ir_bar.append(avg_img_rate_list[ep])
-    
-    y_bt_yerr.append(std_batch_time_list[ep])
-    y_ds_yerr.append(std_data_size_list[ep])
-    y_dr_yerr.append(std_data_rate_list[ep])
-    y_ir_yerr.append(std_img_rate_list[ep])
-    
     x_tick_lab.append(name)
     x_color.append(barcolor)
+
+    y_dr_bar.append(avg_mean)
+    y_dr_yerr.append(avg_std)
+
 # -
 
-y_dr_bar
+pickle.dump(batch_time_dict, open("batch_time_dict.pickle", "wb"))
 
-# ### Figure 3
+# #### Mean and std of data rate for table 3
+
+data_rate_epoch_mean_std_dict
+
+# ### Figure 3a
 
 # +
 x_bar_np = np.array(x_bar)
@@ -562,9 +502,7 @@ plt.grid(axis='y', alpha=0.8, zorder=0)
 plt.savefig("figures/loopread_rate.pdf", bbox_inches="tight")
 # -
 
-batch_time_dict
-
-# ### Figure 5
+# ### Figure 4
 
 # +
 scylla_ooo_fn = csv_file_list[8]
@@ -584,18 +522,23 @@ print (no_ooo_dr_series.sum())
 m_no_ooo = np.mean(no_ooo_dr_series)
 
 f, axs = plt.subplots(2, 1, figsize=(10,7), sharex=True)
-axs[0].plot(ooo_dr_series_smoothed, label=f"OOO", c='k')
-axs[0].axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} ms")
-axs[0].set_ylabel("milliseconds", fontsize=14)
+axs[0].plot(no_ooo_dr_series_smoothed, label=f"in-order", c='k', )
+axs[0].axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} ms")
+axs[0].set_ylabel("milliseconds", fontsize=16)
 axs[0].grid(True)
-axs[0].legend(loc='upper center')
+axs[0].legend(loc='upper center', fontsize=12)
 
-axs[1].plot(no_ooo_dr_series_smoothed, label=f"no OOO", c='k', )
-axs[1].axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} ms")
-axs[1].set_xlabel("batch index", fontsize=14)
-axs[1].set_ylabel("milliseconds", fontsize=14)
+axs[0].tick_params(axis='both', which='major', labelsize=11)
+
+axs[1].set_xlabel("batch index", fontsize=16)
+axs[1].plot(ooo_dr_series_smoothed, label=f"out-of-order", c='k')
+axs[1].axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} ms")
+axs[1].set_ylabel("milliseconds", fontsize=16)
 axs[1].grid(True)
-axs[1].legend(loc='upper center')
+axs[1].legend(loc='upper center', fontsize=12)
+
+axs[1].tick_params(axis='both', which='major', labelsize=11)
+
 plt.tight_layout()
 
 plt.savefig("figures/batchtime_ooo_vs_noooo.pdf", bbox_inches="tight")
@@ -613,34 +556,38 @@ scylla_no_ooo_fn = csv_file_list[12]
 epoch = 2
 
 n_epochs, bs, data_df, data_grp_per_epoch, test_name = load_loopread_csv(scylla_ooo_fn, test_name_dict)
-ooo_dr_series = data_grp_per_epoch.get_group(epoch)['data_rate_GBs'].iloc[1:-1]
+ooo_dr_series = data_grp_per_epoch.get_group(epoch)['data_rate_MBs'].iloc[1:-1]
 ooo_dr_series_smoothed = moving_average(ooo_dr_series, n=1)
 m_ooo = hmean(ooo_dr_series)
 
 n_epochs, bs, data_df, data_grp_per_epoch, test_name = load_loopread_csv(scylla_no_ooo_fn, test_name_dict)
-no_ooo_dr_series = data_grp_per_epoch.get_group(epoch)['data_rate_GBs'].iloc[1:-1]
+no_ooo_dr_series = data_grp_per_epoch.get_group(epoch)['data_rate_MBs'].iloc[1:-1]
 no_ooo_dr_series_smoothed = moving_average(no_ooo_dr_series, n=1)
 m_no_ooo = hmean(no_ooo_dr_series)
 
 f, axs = plt.subplots(2, 1, figsize=(10,7), sharex=True)
-axs[0].plot(ooo_dr_series_smoothed, label="OOO", c='k')
-axs[0].axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} GB/s")
-axs[0].set_ylabel("GB/s", fontsize=14)
+axs[0].plot(no_ooo_dr_series_smoothed, label="no OOO", c='k')
+axs[0].axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} MB/s")
+axs[0].set_xlabel("batch index", fontsize=14)
+axs[0].set_ylabel("MB/s", fontsize=14)
 axs[0].grid(True)
 axs[0].legend(loc='upper center')
 
-axs[1].plot(no_ooo_dr_series_smoothed, label="no OOO", c='k')
-axs[1].axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} GB/s")
-axs[1].set_xlabel("batch index", fontsize=14)
-axs[1].set_ylabel("GB/s", fontsize=14)
+axs[1].plot(ooo_dr_series_smoothed, label="OOO", c='k')
+axs[1].axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} MB/s")
+axs[1].set_ylabel("MB/s", fontsize=14)
 axs[1].grid(True)
 axs[1].legend(loc='upper center')
+
+
 plt.tight_layout()
 
 plt.savefig("figures/throughput_ooo_vs_noooo.pdf", bbox_inches="tight")
 # -
 
-# ### Figure 8
+print(np.max(no_ooo_dr_series), np.min(no_ooo_dr_series))
+
+# ### Figure 7
 
 data_rate_dict['HIlat - Scylla with OOO and SS=4']
 
@@ -683,10 +630,11 @@ print (scylla_disk_IO_mean)
 ##### Loopread mean Data rate 
 n_epochs, bs, data_df, data_grp_per_epoch, name = load_loopread_csv(csv_file_list[8], test_name_dict)
 scylla_avg_data_rate_list, _ = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs", mean_type='harmonic',
+        n_epochs, data_grp_per_epoch, data_field="batch_bytes_MB", mean_type='integral',
     )
+scylla_loopread_epoch_avg_MB = np.mean(scylla_avg_data_rate_list) / 1000. # in GB
 
-print (scylla_avg_data_rate_list)
+print (scylla_avg_data_rate_list, scylla_loopread_epoch_avg_MB)
 
 # -
 
@@ -706,16 +654,17 @@ print (cass_disk_IO_mean)
 ##### Loopread mean Data rate
 n_epochs, bs, data_df, data_grp_per_epoch, name = load_loopread_csv(csv_file_list[7], test_name_dict)
 cass_avg_data_rate_list, _ = get_per_epoch_avg_values(
-        n_epochs, data_grp_per_epoch, data_field="data_rate_GBs", mean_type='harmonic',
+        n_epochs, data_grp_per_epoch, data_field="batch_bytes_MB", mean_type='integral',
     )
+cass_loopread_epoch_avg_MB = np.mean(cass_avg_data_rate_list) / 1000. # in GB
 
-print (cass_avg_data_rate_list)
+print (cass_avg_data_rate_list, cass_loopread_epoch_avg_MB)
 
 # +
-plt.figure(figsize=(5,5))
+plt.figure(figsize=(6,6))
 x_bar_np = np.array([0,1,2,3])
-y_bar_np = np.array([scylla_disk_IO_mean, hmean(scylla_avg_data_rate_list), 
-                      cass_disk_IO_mean, hmean(cass_avg_data_rate_list)])
+y_bar_np = np.array([scylla_disk_IO_mean, scylla_loopread_epoch_avg_MB, 
+                      cass_disk_IO_mean, cass_loopread_epoch_avg_MB])
 
 x_color_np = np.array(['r','k', 'r', 'k'])
 x_tick_lab_np = ['Scylla', 'Cassandra']
@@ -733,16 +682,15 @@ x_offset = 0.1
 _ = plt.bar(x_bar_np[x_bar_disk_index] + x_offset, y_bar_np[x_bar_disk_index], color=x_color_np[x_bar_disk_index], label="Disk IO", zorder=3)
 _ = plt.bar(x_bar_np[x_bar_reader_index] - x_offset, y_bar_np[x_bar_reader_index], color=x_color_np[x_bar_reader_index], label="Reader throughput", zorder=3)
 
-_ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0)
+_ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0, fontsize=18)
 
 plt.ylim(0,4.5)
-plt.ylabel("Data rate (GB/s)")
-plt.legend(loc='upper right')
+plt.ylabel("Data rate (GB/s)",fontsize=18)
+plt.legend(loc='upper right', fontsize=12)
 plt.grid(axis='y', alpha=0.8, zorder=0)
 
+plt.yticks(fontsize=16)
 plt.savefig("figures/scylla_vs_cassandra.pdf", bbox_inches="tight")
 # -
-
-
 
 

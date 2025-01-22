@@ -272,7 +272,7 @@ _ = df_tmp.plot(subplots=True, layout=(dim,dim), figsize=(dim*2, dim*2), legend=
 
 # ## Fig 5 and 6
 
-# ### Fig 5
+# ### Fig 6
 
 # +
 test_time_intervals_d = {'HI_scylla_ooo_start': '2024-12-10 16:03:31.660300032', 'HI_scylla_ooo_stop': '2024-12-10 16:05:58.601401856',
@@ -297,15 +297,19 @@ dim2 = int(np.ceil(np.sqrt(n_plots)))
 dim1 = 4
 dim2 = 8
 
-plt.rcParams.update({'font.size': 12}) 
+#plt.rcParams.update({'font.size': 12}) 
 
-_ = df_tmp_smoothed.plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), lw=2, legend=False, sharex=True, sharey=True, xlabel='seconds', ylabel='MB/s')
+ax = df_tmp_smoothed.plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), lw=2, legend=False, sharex=True, sharey=True, fontsize=18)
+f = plt.gcf()
+
+f.supxlabel("Time (s)", fontsize=20)
+f.supylabel("Throughput (MB/s)", fontsize=20,x = 0.01)
 
 plt.tight_layout()
 plt.savefig("figures/scylla_OOO_sentbytes.pdf", bbox_inches="tight")
 # -
 
-# ### Fig 6
+# ### Fig 5
 
 # +
 start = test_time_intervals_d['HI_scylla_no_ooo_start']
@@ -327,10 +331,13 @@ dim2 = int(np.ceil(np.sqrt(n_plots)))
 dim1 = 4
 dim2 = 8
 
-plt.rcParams.update({'font.size': 12}) 
+#plt.rcParams.update({'font.size': 12}) 
 
-_ = df_tmp_smoothed.plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), legend=False, sharex=True, sharey=True, xlabel='seconds', ylabel='MB/s')
+_ = df_tmp_smoothed.plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), legend=False, sharex=True, sharey=True,fontsize=18)
+f = plt.gcf()
 
+f.supxlabel("Time (s)", fontsize=20)
+f.supylabel("Throughput (MB/s)", fontsize=20,x = 0.01)
 
 plt.tight_layout()
 plt.savefig("figures/scylla_NO_OOO_sentbytes.pdf", bbox_inches="tight")
