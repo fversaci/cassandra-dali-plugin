@@ -280,13 +280,7 @@ plt.tight_layout()
 
 f.savefig("training_timeseries.png", dpi=300)
 # -
-
-
-
-
-# ### Fig 4
-
-data_dict.keys()
+# ### Fig 3b
 
 barcolor_dict = {'HIlat': 'red',
              'MEDlat': 'green',
@@ -305,29 +299,44 @@ data_rate_dict = {}
 img_rate_dict = {}
 df_dict = {}
 
-ep = 1 # Epoch to take
-
 x_bar = []
 y_bar = []
 x_tick_lab = []
 x_color=[]
 
+print ("TABLE 3") 
+
 for i, (test_name, label, color) in enumerate(test_name_list):    
     df, batch_size, num_gpu, df_group = data_dict[test_name]
 
-    #df = df[df["epoch"] >= 1] # decomment to exclude epoch 0
-    #df = df_group.get_group(ep)
-    
-    y = df["train_im_sec"]
-    m = hmean(y[~np.isnan(y)])
+    # Consider all epochs: compute harmonic mean of batch image rates as the epoch image rates. Then take the mean and std of the epoch image rates
+    avg_list = []
+    for epoch_grp in df_group:
+        epoch = epoch_grp[0]
+        if epoch == 0:
+            continue # skip epoch zero to avoid considerig the startup
+        epoch_df = epoch_grp[1]
+        y = epoch_df["train_im_sec"]
+        m = hmean(y[~np.isnan(y)])
+        avg_list.append(m)
 
+    mean_im_rate = np.mean(avg_list)
+
+    if len(avg_list) > 1:
+        std_im_rate = np.std(avg_list)
+    else:
+        std_im_rate = None
+
+    print ('-'*100)
+    print (test_name, len(avg_list), mean_im_rate, std_im_rate)
+    print (f'Mean: {int(mean_im_rate):d} im/s, std:{int(std_im_rate):d} im/s')
+
+
+    y_bar.append(mean_im_rate)
+    
     x_bar.append(i)
     x_tick_lab.append(label)
-    y_bar.append(m)
     x_color.append(color)
-# -
-
-y_bar_np
 
 # +
 x_bar_np = np.array(x_bar)
