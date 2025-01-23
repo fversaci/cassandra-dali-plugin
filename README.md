@@ -57,7 +57,7 @@ pipeline](https://docs.nvidia.com/deeplearning/dali/user-guide/docs/pipeline.htm
 for example replacing a call to `fn.readers.file` with
 ```python
 images, labels = fn.crs4.cassandra(
-    name="Reder", cassandra_ips=["127.0.0.1"],
+    name="Reader", cassandra_ips=["127.0.0.1"],
     table="imagenet.train_data", label_col="label", label_type="int",
     data_col="data", id_col="img_id",
     source_uuids=train_uuids, prefetch_buffers=2,
