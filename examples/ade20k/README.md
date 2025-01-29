@@ -17,19 +17,6 @@ $ kaggle datasets download -d residentmario/ade20k-outdoors
 In the following we will assume the original images are stored in the
 `/data/ade20k/`directory.
 
-## Starting Cassandra server
-We begin by starting the Cassandra server shipped with the provided
-Docker container:
-
-```bash
-# Start Cassandra server
-$ /cassandra/bin/cassandra
-
-```
-
-Note that the shell prompt is immediately returned.  Wait until `state
-jump to NORMAL` is shown (about 1 minute).
-
 ## Storing the (unchanged) images in the DB
 The following commands will insert the original dataset in Cassandra
 and use the plugin to read the images in NVIDIA DALI.
@@ -37,7 +24,7 @@ and use the plugin to read the images in NVIDIA DALI.
 ```bash
 # - Create the tables in the Cassandra DB
 $ cd examples/ade20k/
-$ /cassandra/bin/cqlsh -f create_tables.cql
+$ cat create_tables.cql | ssh root@cassandra /opt/cassandra/bin/cqlsh
 
 # - Fill the tables with data and metadata
 $ python3 extract_serial.py /data/ade20k/images/training/ /data/ade20k/annotations/training/ --data-table=ade20k.data --metadata-table=ade20k.metadata

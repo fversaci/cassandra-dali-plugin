@@ -2,10 +2,9 @@
 set -e
 
 # start cassandra and (re)create tables
-pgrep -f cassandra || /cassandra/bin/cassandra 2>&1 | grep "state jump to NORMAL"
 cd examples/imagenette/
-SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE IF EXISTS imagenette;"
-SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -f create_tables.cql
+ssh root@cassandra 'SSL_VALIDATE=false /opt/cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE IF EXISTS imagenette;"'
+cat create_tables.cql | ssh root@cassandra 'SSL_VALIDATE=false /opt/cassandra/bin/cqlsh --ssl'
 # start spark and insert dataset
 pgrep -f spark || (/spark/sbin/start-master.sh  && /spark/sbin/start-worker.sh spark://$HOSTNAME:7077)
 /spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
@@ -24,8 +23,8 @@ python3 cache_uuids.py --metadata-table=imagenette.metadata_val --rows-fn val.ro
 python3 loop_read.py --data-table imagenette.data_val --rows-fn val.rows
 python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows --use-gpu
 # recreate tables and insert serially
-SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE IF EXISTS imagenette;"
-SSL_VALIDATE=false /cassandra/bin/cqlsh --ssl -f create_tables.cql
+ssh root@cassandra 'SSL_VALIDATE=false /opt/cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE IF EXISTS imagenette;"'
+cat create_tables.cql | ssh root@cassandra 'SSL_VALIDATE=false /opt/cassandra/bin/cqlsh --ssl'
 python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table imagenette.data_train --metadata-table imagenette.metadata_train
 python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table imagenette.data_val --metadata-table imagenette.metadata_val
 # read from db

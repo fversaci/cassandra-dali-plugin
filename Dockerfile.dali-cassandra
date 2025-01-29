@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
-FROM nvcr.io/nvidia/pytorch:24.08-py3
+FROM nvcr.io/nvidia/pytorch:24.11-py3
 
 # install some useful tools
 RUN \
@@ -29,6 +29,7 @@ RUN \
     mc \
     nload \
     nmon \
+    openjdk-11-jdk \
     psutils \
     source-highlight \
     ssh \
@@ -78,29 +79,11 @@ RUN \
     && cd / && tar xfz "/tmp/spark-$SPARK_VER-bin-hadoop3.tgz" \
     && ln -s "spark-$SPARK_VER-bin-hadoop3" spark
 
-# Install jdk
-RUN \
-    export DEBIAN_FRONTEND=noninteractive \
-    && apt-get update -y -q \
-    && apt-get install -y openjdk-11-jdk
-
 ENV PYSPARK_DRIVER_PYTHON=python3
 ENV PYSPARK_PYTHON=python3
 EXPOSE 8080
 EXPOSE 7077
 EXPOSE 4040
-
-########################################################################
-# Cassandra server installation, to test examples
-########################################################################
-ARG CASS_V=5.0
-RUN \
-    export CASS_VERS=$(curl 'https://archive.apache.org/dist/cassandra/' | grep -o "$CASS_V\.[[:digit:]]\+" | tail -n 1) \
-    && cd /tmp && wget -nv "https://archive.apache.org/dist/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
-    && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
-    && ln -s "apache-cassandra-$CASS_VERS" cassandra
-
-EXPOSE 9042
 
 ########################################################################
 # Download the Imagenette dataset
@@ -112,36 +95,35 @@ RUN \
     && rm 'imagenette2-320.tgz'
 
 ########################################################################
-# Upgrade DALI, install plugin and run as user
+# Upgrade DALI, install plugin and run as ubuntu user
 ########################################################################
 # Fix for error given by "from nvidia.dali.plugin.pytorch import DALIGenericIterator"
 # - https://forums.developer.nvidia.com/t/issues-building-docker-image-from-ngc-container-nvcr-io-nvidia-pytorch-22-py3/209034
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib:/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib"
 RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
-    --upgrade nvidia-dali-cuda120==1.41
-RUN \
-    useradd -m -G sudo -s /usr/bin/fish -p '*' user \
-    && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
-    && chown -R user.user /apache-cassandra-$CASS_V*
+    --upgrade nvidia-dali-cuda120==1.43
 
-COPY . /home/user/cassandra-dali-plugin
-COPY ./examples/common/private_data.template.py /home/user/cassandra-dali-plugin/examples/common/private_data.py
+RUN sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers
+COPY . /home/ubuntu/cassandra-dali-plugin
+COPY ./examples/common/private_data.template.py /home/ubuntu/cassandra-dali-plugin/examples/common/private_data.py
 
-# increase write timeout to 20 seconds, listen to all interfaces,
-# enable SSL and increase max direct memory available
-RUN \
-    cp /home/user/cassandra-dali-plugin/varia/keystore /cassandra/conf/ \
-    && cp /cassandra/conf/cassandra.yaml /tmp/cassandra.orig.yaml \
-    && python3 /home/user/cassandra-dali-plugin/varia/edit_cassandra_conf.py
-
-RUN chown -R user.user '/home/user/cassandra-dali-plugin'
-RUN chown -R user.user "/spark/"
+RUN chown -R ubuntu:ubuntu '/home/ubuntu/cassandra-dali-plugin'
+RUN chown -R ubuntu:ubuntu "/spark/"
 # create data dir
 RUN mkdir /data
-RUN chown user.user '/data'
+RUN chown ubuntu:ubuntu '/data'
+
+# copy ssh keys to access cassandra container
+COPY varia/ssh/ /home/ubuntu/.ssh/
+RUN chown -R ubuntu:ubuntu '/home/ubuntu/.ssh' \
+    && chmod 600 /home/ubuntu/.ssh/id_rsa
+
+COPY varia/entrypoint-dali-cassandra.sh /tmp
+
 # install plugin
-WORKDIR /home/user/cassandra-dali-plugin
+WORKDIR /home/ubuntu/cassandra-dali-plugin
 RUN pip3 install IPython
 RUN pip3 install .
-USER user
+USER ubuntu
+ENTRYPOINT ["/tmp/entrypoint-dali-cassandra.sh"]

@@ -6,30 +6,20 @@ The raw files are already present in the `/tmp` directory of the
 provided [Docker container](../../README.md#running-the-docker-container),
 from which the following commands can be run.
 
-Before starting the training process, we will see how to start the Cassandra server, how to store data into the database and the procedure of generating a split file. This file will contain essential information, including training and validation splits, which will serve as input for the training application.
-
-## Starting Cassandra server
-We can start the Cassandra server shipped with the provided
-Docker container issuing this command:
-
-```bash
-# Start Cassandra server
-$ /cassandra/bin/cassandra
-
-```
-
-Note that the shell prompt is immediately returned.  Wait until `state
-jump to NORMAL` is shown (about 1 minute).
+Before starting the training process, we will see how to store data
+into the database and the procedure of generating a split file. This
+file will contain essential information, including training and
+validation splits, which will serve as input for the training
+application.
 
 ## Store imagenette dataset to Cassandra DB
-After the Cassandra DB server is started, it is possibile to populate it with images of the imagenette dataset.
-
-The following commands will create the data and metadata tables within the Cassandra DB and store all imagenette images to it:
+The following commands will create the data and metadata tables within
+the Cassandra DB and store all imagenette images to it:
 
 ```bash
 # - Create the tables in the Cassandra DB
 $ cd examples/splitfile/
-$ /cassandra/bin/cqlsh -f create_tables.cql
+$ cat create_tables.cql | ssh root@cassandra /opt/cassandra/bin/cqlsh
 
 # - Fill the tables with data and metadata
 $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table=imagenette.data --metadata-table=imagenette.metadata
@@ -51,19 +41,20 @@ Create Split: a splitfile generator starting from data stored on a Cassandra db.
 
 Options:
   -d, --data-table=STR          Specify the Cassandra datatable (i.e.: keyspace.tablename)
-  -m, --metadata-table=STR      Specify the Cassandra metadata table (i.e.: keyspace.tablename)
-
+  -m, --metadata-table=STR      Specify the metadata table (i.e.: keyspace.tablename)
   --metadata-ifn=STR            The input filename of previous cached metadata
   --metadata-ofn=STR            The filename to cache  metadata read from db
   -o, --split-ofn=STR           The name of the output splitfile
   -r, --split-ratio=TOLIST      a comma separated values list that specifies the data proportion among desired splits (default: [8, 2])
-  -b, --balance=PARSE_BALANCE   balance configuration among classes for each split (it can be a string ('original', 'random') or a a comma separated values list with one entry for each class (default: original)
+  -b, --balance=PARSE_BALANCE   balance configuration among classes for each split (it can be a string ('original', 'random') or a a comma separated values
+                                list with one entry for each class (default: original)
 
 Other actions:
   -h, --help                    Show the help
 ```
 
-To create a training and validation split from the training table images in Imagenette, we can use the following command:
+To create a training and validation split from the training table
+images in Imagenette, we can use the following command:
 
 ```bash
 python3 create_split.py -d imagenette.data -m imagenette.metadata -r 8,2 -o imagenette_splitfile.pckl

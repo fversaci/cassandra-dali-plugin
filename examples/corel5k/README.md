@@ -19,19 +19,6 @@ $ kaggle datasets download -d parhamsalar/corel5k
 In the following we will assume the original images are stored in the
 `/data/Corel-5k/`directory.
 
-## Starting Cassandra server
-We begin by starting the Cassandra server shipped with the provided
-Docker container:
-
-```bash
-# Start Cassandra server
-$ /cassandra/bin/cassandra
-
-```
-
-Note that the shell prompt is immediately returned.  Wait until `state
-jump to NORMAL` is shown (about 1 minute).
-
 ## Storing the (unchanged) images in the DB
 The following commands will insert the original dataset in Cassandra
 and use the plugin to read the images in NVIDIA DALI.
@@ -39,7 +26,7 @@ and use the plugin to read the images in NVIDIA DALI.
 ```bash
 # - Create the tables in the Cassandra DB
 $ cd examples/corel5k/
-$ /cassandra/bin/cqlsh -f create_tables.cql
+$ cat create_tables.cql | ssh root@cassandra /opt/cassandra/bin/cqlsh
 
 # - Fill the tables with data and metadata
 $ python3 extract_serial.py /data/Corel-5k/images/ /data/Corel-5k/npy_labs /data/Corel-5k/train.json --data-table corel5k.data --metadata-table corel5k.metadata

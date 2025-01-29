@@ -8,33 +8,31 @@ Library (DALI)](https://github.com/NVIDIA/DALI) (which can be used to
 load and preprocess images for PyTorch or TensorFlow).
 
 ### DALI compatibility
-The plugin has been tested and is compatible with DALI v1.41.
+The plugin has been tested and is compatible with DALI v1.43.
 
-## Running the docker container
+## Running the Docker container
 
-The easiest way to test the cassandra-dali-plugin is by using the
-provided [Dockerfile](Dockerfile) (derived from [NVIDIA PyTorch
-NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch)),
-which also contains NVIDIA DALI, Cassandra C++ and Python drivers,
-a Cassandra server, PyTorch and Apache Spark, as shown in the commands below.
+The easiest way to test the `cassandra-dali-plugin` is by using the
+provided Docker images, which can be built and run easily with Docker
+Compose. The setup includes two containers:
 
-```bash
-# Build and run cassandra-dali-plugin docker container
-$ docker build -t cassandra-dali-plugin .
-$ docker run --rm -it --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
-  --cap-add=sys_admin cassandra-dali-plugin
-```
+- **Cassandra server container**: Based on the [official Cassandra Docker
+  image](https://hub.docker.com/_/cassandra).
+- **DALI-Cassandra client container**: Built from the [NVIDIA PyTorch
+  NGC image](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch). It
+  includes NVIDIA DALI, Cassandra C++ and Python drivers, PyTorch, and
+  Apache Spark.
 
-Alternatively, for better performance and for data persistence, it is
-advised to mount a host directory for Cassandra on a fast disk (e.g.,
-`/mnt/fast_disk/cassandra`):
+To build and run the containers, use the following commands:
 
 ```bash
-# Run cassandra-dali-plugin docker container with external data dir
-$ docker run --rm -it --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
-  -v /mnt/fast_disk/cassandra:/cassandra/data:rw \
-  --cap-add=sys_admin cassandra-dali-plugin
+docker compose up --build -d
+docker compose exec dali-cassandra fish
 ```
+
+For improved performance and for data persistence, consider modifying
+[docker-compose.yml](docker-compose.yml) to mount a host directory for
+Cassandra on a fast disk.
 
 ## How to call the plugin
 
@@ -57,7 +55,7 @@ pipeline](https://docs.nvidia.com/deeplearning/dali/user-guide/docs/pipeline.htm
 for example replacing a call to `fn.readers.file` with
 ```python
 images, labels = fn.crs4.cassandra(
-    name="Reder", cassandra_ips=["127.0.0.1"],
+    name="Reder", cassandra_ips=["cassandra_host"],
     table="imagenet.train_data", label_col="label", label_type="int",
     data_col="data", id_col="img_id",
     source_uuids=train_uuids, prefetch_buffers=2,
@@ -71,7 +69,7 @@ examples](README.md#examples).
 ### Basic parameters
 
 - `name`: name of the module to be passed to DALI (e.g. "Reader")
-- `cassandra_ips`: list of IP pointing to the DB (e.g., `["127.0.0.1"]`)
+- `cassandra_ips`: list of IPs or hostnames pointing to the DB (e.g., `["cassandra_host"]`)
 - `cassandra_port`: Cassandra TCP port (default: `9042`)
 - `table`: data table (e.g., `imagenet.train_data`)
 - `label_col`: name of the label column (e.g., `label`)

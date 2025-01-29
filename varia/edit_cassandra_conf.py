@@ -16,7 +16,7 @@
 # and enable SSL
 import yaml
 
-yaml_fn = "/cassandra/conf/cassandra.yaml"
+yaml_fn = "/opt/cassandra/conf/cassandra.yaml"
 with open(yaml_fn, "r") as f:
     cass_conf = yaml.safe_load(f)
     cass_conf["write_request_timeout"] = "20s"
@@ -24,7 +24,7 @@ with open(yaml_fn, "r") as f:
     cass_conf["broadcast_rpc_address"] = "127.0.0.1"
     cass_conf["client_encryption_options"]["enabled"] = True
     cass_conf["client_encryption_options"]["optional"] = True
-    cass_conf["client_encryption_options"]["keystore"] = "/cassandra/conf/keystore"
+    cass_conf["client_encryption_options"]["keystore"] = "/opt/cassandra/conf/keystore"
     cass_conf["client_encryption_options"]["keystore_password"] = "cassandra"
     cass_conf.setdefault("sstable", {})["selected_format"] = "bti"
     cass_conf["concurrent_compactors"] = "4"
@@ -37,7 +37,7 @@ with open(yaml_fn, "w") as f:
 ## # increase max direct memory -- Cassandra 4
 ## from pathlib import Path
 ## 
-## jvm_fns = Path("/cassandra/conf/").glob("jvm*server.options")
+## jvm_fns = Path("/opt/cassandra/conf/").glob("jvm*server.options")
 ## for fn in jvm_fns:
 ##     with open(fn, "a") as f:
 ##         f.write("-XX:MaxDirectMemorySize=64G")

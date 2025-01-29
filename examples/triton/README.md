@@ -59,8 +59,8 @@ first byte of every BLOB. It utilizes the
 ### `classification_resnet`
 
 This model utilizes a pre-trained ResNet50 for ImageNet classification
-to perform inference. To download the network, simply run the
-[runme.py file](models/classification_resnet/1/runme.py).
+to perform inference, predownloaded using the
+[runme.py](models/classification_resnet/1/runme.py) script.
 
 ### `cass_to_inference`
 
@@ -79,28 +79,27 @@ database and perform inference on them.
 
 The most convenient method to test the cassandra-dali-plugin with
 Triton is by utilizing the provided
-[Dockerfile.triton](../../Dockerfile.triton) (derived from [NVIDIA
-Triton Inference Server
+[docker-compose.triton.yml](../../docker-compose.triton.yml), which
+runs a Cassandra container and another container, (derived from
+[NVIDIA Triton Inference Server
 NGC](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver)),
 which contains our plugin, NVIDIA Triton, NVIDIA DALI, Cassandra C++
-and Python drivers, as well as a Cassandra server. To build and run
-the container, use the following commands:
+and Python drivers. To build and run the containers, use the following
+commands:
 
 ```bash
-# Build and run cassandra-dali-triton docker container
-$ docker build -t cassandra-dali-triton -f Dockerfile.triton .
-$ docker run --rm -it --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
-  --gpus all --cap-add=sys_admin --name cass-dali cassandra-dali-triton
+docker compose -f docker-compose.triton.yml up --build -d
+docker compose exec dali-cassandra fish
 ```
 
-### Starting and filling the DB
+### Filling the DB
 
-Once the Docker container is set up, it is possible to start the
-database and populate it with images from the imagenette dataset using
-the provided script:
+Once the Docker containers are set up, it is possible to populate the
+database with images from the imagenette dataset using the provided
+script:
 
 ```bash
-./start-and-fill-db.sh  # might take a few minutes
+./fill-db.sh  # might take a few minutes
 ```
 
 ### Starting Triton server
@@ -109,7 +108,6 @@ After the database is populated, we can start the Triton server with
 
 ```bash
 ./start-triton.sh
-# i.e., tritonserver --model-repository ./models --backend-config dali,plugin_libs=/opt/conda/lib/python3.8/site-packages/libcrs4cassandra.so
 ```
 
 Now you can leave this shell open, and it will display the logs of the
@@ -121,7 +119,7 @@ To run the clients, start a new shell in the container with following
 command:
 
 ```bash
-docker exec -ti cass-dali fish
+docker compose exec dali-cassandra fish
 ```
 
 Now, within the container, run the following commands to test the

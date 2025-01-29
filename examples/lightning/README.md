@@ -6,7 +6,7 @@ database and populate it with images from the imagenette dataset using
 the provided script within the Docker container:
 
 ```bash
-./start-and-fill-db.sh  # might take a few minutes
+./fill-db.sh  # might take a few minutes
 ```
 
 In this example we will import the [Imagenette2-320

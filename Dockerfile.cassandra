@@ -1,0 +1,48 @@
+FROM cassandra:5.0
+EXPOSE 9042
+
+RUN \
+    export DEBIAN_FRONTEND=noninteractive \
+    && apt-get update -y -q \
+    && apt-get install -y \
+    python3-yaml/jammy \
+    bash-completion \
+    dnsutils \
+    elinks \
+    fish \
+    git \
+    htop \
+    iperf3 \
+    iproute2 \
+    iputils-ping \
+    less \
+    libtool \
+    mc \
+    nload \
+    nmon \
+    psutils \
+    source-highlight \
+    ssh \
+    sudo \
+    tmux \
+    vim \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# install and configure ssh server
+RUN apt-get install -y openssh-server && mkdir /var/run/sshd
+RUN sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+EXPOSE 22
+COPY varia/ /tmp/varia/
+RUN mv /tmp/varia/ssh/ /root/.ssh/ \
+    && cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys \
+    && chmod 600 /root/.ssh/authorized_keys
+
+# increase write timeout to 20 seconds, listen to all interfaces,
+# enable SSL and increase max direct memory available
+RUN \
+    cp /tmp/varia/keystore /opt/cassandra/conf/ \
+    && cp /opt/cassandra/conf/cassandra.yaml /tmp/cassandra.orig.yaml \
+    && python3 /tmp/varia/edit_cassandra_conf.py
+
+ENTRYPOINT ["/tmp/varia/entrypoint-cassandra.sh"]

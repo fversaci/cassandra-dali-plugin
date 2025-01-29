@@ -17,7 +17,7 @@ from crs4.cassandra_utils import CassandraConf
 cass_conf = CassandraConf()
 cass_conf.username = "guest"
 cass_conf.password = "test"
-cass_conf.cassandra_ips = ["127.0.0.1"]
+cass_conf.cassandra_ips = ["cassandra"]
 cass_conf.use_ssl = True
 # cass_conf.cassandra_port = 9042
 # cass_conf.ssl_certificate = "/certs/rootca.crt"

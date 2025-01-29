@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
-FROM nvcr.io/nvidia/tritonserver:24.08-py3
+FROM nvcr.io/nvidia/tritonserver:24.11-py3
 
 # install some useful tools
 RUN \
@@ -35,6 +35,7 @@ RUN \
     mc \
     nload \
     nmon \
+    openjdk-11-jdk \
     psutils \
     python3 \
     python3-pip \
@@ -48,9 +49,6 @@ RUN \
     wget \
     zip \
     && rm -rf /var/lib/apt/lists/*
-
-# upgrade pip
-RUN pip3 install -U pip
 
 WORKDIR /opt
 
@@ -71,7 +69,7 @@ RUN rm -rf /opt/tritonserver/backends/dali
 # use dali nightly build?
 ARG DALI_DOWNLOAD_EXTRA_INDEX_URL #=https://developer.download.nvidia.com/compute/redist/nightly
 ARG DALI_DOWNLOAD_PKG_NAME #=nvidia-dali-nightly-cuda120
-ARG DALI_DOWNLOAD_VERSION=1.41
+ARG DALI_DOWNLOAD_VERSION=1.43
 ARG DALI_DOWNLOAD_EXTRA_OPTIONS
 
 ARG TRITON_BACKEND_API_VERSION="r22.07"
@@ -126,23 +124,6 @@ RUN \
 # - https://forums.developer.nvidia.com/t/issues-building-docker-image-from-ngc-container-nvcr-io-nvidia-pytorch-22-py3/209034
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib:/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib"
-# Install jdk
-RUN \
-    export DEBIAN_FRONTEND=noninteractive \
-    && apt-get update -y -q \
-    && apt-get install -y openjdk-11-jdk
-
-########################################################################
-# Cassandra server installation, to test examples
-########################################################################
-ARG CASS_V=5.0
-RUN \
-    export CASS_VERS=$(curl 'https://archive.apache.org/dist/cassandra/' | grep -o "$CASS_V\.[[:digit:]]\+" | tail -n 1) \
-    && cd /tmp && wget -nv "https://archive.apache.org/dist/cassandra/$CASS_VERS/apache-cassandra-$CASS_VERS-bin.tar.gz" \
-    && cd / && tar xfz "/tmp/apache-cassandra-$CASS_VERS-bin.tar.gz" \
-    && ln -s "apache-cassandra-$CASS_VERS" cassandra
-
-EXPOSE 9042
 
 ########################################################################
 # Download the Imagenette dataset
@@ -153,21 +134,12 @@ RUN \
     && tar xfz 'imagenette2-320.tgz' \
     && rm 'imagenette2-320.tgz'
 
-RUN \
-    usermod -aG sudo -s /usr/bin/fish triton-server \
-    && sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers \
-    && chown -R triton-server:triton-server /apache-cassandra-$CASS_V*
+RUN sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers
 
-COPY . /home/triton-server/cassandra-dali-plugin
-COPY ./examples/common/private_data.template.py /home/triton-server/cassandra-dali-plugin/examples/common/private_data.py
+COPY . /home/ubuntu/cassandra-dali-plugin
+COPY ./examples/common/private_data.template.py /home/ubuntu/cassandra-dali-plugin/examples/common/private_data.py
 
-RUN chown -R triton-server:triton-server '/home/triton-server/'
-
-# increase write timeout to 20 seconds, listen to all interfaces,
-# enable SSL and increase max direct memory available
-RUN \
-    cp /home/triton-server/cassandra-dali-plugin/varia/keystore /cassandra/conf/ \
-    && python3 /home/triton-server/cassandra-dali-plugin/varia/edit_cassandra_conf.py
+RUN chown -R triton-server:triton-server '/home/ubuntu/'
 
 # install DALI
 RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist \
@@ -177,11 +149,20 @@ RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute
 
 
 # install cassandra dali plugin
-WORKDIR /home/triton-server/cassandra-dali-plugin
+WORKDIR /home/ubuntu/cassandra-dali-plugin
 RUN /usr/bin/pip3 install .
 
 # install triton client
 RUN pip3 install tritonclient[all] IPython
 
-WORKDIR /home/triton-server/cassandra-dali-plugin/examples/triton
+# copy ssh keys to access cassandra container
+COPY varia/ssh/ /home/ubuntu/.ssh/
+RUN chown -R triton-server:triton-server '/home/ubuntu/.ssh' \
+    && chmod 600 /home/ubuntu/.ssh/id_rsa
+COPY varia/entrypoint-dali-cassandra.sh /tmp
+
+RUN cd /home && ln -s ubuntu triton-server
 USER triton-server
+WORKDIR /home/ubuntu/cassandra-dali-plugin/examples/triton
+RUN cd models/classification_resnet/1/ && python3 runme.py && cd -
+ENTRYPOINT ["/tmp/entrypoint-dali-cassandra.sh"]

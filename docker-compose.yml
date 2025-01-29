@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  cassandra:
+    build:
+      context: .
+      dockerfile: Dockerfile.cassandra
+    container_name: cassandra
+    # ports:
+    #   - "9042:9042"
+    # volumes:
+    #   - /mnt/fast_disk/cassandra:/var/lib/cassandra:rw
+    networks:
+      - cassandra-net
+
+  dali-cassandra:
+    build:
+      context: .
+      dockerfile: Dockerfile.dali-cassandra
+    container_name: dali-cassandra
+    depends_on:
+      - cassandra
+    networks:
+      - cassandra-net
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    environment:
+      NVIDIA_VISIBLE_DEVICES: "all"
+    ipc: host
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      stack:
+        soft: 67108864
+        hard: 67108864
+    command: tail -f /dev/null
+
+networks:
+  cassandra-net:
+    driver: bridge
