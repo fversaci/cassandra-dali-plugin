@@ -37,8 +37,8 @@ using BatchImgLab = std::pair<BatchRawImage, BatchLabel>;
 class BatchLoader {
  private:
   // dali types
-  dali::DALIDataType DALI_INT_TYPE = dali::DALI_INT32;
-  dali::DALIDataType DALI_IMG_TYPE = dali::DALI_UINT8;
+  dali::DALIDataType DALI_INT_TYPE = DALI_INT32;
+  dali::DALIDataType DALI_IMG_TYPE = DALI_UINT8;
   // parameters
   bool connected = false;
   std::string table;
