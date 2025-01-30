@@ -30,9 +30,11 @@ docker compose up --build -d
 docker compose exec dali-cassandra fish
 ```
 
-For improved performance and for data persistence, consider modifying
-[docker-compose.yml](docker-compose.yml) to mount a host directory for
-Cassandra on a fast disk.
+Note that Cassandra DB may take 1-2 minutes to become fully
+operational, even though the container starts almost immediately.
+Also, for improved performance and for data persistence, consider
+modifying [docker-compose.yml](docker-compose.yml) to mount a host
+directory for Cassandra on a fast disk.
 
 ## How to call the plugin
 
