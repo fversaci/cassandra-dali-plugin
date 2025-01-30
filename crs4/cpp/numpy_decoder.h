@@ -36,6 +36,10 @@ class NumpyDecoder : public dali::Operator<dali::CPUBackend> {
   bool SetupImpl(std::vector<dali::OutputDesc> &output_desc,
                  const dali::Workspace &ws) override;
   void RunImpl(dali::Workspace &ws) override;
+  bool HasContiguousOutputs() const override {
+    return false;
+  }
+
 };
 
 }  // namespace crs4
