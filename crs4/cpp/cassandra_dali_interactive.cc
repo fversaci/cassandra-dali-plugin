@@ -158,6 +158,7 @@ DALI_SCHEMA(crs4__cassandra_interactive)
 .DocStr("Reads UUIDs via feed_input and returns images and labels/masks")
 .NumInput(0)
 .NumOutput(2)
+.AddRandomSeedArg()
 .AddOptionalArg<std::string>("cloud_config",
    R"(Cloud configuration for Cassandra (e.g., AstraDB))", "")
 .AddOptionalArg("cassandra_ips",
