@@ -114,10 +114,9 @@ efficiently stored and retrieved as BLOBs in a NoSQL DB. This enables
 scalability in data loading through prefetching and
 pipelining. Furthermore, it enables data to be stored in a separate
 location, potentially even at a significant distance from where it is
-processed, as discussed [here](docs/LFN.md). This capability also
-facilitates storing data along with a comprehensive set of associated
-metadata, which can be more conveniently utilized during machine
-learning.
+processed. This capability also facilitates storing data along with a
+comprehensive set of associated metadata, which can be more
+conveniently utilized during machine learning.
 
 For the sake of convenience and improved performance, we choose to
 store data and metadata in separate tables within the database. The
@@ -127,6 +126,27 @@ BLOBs in the *data* table. During the machine learning process, we
 will exclusively access the *data* table. Below, you will find
 examples of functional code for creating and populating these tables
 in the database.
+
+## Further details
+
+A technical report which describes in detail our plugin performance,
+with a focus on high-latency connections, is available
+[here](https://arxiv.org/abs/2503.22643).
+
+### Citation
+
+```bibtex
+@misc{versaci2025hidinglatenciesnetworkbasedimage,
+      title={Hiding Latencies in Network-Based Image Loading for Deep Learning},
+      author={Francesco Versaci and Giovanni Busonera},
+      year={2025},
+      eprint={2503.22643},
+      archivePrefix={arXiv},
+      primaryClass={cs.DC},
+      url={https://arxiv.org/abs/2503.22643},
+}
+```
+
 
 ## Examples
 
