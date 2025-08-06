@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.17.2
 #   kernelspec:
-#     display_name: python3_stats-ML
+#     display_name: stats-ML
 #     language: python
-#     name: python3_stats-ml
+#     name: stats-ml
 # ---
 
 import os, sys, glob
@@ -353,6 +353,8 @@ x_offset = 0.2
 
 norm_factor = np.max(y_bar_np)
 
+plt.figure(figsize=(4,2.5))
+
 _ = plt.bar(x_bar_np[x_bar_loc_index], y_bar_np[x_bar_loc_index] / norm_factor, color=x_color_np[x_bar_loc_index], label="Loc", zorder=3)
 _ = plt.bar(x_bar_np[x_bar_hi_index] + x_offset, y_bar_np[x_bar_hi_index] / norm_factor, color=x_color_np[x_bar_hi_index], label="Hi", zorder=3)
 _ = plt.bar(x_bar_np[x_bar_med_index], y_bar_np[x_bar_med_index] / norm_factor, color=x_color_np[x_bar_med_index], label="Med", zorder=3)
@@ -361,7 +363,7 @@ _ = plt.bar(x_bar_np[x_bar_low_index] - x_offset, y_bar_np[x_bar_low_index] / no
 _ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0)
 
 plt.ylabel("Normalized image rate")
-plt.legend(loc='upper center')
+plt.legend(loc='upper center', fontsize=8)
 plt.grid(axis='y', alpha=0.8, zorder=0)
 
 plt.savefig("figures/normalized_train_rate.pdf", bbox_inches="tight")
