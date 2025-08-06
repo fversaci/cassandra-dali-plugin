@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.17.2
 #   kernelspec:
-#     display_name: python3_stats-ML
+#     display_name: stats-ML
 #     language: python
-#     name: python3_stats-ml
+#     name: stats-ml
 # ---
 
 import numpy as np
@@ -460,6 +460,8 @@ x_offset = 0.2
 
 norm_fact = np.max(y_bar_np)
 
+plt.figure(figsize=(5.5,2.5))
+
 _ = plt.bar(x_bar_np[x_bar_loc_index], y_bar_np[x_bar_loc_index] / norm_fact, color=x_color_np[x_bar_loc_index], label="Loc", zorder=3)
 _ = plt.bar(x_bar_np[x_bar_hi_index] + x_offset, y_bar_np[x_bar_hi_index] / norm_fact, color=x_color_np[x_bar_hi_index], label="Hi", zorder=3)
 _ = plt.bar(x_bar_np[x_bar_med_index], y_bar_np[x_bar_med_index] / norm_fact, color=x_color_np[x_bar_med_index], label="Med", zorder=3)
@@ -467,11 +469,16 @@ _ = plt.bar(x_bar_np[x_bar_low_index] - x_offset, y_bar_np[x_bar_low_index] / no
 
 _ = plt.xticks(x_ticks_indexes, x_tick_lab_np, rotation=0)
 
+plt.axhline(6250 / norm_fact, c='r', ls='--')
+    
 plt.ylabel("Normalized data rate")
-plt.legend(loc='upper center')
+plt.legend(loc='upper center', fontsize=8)
 plt.grid(axis='y', alpha=0.8, zorder=0)
 
 plt.savefig("figures/normalized_loopread.pdf", bbox_inches="tight")
+# -
+
+norm_fact
 
 # +
 x_bar_np = np.array(x_bar)
@@ -542,6 +549,66 @@ axs[1].tick_params(axis='both', which='major', labelsize=11)
 plt.tight_layout()
 
 plt.savefig("figures/batchtime_ooo_vs_noooo.pdf", bbox_inches="tight")
+# -
+
+ooo_dr_series_smoothed
+
+# +
+scylla_ooo_fn = csv_file_list[8]
+scylla_no_ooo_fn = csv_file_list[12]
+epoch = 1
+
+n_epochs, bs, data_df, data_grp_per_epoch, test_name = load_loopread_csv(scylla_ooo_fn, test_name_dict)
+ooo_dr_series = data_grp_per_epoch.get_group(epoch)['batch_time_ms'].iloc[1:1250]
+
+ooo_dr_series_smoothed = moving_average(ooo_dr_series, n=1)
+print (ooo_dr_series.sum())
+m_ooo = np.mean(ooo_dr_series)
+
+f, axs = plt.subplots(1, 1, figsize=(5,3))
+axs.set_xlabel("batch index", fontsize=10)
+axs.plot(ooo_dr_series_smoothed, c='k')
+axs.axhline(m_ooo, ls='--', c='r', label= f"mean={m_ooo:.2f} ms")
+axs.set_ylabel("milliseconds", fontsize=10)
+axs.grid(True)
+axs.legend(loc='upper center', fontsize=12)
+
+axs.tick_params(axis='both', which='major', labelsize=8)
+
+plt.tight_layout()
+
+plt.savefig("figures/batchtime_ooo.pdf", bbox_inches="tight")
+
+# +
+scylla_ooo_fn = csv_file_list[8]
+scylla_no_ooo_fn = csv_file_list[12]
+epoch = 1
+
+n_epochs, bs, data_df, data_grp_per_epoch, test_name = load_loopread_csv(scylla_ooo_fn, test_name_dict)
+ooo_dr_series = data_grp_per_epoch.get_group(epoch)['batch_time_ms'].iloc[1:-1]
+ooo_dr_series_smoothed = moving_average(ooo_dr_series, n=1)
+print (ooo_dr_series.sum())
+m_ooo = np.mean(ooo_dr_series)
+
+n_epochs, bs, data_df, data_grp_per_epoch, test_name = load_loopread_csv(scylla_no_ooo_fn, test_name_dict)
+no_ooo_dr_series = data_grp_per_epoch.get_group(epoch)['batch_time_ms'].iloc[1:1250]
+no_ooo_dr_series_smoothed = moving_average(no_ooo_dr_series, n=1)
+print (no_ooo_dr_series.sum())
+m_no_ooo = np.mean(no_ooo_dr_series)
+
+f, axs = plt.subplots(1, 1, figsize=(5,3), sharex=True)
+axs.plot(no_ooo_dr_series_smoothed, c='k', )
+axs.set_xlabel("batch index", fontsize=10)
+axs.axhline(m_no_ooo, ls='--', c='r', label= f"mean={m_no_ooo:.2f} ms")
+axs.set_ylabel("milliseconds", fontsize=10)
+axs.grid(True)
+axs.legend(loc='upper center', fontsize=12)
+
+axs.tick_params(axis='both', which='major', labelsize=8)
+
+plt.tight_layout()
+
+plt.savefig("figures/batchtime_noooo.pdf", bbox_inches="tight")
 # -
 
 plt.plot(no_ooo_dr_series_smoothed, label=f"no OOO", c='k', )
