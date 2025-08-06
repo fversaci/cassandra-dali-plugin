@@ -6,11 +6,11 @@
 #       extension: .py
 #       format_name: light
 #       format_version: '1.5'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.17.2
 #   kernelspec:
-#     display_name: python3_stats-ML
+#     display_name: stats-ML
 #     language: python
-#     name: python3_stats-ml
+#     name: stats-ml
 # ---
 
 # +
@@ -295,11 +295,11 @@ dim1 = int(np.ceil(np.sqrt(n_plots)))
 dim2 = int(np.ceil(np.sqrt(n_plots)))
 
 dim1 = 4
-dim2 = 8
+dim2 = 4
 
 #plt.rcParams.update({'font.size': 12}) 
 
-ax = df_tmp_smoothed.plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), lw=2, legend=False, sharex=True, sharey=True, fontsize=18)
+ax = df_tmp_smoothed.iloc[:,:16].plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), lw=2, legend=False, sharex=True, sharey=True, fontsize=18)
 f = plt.gcf()
 
 f.supxlabel("Time (s)", fontsize=20)
@@ -329,11 +329,11 @@ dim1 = int(np.ceil(np.sqrt(n_plots)))
 dim2 = int(np.ceil(np.sqrt(n_plots)))
 
 dim1 = 4
-dim2 = 8
+dim2 = 4
 
 #plt.rcParams.update({'font.size': 12}) 
 
-_ = df_tmp_smoothed.plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), legend=False, sharex=True, sharey=True,fontsize=18)
+_ = df_tmp_smoothed.iloc[:,:16].plot(subplots=True, layout=(dim1,dim2), figsize=(dim2*2.5, dim1*2), legend=False, sharex=True, sharey=True,fontsize=18)
 f = plt.gcf()
 
 f.supxlabel("Time (s)", fontsize=20)
