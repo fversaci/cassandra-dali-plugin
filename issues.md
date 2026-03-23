@@ -6,8 +6,6 @@
 - **Major: the decoupled Triton stress model config has an output-type mismatch.**  
   `examples/triton/models/dali_cassandra_decoupled_stress/config.pbtxt` declares `DALI_OUTPUT_0` as `TYPE_FP32`, but the corresponding pipeline is a raw-byte / first-byte stress test and does not obviously produce FP32 output. The config and implementation look inconsistent.
 
-# New issues found
-
 - **Minor: Typo in `examples/splitfile/distrib_train_from_cassandra.py` in `compute_split_index` function.**  
   There is a typo `exlcude_index` instead of `exclude_index` inside the `if exclude_index > n_split:` block.
 
