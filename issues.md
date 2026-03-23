@@ -1,15 +1,5 @@
 # Issues found
 
-- **Major: `setup.py` does not declare the Python package correctly.**  
-  `packages=["crs4/cassandra_utils"]` is not a valid package name for setuptools. This is likely to break `pip install .` and prevent `crs4.cassandra_utils` from being importable in a normal installation.
-
-- **Major: some C++ source/header files are missing required standard-library includes.**  
-  At minimum:
-  - `crs4/cpp/batch_loader.h` uses `std::condition_variable` but does not include `<condition_variable>`.
-  - `crs4/cpp/cassandra_dali_interactive.h` uses `std::optional` but does not include `<optional>`.
-  - `crs4/cpp/cassandra_dali_selffeed.h` uses `std::mt19937` and `std::shuffle` but does not include `<random>` and `<algorithm>`.  
-  These are likely build failures on a clean toolchain.
-
 - **Major: `crs4/cassandra_utils/_cassandra_segmentation_writer.py` uses `BatchStatement` without importing it.**  
   `save_item()` calls `BatchStatement()` but that symbol is never imported, so saving items will raise `NameError`.
 
