@@ -1,8 +1,5 @@
 # Issues found
 
-- **Major: `crs4/cassandra_utils/_cassandra_segmentation_writer.py` uses `BatchStatement` without importing it.**  
-  `save_item()` calls `BatchStatement()` but that symbol is never imported, so saving items will raise `NameError`.
-
 - **Major: split-file cross-validation logic is broken in `examples/splitfile/distrib_train_from_cassandra.py`.**  
   The `crossval_index` option is documented, but `compute_split_index()` does not actually use it to pick the validation split. The branch also has fragile `exclude_index` handling that can crash when `exclude_index` is `None`. This makes the documented `--crossval-index` / `--exclude-index` feature unreliable.
 
