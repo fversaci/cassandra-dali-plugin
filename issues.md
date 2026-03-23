@@ -17,6 +17,3 @@
 
 - **Minor: Several parameters silently ignored in Triton reader wrapper `examples/triton/cassandra_reader_interactive.py`.**  
   The function `get_cassandra_reader()` in this file accepts `shuffle_every_epoch`, `shard_id`, `num_shards`, and `mini_batch_size` parameters, but none of them are passed to the underlying `fn.crs4.cassandra_interactive` operator. Users who set these parameters (e.g., expecting shuffling) will get no effect. The same `shuffle_every_epoch` issue applies to `examples/triton/cassandra_reader_decoupled.py`.
-
-- **Minor: Typo in `crs4/cassandra_utils/_split_generator.py` produces a misleadingly named key in saved split files.**  
-  In the `setup()` method, the dictionary key is written as `"medadata_id_col"` (missing the first `"ta"`) instead of `"metadata_id_col"`. The key is never read back by any training script, so it does not cause a runtime error, but it produces an incorrectly named entry in every saved split file, which could confuse users inspecting the pickled data directly.
