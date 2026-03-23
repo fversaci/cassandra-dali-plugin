@@ -5,9 +5,3 @@
 
 - **Major: the decoupled Triton stress model config has an output-type mismatch.**  
   `examples/triton/models/dali_cassandra_decoupled_stress/config.pbtxt` declares `DALI_OUTPUT_0` as `TYPE_FP32`, but the corresponding pipeline is a raw-byte / first-byte stress test and does not obviously produce FP32 output. The config and implementation look inconsistent.
-
-- **Major: `examples/splitfile/README.md` has malformed markdown.**  
-  The first code block is not properly closed before the `## Create a split file` section, so the rest of the document will render incorrectly.
-
-- **Security issue: an SSH private key is committed to the repository and copied into container images.**  
-  `varia/ssh/id_rsa` is present in the repo, and the Dockerfiles copy `varia/ssh/` into the images. This exposes a secret key in source control and in built images.
