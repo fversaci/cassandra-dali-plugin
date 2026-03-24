@@ -54,7 +54,7 @@ ARG CASS_DRIVER_VER=2.17.1
 RUN \
     wget -nv "https://github.com/datastax/cpp-driver/archive/$CASS_DRIVER_VER.tar.gz" \
     && tar xfz cassandra-cpp-driver-$CASS_DRIVER_VER.tar.gz \
-    && cd cpp-driver-$CASS_DRIVER_VER \
+    && cd cassandra-cpp-driver-$CASS_DRIVER_VER \
     && mkdir build \
     && cd build \
     && cmake .. \
