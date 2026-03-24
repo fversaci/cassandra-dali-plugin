@@ -14,6 +14,7 @@
 
 import cassandra
 from cassandra import concurrent
+from cassandra.query import BatchStatement
 import uuid
 
 from crs4.cassandra_utils._cassandra_writer import CassandraWriter

@@ -24,6 +24,7 @@ $ cat create_tables.cql | ssh root@cassandra /opt/cassandra/bin/cqlsh
 # - Fill the tables with data and metadata
 $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=train --data-table=imagenette.data --metadata-table=imagenette.metadata
 $ python3 extract_serial.py /tmp/imagenette2-320 --split-subdir=val --data-table=imagenette.data --metadata-table=imagenette.metadata
+```
 
 ## Create a split file
 Once the data is in the database, we can create a split file by running the ```create_split.py``` script. To view the different options available for the script, we can use the command:

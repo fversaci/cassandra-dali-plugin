@@ -41,17 +41,13 @@ def read_uuids(rows_fn):
 
 def get_cassandra_reader(
     data_table,
-    mini_batch_size=-1,
     id_col="id",
     label_type="int",
     label_col="label",
     data_col="data",
-    shard_id=0,
-    num_shards=1,
     io_threads=2,
     prefetch_buffers=2,
     name="UUID",
-    shuffle_every_epoch=True,
     comm_threads=2,
     copy_threads=2,
     wait_threads=2,

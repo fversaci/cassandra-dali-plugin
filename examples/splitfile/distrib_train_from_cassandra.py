@@ -325,7 +325,7 @@ def compute_split_index(split, train_index, val_index, crossval_index, exclude_i
     # Do nothing otherwise
     if crossval_index and n_split > 2:
         if exclude_index > n_split:
-            exlcude_index = n_split - 1
+            exclude_index = n_split - 1
         if crossval_index > n_split or crossval_index == exclude_index:
             crossval_index = n_split - 2
 

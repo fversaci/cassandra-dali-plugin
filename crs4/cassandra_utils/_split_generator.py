@@ -78,7 +78,7 @@ class split_generator:
             "data_id_col": self._data_id_col,
             "data_label_col": self._data_label_col,
             "metadata_table": self._metadata_table,
-            "medadata_id_col": self._metadata_id_col,
+            "metadata_id_col": self._metadata_id_col,
             "metadata_label_col": self._metadata_label_col,
             "data_col": self._data_col,
             "label_type": self._label_type,  # String {int|blob|none} to be defined in derived classes

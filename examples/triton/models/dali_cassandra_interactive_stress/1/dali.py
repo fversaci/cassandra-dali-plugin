@@ -21,9 +21,6 @@ max_batch_size = 256
 @pipeline_def(batch_size=max_batch_size, num_threads=16)
 def create_dali_pipeline(
     data_table="imagenette.data_train",
-    crop=224,
-    size=256,
-    dali_cpu=False,
     prefetch_buffers=4,
     io_threads=4,
     comm_threads=2,

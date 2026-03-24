@@ -108,7 +108,7 @@ def send_images_to_db(
     return ret
 
 
-def save_image_to_dir(target_dir, path, label, raw_data, file_ext):
+def save_image_to_dir(target_dir, label, raw_data, file_ext):
     out_dir = os.path.join(target_dir, str(label))
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
@@ -132,6 +132,6 @@ def save_images_to_dir(target_dir, img_format, img_size=def_size):
     def ret(jobs):
         for path, label, _ in tqdm(jobs):
             raw_data = get_data(img_format, img_size=img_size)(path)
-            save_image_to_dir(target_dir, path, label, raw_data, file_ext)
+            save_image_to_dir(target_dir, label, raw_data, file_ext)
 
     return ret
