@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/tritonserver
-FROM nvcr.io/nvidia/tritonserver:25.04-py3
+FROM nvcr.io/nvidia/tritonserver:26.02-py3
 
 # install some useful tools
 RUN \
@@ -114,7 +114,7 @@ RUN \
 #install cassandra python driver + torch + other python libraries
 RUN \
     pip3 install --upgrade --no-cache matplotlib pandas clize \
-      opencv-python cassandra-driver pybind11 tqdm tifffile pyyaml torch torchvision
+      opencv-python cassandra-driver pybind11 tqdm tifffile torch torchvision
 
 ########################################################################
 # Fix for error given by "from nvidia.dali.plugin.pytorch import DALIGenericIterator"
