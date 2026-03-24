@@ -1,7 +1,4 @@
-# inspired by
-# https://docs.nvidia.com/deeplearning/dali/user-guide/docs/examples/custom_operations/custom_operator/create_a_custom_operator.html
-
-cmake_minimum_required(VERSION 3.25.2)
+cmake_minimum_required(VERSION 3.10)
 set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")
 
 project(crs4_cassandra_plugin LANGUAGES CUDA CXX C)
