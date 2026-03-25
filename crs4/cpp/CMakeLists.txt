@@ -1,3 +1,5 @@
+# inspired to https://docs.nvidia.com/deeplearning/dali/archives/dali_1_53_0/user-guide/examples/custom_operations/custom_operator/create_a_custom_operator.html
+
 cmake_minimum_required(VERSION 3.25.2)
 set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")
 
