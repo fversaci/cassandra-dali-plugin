@@ -396,6 +396,13 @@ def main():
 
     args.distributed = world_size > 1
 
+    print("opt_level = {}".format(args.opt_level))
+    print(
+        "keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32),
+        type(args.keep_batchnorm_fp32),
+    )
+    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
+
     print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
@@ -446,12 +453,11 @@ def main():
         weight_decay=args.weight_decay,
     )
 
-    # Initialize GradScaler
-    if args.amp:
-        if args.loss_scale:
-            args.scaler = torch.amp.GradScaler("cuda", init_scale=args.loss_scale)
-        else:
-            args.scaler = torch.amp.GradScaler("cuda")
+    # Initialize Amp.  Amp accepts either values or strings for the
+    # optional override arguments, for convenient interoperation with
+    # argparse.
+    if args.opt_level is not None:
+        args.scaler = torch.cuda.amp.GradScaler()
 
     # For distributed training, wrap the model with
     # torch.nn.parallel.DistributedDataParallel.
@@ -619,13 +625,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # compute output
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("forward")
-
-        if args.amp:
-            with torch.amp.autocast("cuda"):
+        
+        if args.opt_level is not None:
+            with torch.cuda.amp.autocast():
                 output = model(input)
         else:
             output = model(input)
-
+            
         if args.prof >= 0:
             torch.cuda.nvtx.range_pop()
         loss = criterion(output, target)
@@ -635,7 +641,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("backward")
-        if args.amp:
+        if args.opt_level is not None:
             args.scaler.scale(loss).backward()
         else:
             loss.backward()
@@ -644,13 +650,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("optimizer.step()")
-
-        if args.amp:
+        
+        if args.opt_level is not None:
             args.scaler.step(optimizer)
             args.scaler.update()
         else:
             optimizer.step()
-
+            
         if args.prof >= 0:
             torch.cuda.nvtx.range_pop()
 
@@ -730,8 +736,8 @@ def validate(val_loader, model, criterion):
 
         # compute output
         with torch.no_grad():
-            if args.amp:
-                with torch.amp.autocast("cuda"):
+            if args.opt_level is not None:
+                with torch.cuda.amp.autocast():
                     output = model(input)
             else:
                 output = model(input)
