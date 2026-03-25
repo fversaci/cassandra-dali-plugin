@@ -396,13 +396,6 @@ def main():
 
     args.distributed = world_size > 1
 
-    print("opt_level = {}".format(args.opt_level))
-    print(
-        "keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32),
-        type(args.keep_batchnorm_fp32),
-    )
-    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
-
     print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
     cudnn.benchmark = True
@@ -453,10 +446,8 @@ def main():
         weight_decay=args.weight_decay,
     )
 
-    # Initialize Amp.  Amp accepts either values or strings for the
-    # optional override arguments, for convenient interoperation with
-    # argparse.
-    if args.opt_level is not None:
+    # Initialize GradScaler
+    if args.amp:
         args.scaler = torch.amp.GradScaler('cuda')
 
     # For distributed training, wrap the model with
@@ -626,7 +617,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("forward")
         
-        if args.opt_level is not None:
+        if args.amp:
             with torch.amp.autocast('cuda'):
                 output = model(input)
         else:
@@ -641,7 +632,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("backward")
-        if args.opt_level is not None:
+        if args.amp:
             args.scaler.scale(loss).backward()
         else:
             loss.backward()
@@ -651,7 +642,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("optimizer.step()")
         
-        if args.opt_level is not None:
+        if args.amp:
             args.scaler.step(optimizer)
             args.scaler.update()
         else:
@@ -736,7 +727,7 @@ def validate(val_loader, model, criterion):
 
         # compute output
         with torch.no_grad():
-            if args.opt_level is not None:
+            if args.amp:
                 with torch.amp.autocast('cuda'):
                     output = model(input)
             else:
