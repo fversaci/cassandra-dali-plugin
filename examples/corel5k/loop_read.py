@@ -21,6 +21,7 @@ from nvidia.dali.plugin.base_iterator import LastBatchPolicy
 from nvidia.dali.plugin.pytorch import DALIGenericIterator
 import nvidia.dali.fn as fn
 import nvidia.dali.types as types
+from nvidia.dali.fn import decoders
 
 # some preconfigured operators
 from fn_shortcuts import (
@@ -95,8 +96,8 @@ def read_data(
         images = fn_decode(images)
         images = fn_resize(images)
         # decode labels
-        labels = fn.crs4.numpy_decoder(labels)
-        if device_id != types.CPU_ONLY_DEVICE_ID:
+        labels = decoders.numpy(labels)
+        if use_gpu:
             images = images.gpu()
             labels = labels.gpu()
         return images, labels
