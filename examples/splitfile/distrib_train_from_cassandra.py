@@ -457,7 +457,7 @@ def main():
     # optional override arguments, for convenient interoperation with
     # argparse.
     if args.opt_level is not None:
-        args.scaler = torch.cuda.amp.GradScaler()
+        args.scaler = torch.amp.GradScaler('cuda')
 
     # For distributed training, wrap the model with
     # torch.nn.parallel.DistributedDataParallel.
@@ -627,7 +627,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             torch.cuda.nvtx.range_push("forward")
         
         if args.opt_level is not None:
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast('cuda'):
                 output = model(input)
         else:
             output = model(input)
@@ -737,7 +737,7 @@ def validate(val_loader, model, criterion):
         # compute output
         with torch.no_grad():
             if args.opt_level is not None:
-                with torch.cuda.amp.autocast():
+                with torch.amp.autocast('cuda'):
                     output = model(input)
             else:
                 output = model(input)
