@@ -350,7 +350,10 @@ def main():
 
     # Initialize GradScaler
     if args.amp:
-        scaler = torch.amp.GradScaler('cuda')
+        if args.loss_scale:
+            scaler = torch.amp.GradScaler('cuda', init_scale=args.loss_scale)
+        else:
+            scaler = torch.amp.GradScaler('cuda')
 
     # For distributed training, wrap the model with
     # torch.nn.parallel.DistributedDataParallel.
