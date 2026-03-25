@@ -168,17 +168,31 @@ def parse():
     )
     parser.add_argument("--deterministic", action="store_true")
 
-    parser.add_argument("--sync_bn", action="store_true", help="enabling apex sync BN.")
+    parser.add_argument(
+        "--sync_bn", action="store_true", help="enabling torch sync BN."
+    )
 
-    parser.add_argument("--opt-level", type=str, default=None)
-    parser.add_argument("--keep-batchnorm-fp32", type=str, default=None)
-    parser.add_argument("--loss-scale", type=str, default=None)
+    parser.add_argument("--amp", action="store_true", help="Use native torch amp")
     parser.add_argument("--channels-last", type=bool, default=False)
     parser.add_argument(
         "-t",
         "--test",
         action="store_true",
         help="Launch test mode with preset arguments",
+    )
+    parser.add_argument(
+        "--loss-scale",
+        default=None,
+        type=float,
+        metavar="LS",
+        help="Loss scale for AMP (default: dynamic)",
+    )
+    parser.add_argument(
+        "--opt-level",
+        default="O1",
+        type=str,
+        metavar="OL",
+        help="Optimization level (Apex compatibility, ignored in native AMP)",
     )
     args = parser.parse_args()
     return args
@@ -277,7 +291,6 @@ def main():
 
     # test mode, use default args for sanity test
     if args.test:
-        args.opt_level = None
         args.epochs = 1
         args.start_epoch = 0
         args.arch = "resnet50"
@@ -286,24 +299,6 @@ def main():
         print("Test mode - no DDP, no apex, RN50, 10 iterations")
 
     args.distributed = world_size > 1
-
-    # make apex optional
-    if args.opt_level is not None or args.distributed or args.sync_bn:
-        try:
-            global DDP, amp, optimizers, parallel
-            from apex.parallel import DistributedDataParallel as DDP
-            from apex import amp, optimizers, parallel
-        except ImportError:
-            raise ImportError(
-                "Please install apex from https://www.github.com/nvidia/apex to run this example."
-            )
-
-    print("opt_level = {}".format(args.opt_level))
-    print(
-        "keep_batchnorm_fp32 = {}".format(args.keep_batchnorm_fp32),
-        type(args.keep_batchnorm_fp32),
-    )
-    print("loss_scale = {}".format(args.loss_scale), type(args.loss_scale))
 
     print("\nCUDNN VERSION: {}\n".format(torch.backends.cudnn.version()))
 
@@ -334,8 +329,8 @@ def main():
         model = models.__dict__[args.arch]()
 
     if args.sync_bn:
-        print("using apex synced BN")
-        model = parallel.convert_syncbn_model(model)
+        print("using torch synced BN")
+        model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
 
     if hasattr(torch, "channels_last") and hasattr(torch, "contiguous_format"):
         if args.channels_last:
@@ -355,30 +350,18 @@ def main():
         weight_decay=args.weight_decay,
     )
 
-    # Initialize Amp.  Amp accepts either values or strings for the
-    # optional override arguments, for convenient interoperation with
-    # argparse.
-    if args.opt_level is not None:
-        model, optimizer = amp.initialize(
-            model,
-            optimizer,
-            opt_level=args.opt_level,
-            keep_batchnorm_fp32=args.keep_batchnorm_fp32,
-            loss_scale=args.loss_scale,
-        )
+    # Initialize GradScaler
+    scaler = None
+    if args.amp:
+        if args.loss_scale:
+            scaler = torch.amp.GradScaler("cuda", init_scale=args.loss_scale)
+        else:
+            scaler = torch.amp.GradScaler("cuda")
 
     # For distributed training, wrap the model with
-    # apex.parallel.DistributedDataParallel.  This must be done AFTER
-    # the call to amp.initialize.  If model = DDP(model) is called
-    # before model, ... = amp.initialize(model, ...), the call to
-    # amp.initialize may alter the types of model's parameters in a
-    # way that disrupts or destroys DDP's allreduce hooks.
+    # torch.nn.parallel.DistributedDataParallel.
     if args.distributed:
-        # By default, apex.parallel.DistributedDataParallel overlaps
-        # communication with computation in the backward pass.  model
-        # = DDP(model) delay_allreduce delays all communication to the
-        # end of the backward pass.
-        model = DDP(model, delay_allreduce=True)
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -467,13 +450,13 @@ def main():
     total_time = AverageMeter()
     for epoch in range(args.start_epoch, args.epochs):
         # train for one epoch
-        avg_train_time = train(train_loader, model, criterion, optimizer, epoch)
+        avg_train_time = train(train_loader, model, criterion, optimizer, epoch, scaler)
         total_time.update(avg_train_time)
         if args.test:
             break
 
         # evaluate on validation set
-        [prec1, prec5] = validate(val_loader, model, criterion)
+        [prec1, prec5] = validate(val_loader, model, criterion, scaler)
 
         # remember best prec@1 and save checkpoint
         if local_rank == 0:  # global_rank?
@@ -491,9 +474,7 @@ def main():
             )
             if epoch == args.epochs - 1:
                 print(
-                    "##Top-1 {0}\n"
-                    "##Top-5 {1}\n"
-                    "##Perf  {2}".format(
+                    "##Top-1 {0}\n##Top-5 {1}\n##Perf  {2}".format(
                         prec1, prec5, args.total_batch_size / total_time.avg
                     )
                 )
@@ -502,7 +483,7 @@ def main():
         val_loader.reset()
 
 
-def train(train_loader, model, criterion, optimizer, epoch):
+def train(train_loader, model, criterion, optimizer, epoch, scaler):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -532,7 +513,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # compute output
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("forward")
-        output = model(input)
+
+        if args.amp:
+            with torch.amp.autocast("cuda"):
+                output = model(input)
+        else:
+            output = model(input)
+
         if args.prof >= 0:
             torch.cuda.nvtx.range_pop()
         loss = criterion(output, target)
@@ -542,9 +529,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("backward")
-        if args.opt_level is not None:
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
-                scaled_loss.backward()
+        if args.amp:
+            scaler.scale(loss).backward()
         else:
             loss.backward()
         if args.prof >= 0:
@@ -552,7 +538,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("optimizer.step()")
-        optimizer.step()
+
+        if args.amp:
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            optimizer.step()
+
         if args.prof >= 0:
             torch.cuda.nvtx.range_pop()
 
@@ -614,7 +606,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     return batch_time.avg
 
 
-def validate(val_loader, model, criterion):
+def validate(val_loader, model, criterion, scaler=None):
     batch_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -632,7 +624,11 @@ def validate(val_loader, model, criterion):
 
         # compute output
         with torch.no_grad():
-            output = model(input)
+            if args.amp:
+                with torch.amp.autocast("cuda"):
+                    output = model(input)
+            else:
+                output = model(input)
             loss = criterion(output, target)
 
         # measure accuracy and record loss
@@ -738,7 +734,7 @@ def accuracy(output, target, topk=(1,)):
 
 def reduce_tensor(tensor):
     rt = tensor.clone()
-    dist.all_reduce(rt, op=dist.reduce_op.SUM)
+    dist.all_reduce(rt, op=dist.ReduceOp.SUM)
     rt /= world_size
     return rt
 
