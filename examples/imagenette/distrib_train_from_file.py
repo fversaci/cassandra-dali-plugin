@@ -143,7 +143,9 @@ def parse():
     )
     parser.add_argument("--deterministic", action="store_true")
 
-    parser.add_argument("--sync_bn", action="store_true", help="enabling torch sync BN.")
+    parser.add_argument(
+        "--sync_bn", action="store_true", help="enabling torch sync BN."
+    )
 
     parser.add_argument("--amp", action="store_true", help="Use native torch amp")
     parser.add_argument("--channels-last", type=bool, default=False)
@@ -305,7 +307,7 @@ def main():
     # Initialize GradScaler
     scaler = None
     if args.amp:
-        scaler = torch.amp.GradScaler('cuda')
+        scaler = torch.amp.GradScaler("cuda")
 
     # For distributed training, wrap the model with torch.nn.parallel.DistributedDataParallel.
     if args.distributed:
@@ -461,13 +463,13 @@ def train(train_loader, model, criterion, optimizer, epoch, scaler):
         # compute output
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("forward")
-        
+
         if args.amp:
-            with torch.amp.autocast('cuda'):
+            with torch.amp.autocast("cuda"):
                 output = model(input)
         else:
             output = model(input)
-            
+
         if args.prof >= 0:
             torch.cuda.nvtx.range_pop()
         loss = criterion(output, target)
@@ -486,13 +488,13 @@ def train(train_loader, model, criterion, optimizer, epoch, scaler):
 
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("optimizer.step()")
-        
+
         if args.amp:
             scaler.step(optimizer)
             scaler.update()
         else:
             optimizer.step()
-            
+
         if args.prof >= 0:
             torch.cuda.nvtx.range_pop()
 
@@ -572,7 +574,7 @@ def validate(val_loader, model, criterion, scaler=None):
         # compute output
         with torch.no_grad():
             if args.amp:
-                with torch.amp.autocast('cuda'):
+                with torch.amp.autocast("cuda"):
                     output = model(input)
             else:
                 output = model(input)

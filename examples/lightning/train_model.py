@@ -214,7 +214,9 @@ def parse():
     )
     parser.add_argument("--deterministic", action="store_true")
 
-    parser.add_argument("--sync_bn", action="store_true", help="enabling torch sync BN.")
+    parser.add_argument(
+        "--sync_bn", action="store_true", help="enabling torch sync BN."
+    )
 
     parser.add_argument("--keep-batchnorm-fp32", type=str, default=None)
     parser.add_argument("--channels-last", type=bool, default=False)

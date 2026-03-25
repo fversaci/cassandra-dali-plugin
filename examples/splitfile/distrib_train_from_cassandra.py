@@ -449,9 +449,9 @@ def main():
     # Initialize GradScaler
     if args.amp:
         if args.loss_scale:
-            args.scaler = torch.amp.GradScaler('cuda', init_scale=args.loss_scale)
+            args.scaler = torch.amp.GradScaler("cuda", init_scale=args.loss_scale)
         else:
-            args.scaler = torch.amp.GradScaler('cuda')
+            args.scaler = torch.amp.GradScaler("cuda")
 
     # For distributed training, wrap the model with
     # torch.nn.parallel.DistributedDataParallel.
@@ -619,13 +619,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
         # compute output
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("forward")
-        
+
         if args.amp:
-            with torch.amp.autocast('cuda'):
+            with torch.amp.autocast("cuda"):
                 output = model(input)
         else:
             output = model(input)
-            
+
         if args.prof >= 0:
             torch.cuda.nvtx.range_pop()
         loss = criterion(output, target)
@@ -644,13 +644,13 @@ def train(train_loader, model, criterion, optimizer, epoch):
 
         if args.prof >= 0:
             torch.cuda.nvtx.range_push("optimizer.step()")
-        
+
         if args.amp:
             args.scaler.step(optimizer)
             args.scaler.update()
         else:
             optimizer.step()
-            
+
         if args.prof >= 0:
             torch.cuda.nvtx.range_pop()
 
@@ -731,7 +731,7 @@ def validate(val_loader, model, criterion):
         # compute output
         with torch.no_grad():
             if args.amp:
-                with torch.amp.autocast('cuda'):
+                with torch.amp.autocast("cuda"):
                     output = model(input)
             else:
                 output = model(input)
