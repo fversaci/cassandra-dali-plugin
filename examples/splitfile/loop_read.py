@@ -59,7 +59,7 @@ def read_data(
     if use_gpu:
         device_id = local_rank
     else:
-        device_id = types.CPU_ONLY_DEVICE_ID
+        device_id = None
 
     data = pickle.load(open(split_fn, "rb"))
     data_table = data["data_table"]
@@ -102,7 +102,7 @@ def read_data(
         # images = fn_resize(images)
         # images = fn_crop_normalize(images)
         ####################################################################
-        if device_id != types.CPU_ONLY_DEVICE_ID:
+        if use_gpu:
             images = images.gpu()
             labels = labels.gpu()
         return images, labels
@@ -114,7 +114,7 @@ def read_data(
     # DALI iterator
     ########################################################################
     # produce images
-    shard_size = math.ceil(pl.epoch_size()['Reader'] / world_size)
+    shard_size = math.ceil(pl.epoch_size()["Reader"] / world_size)
     steps = math.ceil(shard_size / bs)
     # consume uuids to get images from DB
     for _ in range(epochs):

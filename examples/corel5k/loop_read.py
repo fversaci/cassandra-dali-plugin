@@ -62,7 +62,7 @@ def read_data(
     if use_gpu:
         device_id = local_rank
     else:
-        device_id = types.CPU_ONLY_DEVICE_ID
+        device_id = None
 
     bs = 128
     source_uuids = read_uuids(rows_fn)

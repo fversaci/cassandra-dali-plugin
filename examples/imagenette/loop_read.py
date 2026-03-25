@@ -107,7 +107,7 @@ def read_data(
     if use_gpu:
         device_id = local_rank
     else:
-        device_id = types.CPU_ONLY_DEVICE_ID
+        device_id = None
 
     if reader == "cassandra":
         source_uuids = read_uuids(
@@ -196,7 +196,7 @@ def read_data(
         # images = fn_resize(images)
         # images = fn_crop_normalize(images)
         ####################################################################
-        if device_id != types.CPU_ONLY_DEVICE_ID:
+        if use_gpu:
             images = images.gpu()
             labels = labels.gpu()
         return images, labels

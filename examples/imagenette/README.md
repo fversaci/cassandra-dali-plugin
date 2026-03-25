@@ -105,7 +105,7 @@ $ python3 cache_uuids.py --metadata-table=imagenette.metadata_val --rows-fn val.
 
 # Modified script, reading from Cassandra:
 $ torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
-  -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
+  -a resnet50 --dali_cpu --b 64 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 \
   --train-data-table imagenette.data_train --train-rows-fn train.rows \
   --val-data-table imagenette.data_val --val-rows-fn val.rows
 ```

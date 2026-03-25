@@ -39,12 +39,12 @@ class CassandraWriter:
             self.metadata_id_col = metadata_id_col
         else:
             self.metadata_id_col = data_id_col
-        
+
         if metadata_label_col:
             self.metadata_label_col = metadata_label_col
         else:
             self.metadata_label_col = data_label_col
-        
+
         self.data_col = data_col
         self.cols = cols
         self._cs = CassandraSession(cass_conf)

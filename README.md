@@ -8,7 +8,7 @@ Library (DALI)](https://github.com/NVIDIA/DALI) (which can be used to
 load and preprocess images for PyTorch or TensorFlow).
 
 ### DALI compatibility
-The plugin has been tested and is compatible with DALI v1.48.
+The plugin has been tested and is compatible with DALI v1.53.
 
 ## Running the Docker container
 
@@ -197,7 +197,7 @@ commands for the packages above.
 **Once the dependencies have been installed**, the plugin
 can easily be installed with pip:
 ```bash
-$ pip3 install .
+$ pip3 install . --no-build-isolation
 ```
 
 ## Authors

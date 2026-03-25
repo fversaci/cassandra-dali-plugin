@@ -36,7 +36,7 @@ with open(yaml_fn, "w") as f:
 
 ## # increase max direct memory -- Cassandra 4
 ## from pathlib import Path
-## 
+##
 ## jvm_fns = Path("/opt/cassandra/conf/").glob("jvm*server.options")
 ## for fn in jvm_fns:
 ##     with open(fn, "a") as f:

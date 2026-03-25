@@ -14,6 +14,6 @@ python3 create_split.py --metadata-ifn metadata.cache -r 8,2 -o imagenette_split
 python3 loop_read.py imagenette_splitfile.pckl
 python3 loop_read.py imagenette_splitfile.pckl --use-index=1
 torchrun --nproc_per_node=1 distrib_train_from_cassandra.py --split-fn imagenette_splitfile.pckl --train-index 0 \
-  --val-index 1 -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --epochs 1
+  --val-index 1 -a resnet50 --dali_cpu --b 64 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --epochs 1
 rm -f imagenette_splitfile.pckl metadata.cache
 echo "--- OK ---"

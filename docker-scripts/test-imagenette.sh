@@ -36,7 +36,7 @@ python3 loop_read.py --data-table imagenette.data_val --rows-fn val.rows
 # read from filesystem
 python3 loop_read.py --reader=file --file-root=/tmp/imagenette2-320/train
 # train for one epoch
-torchrun --nproc_per_node=1 distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 128 --loss-scale 128.0 \
+torchrun --nproc_per_node=1 distrib_train_from_cassandra.py -a resnet50 --dali_cpu --b 64 --loss-scale 128.0 \
          --workers 4 --lr=0.4 --opt-level O2 --epochs 1 \
          --train-data-table imagenette.data_train --train-rows-fn train.rows \
          --val-data-table imagenette.data_val --val-rows-fn val.rows

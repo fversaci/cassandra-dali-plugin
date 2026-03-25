@@ -53,12 +53,10 @@ class CassandraSegmentationWriter(CassandraWriter):
 
     def set_query(self):
         query_data = f"INSERT INTO {self.data_table} ("
-        query_data += (
-            f"{self.data_id_col}, {self.data_label_col}, {self.data_col}) VALUES (?,?,?)"
-        )
+        query_data += f"{self.data_id_col}, {self.data_label_col}, {self.data_col}) VALUES (?,?,?)"
         query_meta = f"INSERT INTO {self.metadata_table} ("
         query_meta += f"{self.metadata_id_col}, {', '.join(self.cols)}) "
-        query_meta += f"VALUES ({', '.join(['?']*(len(self.cols)+1))})"
+        query_meta += f"VALUES ({', '.join(['?'] * (len(self.cols) + 1))})"
 
         self.prep_data = self.sess.prepare(query_data)
         self.prep_meta = self.sess.prepare(query_meta)
@@ -66,13 +64,13 @@ class CassandraSegmentationWriter(CassandraWriter):
     def save_item(self, item):
         image_id, label, data, partition_items = item
         stuff = (image_id, *partition_items)
-        
+
         batch = BatchStatement()
         # insert metadata
         batch.add(self.prep_meta, stuff)
         # insert heavy data
         batch.add(self.prep_data, (image_id, label, data))
-        
+
         self.sess.execute(batch, execution_profile="tuple", timeout=30)
 
     def enqueue_item(self, item):

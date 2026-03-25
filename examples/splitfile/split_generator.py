@@ -18,17 +18,18 @@ from crs4.cassandra_utils._split_generator import split_generator
 
 class imagenet_split_generator(split_generator):
     def __init__(
-        self, 
+        self,
         metadata_id_col="id",
         metadata_label_col="label",
-        data_col="data", 
-        label_type="int"
+        data_col="data",
+        label_type="int",
     ):
         super().__init__(
-                metadata_id_col=metadata_id_col, 
-                metadata_label_col=metadata_label_col, 
-                data_col=data_col, 
-                label_type=label_type)
+            metadata_id_col=metadata_id_col,
+            metadata_label_col=metadata_label_col,
+            data_col=data_col,
+            label_type=label_type,
+        )
 
     def create_split(self, split_ratio_list, balance=None):
         """
@@ -42,7 +43,9 @@ class imagenet_split_generator(split_generator):
         rows = df.shape[0]
         # Get a dictionary of occurrence for each class
         class_count_dict = (
-            df.groupby(self._metadata_label_col).count().to_dict(orient="dict")[self._metadata_id_col]
+            df.groupby(self._metadata_label_col)
+            .count()
+            .to_dict(orient="dict")[self._metadata_id_col]
         )
         # get class count vector with index sorted by class
         class_count = [

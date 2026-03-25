@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from setuptools import setup
+from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext_orig
-from distutils.core import Extension
 import os
 import pathlib
 
@@ -50,7 +49,7 @@ class build_ext(build_ext_orig):
 
 setup(
     name="cassandra-dali-plugin",
-    version="1.2.3",
+    version="1.3.0",
     author="Francesco Versaci, Giovanni Busonera",
     author_email="francesco.versaci@gmail.com, giovanni.busonera@crs4.it",
     description="Cassandra data loader for ML pipelines",

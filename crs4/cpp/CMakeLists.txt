@@ -1,16 +1,21 @@
-cmake_minimum_required(VERSION 3.10)
-set(CMAKE_CUDA_ARCHITECTURES "50;60;70;80;90")
+# inspired to https://docs.nvidia.com/deeplearning/dali/archives/dali_1_53_0/user-guide/examples/custom_operations/custom_operator/create_a_custom_operator.html
+
+cmake_minimum_required(VERSION 3.25.2)
+set(CMAKE_CUDA_ARCHITECTURES "75;80;86;89;90")
 
 project(crs4_cassandra_plugin LANGUAGES CUDA CXX C)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall")
 
-set(CMAKE_CUDA_STANDARD 17)
-set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+# TODO(klecki): When the test container gets a CMake that supports C++20 as a proper option,
+# swap those lines
+# set(CMAKE_CUDA_STANDARD 20)
+# set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++20")
 
 include_directories(SYSTEM "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
@@ -27,8 +32,7 @@ string(STRIP ${DALI_COMPILE_FLAGS} DALI_COMPILE_FLAGS)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DALI_COMPILE_FLAGS} ")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${DALI_COMPILE_FLAGS} ")
 link_directories("${DALI_LIB_DIR}")
-link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}")
-link_directories("$ENV{CONDA_DALI_LIB}")
+link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}")  # -lcudart
 
 add_library(crs4cassandra SHARED cassandra_dali_interactive.cc cassandra_dali_selffeed.cc cassandra_dali_decoupled.cc batch_loader.cc)
 target_link_libraries(crs4cassandra dali cudart cassandra)
