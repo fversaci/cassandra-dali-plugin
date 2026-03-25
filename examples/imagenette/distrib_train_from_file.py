@@ -303,6 +303,7 @@ def main():
     )
 
     # Initialize GradScaler
+    scaler = None
     if args.amp:
         scaler = torch.amp.GradScaler('cuda')
 
