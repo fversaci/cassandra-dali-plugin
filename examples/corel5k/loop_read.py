@@ -96,7 +96,7 @@ def read_data(
         images = fn_decode(images)
         images = fn_resize(images)
         # decode labels
-        labels = decoders.numpy(labels)
+        labels = fn.crs4.numpy_decoder(labels)
         if use_gpu:
             images = images.gpu()
             labels = labels.gpu()
