@@ -153,13 +153,6 @@ The examples use a two-phase workflow:
 
 The `.rows` files contain a pickled dict with `row_keys` (list of UUID strings). This separation allows filtering the metadata (e.g., by label split) once, then reusing the cached UUID list for multiple training runs.
 
-### Using Aider (AI coding assistant)
-
-```bash
-# From aider.sh - uses podman with OpenRouter API
-./aider.sh
-```
-
 ## Build System
 
 ### C++ Plugin (CMake)
@@ -461,4 +454,3 @@ See `docs/LFN.md` for detailed discussion. Key parameters for high-bandwidth, hi
       primaryClass={cs.DC},
       url={https://arxiv.org/abs/2503.22643},
 }
-```
