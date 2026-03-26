@@ -16,28 +16,28 @@
 
 The `BatchLoader` is configured via its constructor arguments:
 
-| Argument | Type | Description |
-| :--- | :--- | :--- |
-| `table` | `std::string` | Fully qualified table name (e.g., `keyspace.table_name`). |
-| `label_type` | `std::string` | Type of label: `"int"`, `"blob"`, or `"none"`. |
-| `label_col` | `std::string` | Column name for the label/mask. |
-| `data_col` | `std::string` | Column name for the feature data (blob). |
-| `id_col` | `std::string` | Column name for the primary key (UUID). |
-| `username`, `password` | `std::string` | Cassandra authentication credentials. |
-| `cassandra_ips` | `std::vector<std::string>` | List of contact points for the cluster. |
-| `port` | `int` | Cassandra port (default: 9042). |
-| `cloud_config` | `std::string` | Path to the secure connection bundle for AstraDB (optional). |
-| `use_ssl` | `bool` | Enable SSL/TLS encryption. |
-| `ssl_certificate` | `std::string` | Path to the trusted server certificate. |
-| `ssl_own_certificate` | `std::string` | Path to the client certificate (mutual TLS). |
-| `ssl_own_key` | `std::string` | Path to the client private key. |
-| `ssl_own_key_pass` | `std::string` | Password for the client private key. |
-| `io_threads` | `size_t` | Number of I/O threads for the Cassandra driver. |
-| `prefetch_buffers` | `size_t` | Number of batch buffers to cycle through. |
-| `copy_threads` | `size_t` | Number of threads for copying data into DALI tensors. |
-| `wait_threads` | `size_t` | Number of threads for waiting on batch completion. |
-| `comm_threads` | `size_t` | Number of threads for dispatching Cassandra queries. |
-| `ooo` | `bool` | Enable out-of-order processing of results. |
+| Argument               | Type                       | Description                                                  |
+|:-----------------------|:---------------------------|:-------------------------------------------------------------|
+| `table`                | `std::string`              | Fully qualified table name (e.g., `keyspace.table_name`).    |
+| `label_type`           | `std::string`              | Type of label: `"int"`, `"blob"`, or `"none"`.               |
+| `label_col`            | `std::string`              | Column name for the label/mask.                              |
+| `data_col`             | `std::string`              | Column name for the feature data (blob).                     |
+| `id_col`               | `std::string`              | Column name for the primary key (UUID).                      |
+| `username`, `password` | `std::string`              | Cassandra authentication credentials.                        |
+| `cassandra_ips`        | `std::vector<std::string>` | List of contact points for the cluster.                      |
+| `port`                 | `int`                      | Cassandra port (default: 9042).                              |
+| `cloud_config`         | `std::string`              | Path to the secure connection bundle for AstraDB (optional). |
+| `use_ssl`              | `bool`                     | Enable SSL/TLS encryption.                                   |
+| `ssl_certificate`      | `std::string`              | Path to the trusted server certificate.                      |
+| `ssl_own_certificate`  | `std::string`              | Path to the client certificate (mutual TLS).                 |
+| `ssl_own_key`          | `std::string`              | Path to the client private key.                              |
+| `ssl_own_key_pass`     | `std::string`              | Password for the client private key.                         |
+| `io_threads`           | `size_t`                   | Number of I/O threads for the Cassandra driver.              |
+| `prefetch_buffers`     | `size_t`                   | Number of batch buffers to cycle through.                    |
+| `copy_threads`         | `size_t`                   | Number of threads for copying data into DALI tensors.        |
+| `wait_threads`         | `size_t`                   | Number of threads for waiting on batch completion.           |
+| `comm_threads`         | `size_t`                   | Number of threads for dispatching Cassandra queries.         |
+| `ooo`                  | `bool`                     | Enable out-of-order processing of results.                   |
 
 ---
 
