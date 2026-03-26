@@ -36,7 +36,6 @@ examples/
 ├── common/                        # Shared utilities (all examples depend on this)
 │   ├── cassandra_reader.py       # DALI reader wrapper + plugin loader
 │   ├── private_data.template.py  # Template for credentials (copy to private_data.py)
-│   ├── private_data.py           # Local credentials (gitignored, created from template)
 │   ├── fn_shortcuts.py           # DALI function shortcuts
 │   ├── extract_common.py         # Common extraction utilities (used by Spark jobs)
 │   ├── cache_uuids.py            # Cache UUIDs from metadata table to .rows file
