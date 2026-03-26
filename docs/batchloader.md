@@ -1,178 +1,101 @@
-# BatchLoader
+# BatchLoader Algorithm and Data Flow
 
-`BatchLoader` is a C++ class that provides high-performance, asynchronous data loading from a Cassandra database into NVIDIA DALI tensors. It bridges the gap between Cassandra's distributed storage and DALI's GPU-accelerated data pipeline.
+This document details the internal algorithm, threading model, and data flow of the `BatchLoader` class, which serves as the core component for bridging Apache Cassandra with the NVIDIA DALI pipeline.
 
 ## Overview
 
-`BatchLoader` manages the entire lifecycle of reading a batch of data:
-1.  **Connection Management**: Handles Cassandra cluster connections, authentication, and SSL/TLS encryption, including support for cloud deployments (e.g., DataStax Astra).
-2.  **Asynchronous I/O**: Uses non-blocking Cassandra queries and thread pools to parallelize network requests and data copying.
-3.  **Memory Management**: Allocates and populates DALI `TensorList` objects on the CPU, ready for transfer to the GPU.
-4.  **Multi-buffering**: Supports multiple in-flight batches to ensure the DALI pipeline is never starved of data.
+The `BatchLoader` is responsible for:
+1.  Managing connections to a Cassandra cluster.
+2.  Asynchronously fetching image data and labels based on UUIDs.
+3.  Managing memory allocation for DALI Tensors.
+4.  Copying data from Cassandra driver buffers into DALI-readable memory.
+5.  Implementing multi-buffering to overlap I/O with computation.
 
----
-
-## Configuration
-
-The `BatchLoader` is configured via its constructor arguments:
-
-| Argument               | Type                       | Description                                                  |
-|:-----------------------|:---------------------------|:-------------------------------------------------------------|
-| `table`                | `std::string`              | Fully qualified table name (e.g., `keyspace.table_name`).    |
-| `label_type`           | `std::string`              | Type of label: `"int"`, `"blob"`, or `"none"`.               |
-| `label_col`            | `std::string`              | Column name for the label/mask.                              |
-| `data_col`             | `std::string`              | Column name for the feature data (blob).                     |
-| `id_col`               | `std::string`              | Column name for the primary key (UUID).                      |
-| `username`, `password` | `std::string`              | Cassandra authentication credentials.                        |
-| `cassandra_ips`        | `std::vector<std::string>` | List of contact points for the cluster.                      |
-| `port`                 | `int`                      | Cassandra port (default: 9042).                              |
-| `cloud_config`         | `std::string`              | Path to the secure connection bundle for AstraDB (optional). |
-| `use_ssl`              | `bool`                     | Enable SSL/TLS encryption.                                   |
-| `ssl_certificate`      | `std::string`              | Path to the trusted server certificate.                      |
-| `ssl_own_certificate`  | `std::string`              | Path to the client certificate (mutual TLS).                 |
-| `ssl_own_key`          | `std::string`              | Path to the client private key.                              |
-| `ssl_own_key_pass`     | `std::string`              | Password for the client private key.                         |
-| `io_threads`           | `size_t`                   | Number of I/O threads for the Cassandra driver.              |
-| `prefetch_buffers`     | `size_t`                   | Number of batch buffers to cycle through.                    |
-| `copy_threads`         | `size_t`                   | Number of threads for copying data into DALI tensors.        |
-| `wait_threads`         | `size_t`                   | Number of threads for waiting on batch completion.           |
-| `comm_threads`         | `size_t`                   | Number of threads for dispatching Cassandra queries.         |
-| `ooo`                  | `bool`                     | Enable out-of-order processing of results.                   |
-
----
-
-## Types
-
-- **`lab_type`**: Enum for label types (`lab_int`, `lab_img`, `lab_none`).
-- **`INT_LABEL_T`**: Type alias for integer labels (`int32_t`).
-- **`BatchRawImage`**: `dali::TensorList<dali::CPUBackend>` for feature data.
-- **`BatchLabel`**: `dali::TensorList<dali::CPUBackend>` for label data.
-- **`BatchImgLab`**: `std::pair<BatchRawImage, BatchLabel>`, the return type for a finished batch.
-
----
-
-## Internal State
-
-### Connection
-- `cluster`, `session`, `prepared`: Handles for the Cassandra driver connection and prepared statement.
-- `connected`: Boolean flag to prevent re-connection.
-
-### Configuration
-- Stores table/column names, credentials, SSL settings, and thread counts.
-
-### Buffering & Concurrency
-- **Buffers**:
-  - `write_buf`: Queue of buffer indices available for new prefetches.
-  - `read_buf`: Queue of buffer indices ready for consumption.
-  - `ooo_buf`: Queue for active buffers in out-of-order mode.
-- **Tensors**:
-  - `v_feats`, `v_labs`: Vectors of DALI TensorLists (one per buffer).
-  - `shapes`, `lab_shapes`: Stores the dimensions of each sample in the batch.
-- **Synchronization**:
-  - `alloc_mtx`, `alloc_cv`: Mutex and condition variable to synchronize tensor allocation with data copying.
-  - `ooo_buf_mtx`: Protects the out-of-order buffer queue.
+## Architecture Components
 
 ### Thread Pools
-- `comm_pool`: Dispatches Cassandra queries.
-- `copy_pool`: Copies raw bytes from Cassandra results into DALI tensors.
-- `wait_pool`: Waits for all copy tasks to complete and assembles the final batch.
+To achieve high parallelism, `BatchLoader` utilizes three distinct thread pools:
+*   **`comm_pool` (Communication Threads):** Handles the dispatch of Cassandra queries. It iterates through the list of UUIDs and sends asynchronous requests to the Cassandra cluster.
+*   **`copy_pool` (Copy Threads):** Handles the memory copy operations (`memcpy`) from the Cassandra driver's memory into the DALI Tensor memory. This is CPU-bound work.
+*   **`wait_pool` (Wait Threads):** Handles the synchronization of batch completion. It waits for all copy operations of a specific batch to finish before marking the batch as ready.
 
----
+### Buffer Management
+The loader uses a multi-buffering strategy (double buffering or more) defined by `prefetch_buffers`.
+*   **`write_buf`**: A queue of buffer indices that are free to be written to (empty buffers).
+*   **`read_buf`**: A queue of buffer indices that are filled and ready to be consumed.
+*   **`v_feats` / `v_labs`**: Vectors of TensorLists holding the actual image and label data.
 
-## Batch Lifecycle
+### Synchronization Primitives
+*   **`alloc_mtx` / `alloc_cv`**: A mutex and condition variable pair (one per buffer) used to synchronize the allocation of tensor memory. Copy threads must wait until the main thread determines the total size of the batch and allocates the memory block.
 
-The processing of a batch follows a strict pipeline managed by the class:
+## Data Flow Algorithm
 
-1.  **Prefetch Request**:
-    `prefetch_batch(keys)` is called with a list of UUIDs.
-    - A buffer index `wb` is popped from `write_buf`.
-    - `check_connection()` ensures the database is connected.
-    - `start_transfers(keys, wb)` is invoked.
+The lifecycle of a batch involves distinct stages: Prefetch, Transfer, Allocation, Copy, and Retrieval.
 
-2.  **Transfer Initialization** (`start_transfers`):
-    - The batch size is stored.
-    - `allocTens(wb)` resets the tensor shapes and clears previous data.
-    - If Out-of-Order (OOO) mode is active, the buffer is pushed to `ooo_buf`.
-    - `keys2transfers` is enqueued in `comm_pool`.
-    - `wait4images` is enqueued in `wait_pool` to handle completion.
-    - The buffer index `wb` is pushed to `read_buf`.
+### 1. Prefetching (`prefetch_batch`)
+When the DALI operator requests data for the next batch:
+1.  A buffer index `wb` is popped from `write_buf`.
+2.  `start_transfers` is called to initiate the asynchronous workflow.
+3.  A future representing the final batch is stored in `batch[wb]`.
+4.  The buffer index `wb` is pushed to `read_buf`.
 
-3.  **Query Dispatch** (`keys2transfers`):
-    - Iterates through UUIDs.
-    - Binds each UUID to the prepared statement.
-    - Executes the query asynchronously with a callback (`wrap_enq`).
+### 2. Initiating Transfers (`start_transfers`)
+1.  The batch size is recorded.
+2.  `allocTens` initializes empty TensorLists and clears shape vectors.
+3.  If **Out-of-Order (OOO)** execution is disabled:
+    *   `keys2transfers` is enqueued into `comm_pool`.
+4.  If **OOO** is enabled:
+    *   The buffer index is pushed to `ooo_buf`.
+    *   `keys2transfers` is enqueued.
+5.  A task `wait4images` is enqueued into `wait_pool` to monitor completion.
 
-4.  **Result Handling** (`wrap_enq` -> `transfer2copy`):
-    - The callback is triggered when a Cassandra query completes.
-    - **OOO Mode**: `ooo_enqueue` determines the correct slot in the batch.
-    - **Standard Mode**: Uses the pre-determined index.
-    - `transfer2copy` extracts the raw bytes and label.
-    - A copy task is enqueued in `copy_pool`.
-    - **Allocation Logic**: When the number of scheduled copy jobs equals the batch size, the DALI tensors are allocated based on the gathered `shapes`. `alloc_cv` is notified.
+### 3. Dispatching Queries (`keys2transfers`)
+This function runs in a `comm_pool` thread:
+1.  Iterates through the provided vector of UUIDs.
+2.  Binds the UUID to the prepared statement.
+3.  Executes `cass_session_execute` (asynchronous Cassandra query).
+4.  Sets a callback `wrap_enq` on the future. This callback triggers when the Cassandra driver receives a response.
 
-5.  **Data Copy** (`copy_data_*`):
-    - Waits on `alloc_cv` until tensors are allocated.
-    - Performs `memcpy` from the Cassandra result to the DALI tensor.
-    - Frees the Cassandra result memory.
+### 4. Handling Query Results (`wrap_enq` / `transfer2copy`)
+When the Cassandra driver completes a query:
+1.  **OOO Disabled**: `transfer2copy` is called directly.
+2.  **OOO Enabled**: `ooo_enqueue` manages the order of completion. It tracks how many items have returned for the current batch. Once a batch is fully populated in the OOO buffer logic, it triggers `transfer2copy`.
 
-6.  **Completion** (`wait4images`):
-    - Waits for `comm_job` (query dispatch) to finish.
-    - Waits for all `copy_jobs` to finish.
-    - Moves the tensors into a `BatchImgLab` pair and returns it.
+### 5. Scheduling Copy and Allocation (`transfer2copy`)
+This is a critical step that bridges the network response and memory management:
+1.  **Extract Data**: The raw bytes (image/label) are extracted from the Cassandra result.
+2.  **Record Size**: The size of the current sample is stored in `shapes[wb][i]`.
+3.  **Enqueue Copy**: A copy job is created and enqueued into `copy_pool`.
+4.  **Allocation Logic**: The thread locks `alloc_mtx`.
+    *   It pushes the copy job future into `copy_jobs[wb]`.
+    *   **Trigger**: If `copy_jobs[wb].size() == batch_size`, it means all query results for this batch have arrived and their sizes are known.
+    *   **Action**: The thread calculates the total `TensorListShape` and calls `v_feats[wb].Resize(...)`. This allocates the contiguous memory block for the batch.
+5.  **Notify**: `alloc_cv` is notified to wake up any copy threads waiting for memory allocation.
 
-7.  **Consumption** (`blocking_get_batch`):
-    - Pops a buffer index from `read_buf`.
-    - Calls `.get()` on the future to retrieve the `BatchImgLab`.
-    - Pushes the buffer index back to `write_buf` for reuse.
+### 6. Copying Data (`copy_data_none`, `copy_data_int`, `copy_data_img`)
+These functions run in `copy_pool` threads:
+1.  **Wait**: Acquires `alloc_mtx` and waits on `alloc_cv` until `copy_jobs[wb].size() == batch_size`. This ensures the memory has been allocated (Step 5).
+2.  **Copy**: Performs `std::memcpy` from the Cassandra result pointer to the specific offset in the DALI TensorList (`v_feats[wb]`).
+3.  **Cleanup**: Frees the Cassandra result memory.
 
----
+### 7. Waiting for Completion (`wait4images`)
+This function runs in the `wait_pool`:
+1.  Waits for the `comm_job` (dispatching queries) to finish.
+2.  Waits for all `copy_jobs` (copying data) to finish.
+3.  Moves the populated `v_feats` and `v_labs` into a pair and returns it.
 
-## Key Methods
+### 8. Retrieving the Batch (`blocking_get_batch`)
+Called by the DALI operator to get the processed data:
+1.  Pops a buffer index `rb` from `read_buf`.
+2.  Calls `.get()` on the `batch[rb]` future. This blocks until `wait4images` completes.
+3.  Pushes the buffer index `rb` back to `write_buf` to be reused.
+4.  Returns the data.
 
-### `BatchLoader(...)`
-Initializes configuration parameters and internal buffer queues. The connection itself is **lazy** and deferred until the first `prefetch_batch` call.
+## Out-of-Order (OOO) Execution
 
-### `connect()`
-Establishes the connection to the Cassandra cluster.
-- Configures contact points or cloud secure bundle.
-- Sets authentication and SSL/TLS settings.
-- Prepares the parameterized `SELECT` query.
-- Initializes the `comm`, `copy`, and `wait` thread pools.
+The OOO mode is an optimization for high-latency or high-concurrency scenarios.
+*   **Standard Mode**: Results are processed strictly in the order they were requested (or at least, associated with specific buffer slots immediately).
+*   **OOO Mode**: The `ooo_buf` queue acts as a holding area. As Cassandra results arrive (which may be out of order relative to the request stream), `ooo_enqueue` assigns them to the current active batch buffer. This allows the system to fill buffers dynamically as data arrives, potentially reducing idle time if specific queries take longer than others.
 
-### `prefetch_batch(const std::vector<CassUuid>& keys)`
-Initiates the asynchronous load for a batch of UUIDs. It manages the transition of buffer indices from `write_buf` to `read_buf`.
+## Summary Diagram
 
-### `blocking_get_batch()`
-A blocking call that returns the next available `BatchImgLab`. It handles the synchronization with the background threads and recycles the buffer.
-
-### `ignore_batch()`
-A cleanup utility that drains all in-flight batches. This is essential for the destructor to ensure all Cassandra futures are resolved before freeing the session object.
-
----
-
-## Out-of-Order Mode
-
-When `ooo` is enabled, the loader processes results as they arrive from the network, rather than strictly following the order of the input UUID vector. This can reduce latency when query response times vary significantly.
-
-- **Mechanism**: Uses `ooo_buf` to track the current active batch buffer. `ooo_enqueue` atomically determines the next available slot (`ooo_in_bs`) within that buffer.
-- **Synchronization**: Protected by `ooo_buf_mtx` to ensure thread-safe index assignment.
-
----
-
-## SSL/TLS Support
-
-`BatchLoader` supports secure connections:
-- **Server Verification**: If `ssl_certificate` is provided, the server's certificate is validated against it.
-- **Client Authentication**: If `ssl_own_certificate` and `ssl_own_key` are provided, the driver performs mutual TLS authentication.
-- **Implementation**: Uses `cass_ssl_set_*` functions to configure the SSL context before connecting.
-
----
-
-## Relationship to DALI Operators
-
-This class is the backend engine for the DALI Cassandra operators:
-- **`CassandraInteractive`**: Used for interactive inference workloads.
-- **`CassandraDecoupled`**: Used for decoupled training/inference pipelines.
-- **`CassandraSelfFeed`**: Used for pipelines where the reader feeds itself.
-
-The operators manage the DALI pipeline integration (inputs/outputs), while `BatchLoader` manages the heavy lifting of database I/O and memory management.
