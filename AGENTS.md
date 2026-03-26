@@ -7,7 +7,6 @@ NVIDIA DALI plugin for loading image/binary data from Apache Cassandra database 
 **Repository**: https://github.com/crs4/cassandra-dali-plugin
 **Version**: 1.3.0 (from setup.py)
 **License**: Apache License 2.0
-**Authors**: Francesco Versaci, Giovanni Busonera (CRS4)
 
 ## Code Organization
 
@@ -37,17 +36,14 @@ examples/
 │   ├── cassandra_reader.py       # DALI reader wrapper + plugin loader
 │   ├── private_data.template.py  # Template for credentials (copy to private_data.py)
 │   ├── fn_shortcuts.py           # DALI function shortcuts
-│   ├── extract_common.py         # Common extraction utilities (used by Spark jobs)
-│   ├── cache_uuids.py            # Cache UUIDs from metadata table to .rows file
-│   └── extract_serial.py         # Serial data loader (no Spark)
+│   ├── extract_common.py         # Common extraction utilities
+│   ├── cache_uuids.py            # Cache UUIDs from metadata table
+│   └── extract_serial.py         # Serial data loader
 ├── imagenette/                   # Classification example
 │   ├── create_tables.cql         # Cassandra schema
 │   ├── extract_spark.py          # Spark-based data loader
-│   ├── extract_serial.py         # Serial data loader
-│   ├── cache_uuids.py            # UUID caching helper
 │   ├── loop_read.py             # DALI reading test script
 │   ├── distrib_train_from_cassandra.py  # Multi-GPU training
-│   ├── distrib_train_from_file.py      # Original DALI file-based training
 │   └── create_tfrecord.py        # TFRecord conversion
 ├── lightning/                    # PyTorch Lightning variant of imagenette
 ├── ade20k/                       # Segmentation example
@@ -98,71 +94,30 @@ docker compose exec dali-cassandra fish
 
 The test scripts drop/recreate the Cassandra keyspace, load data via Spark (or serial), then run read tests including GPU reads and a full training epoch.
 
-### Development Workflow Inside Container
-
-```bash
-# Rebuild plugin after code changes
-pip3 install . --no-build-isolation
-
-# Run a single example manually
-cd examples/imagenette
-python3 cache_uuids.py --metadata-table=imagenette.metadata_train --rows-fn train.rows
-python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
-python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows --use-gpu
-
-# Multi-GPU training test (1 epoch)
-torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
-  -a resnet50 --dali_cpu --b 64 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --epochs 1 \
-  --train-data-table imagenette.data_train --train-rows-fn train.rows \
-  --val-data-table imagenette.data_val --val-rows-fn val.rows
-```
-
 ### Triton Inference
 
 ```bash
 docker compose -f docker-compose.triton.yml up --build -d
 ```
 
-### Spark-Based Data Loading (for large datasets)
+### Using Aider (AI coding assistant)
 
 ```bash
-# Start Spark master+worker (inside container)
-/spark/sbin/start-master.sh
-/spark/sbin/start-worker.sh spark://$HOSTNAME:7077
-
-# Load data in parallel with Spark
-/spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
-  --py-files extract_common.py extract_spark.py /data/imagenet/ \
-  --split-subdir=train --data-table imagenet.data_train --metadata-table imagenet.metadata_train
+# From aider.sh - uses podman with OpenRouter API
+./aider.sh
 ```
-
-### UUID Caching Workflow
-
-The examples use a two-phase workflow:
-
-1. **Cache UUIDs** from the metadata table to a `.rows` file (pickle format):
-   ```bash
-   python3 cache_uuids.py --metadata-table=imagenette.metadata_train --rows-fn train.rows
-   ```
-
-2. **Read data** using the cached UUID list:
-   ```bash
-   python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
-   ```
-
-The `.rows` files contain a pickled dict with `row_keys` (list of UUID strings). This separation allows filtering the metadata (e.g., by label split) once, then reusing the cached UUID list for multiple training runs.
 
 ## Build System
 
 ### C++ Plugin (CMake)
 
-| Property           | Value                                  |
-|--------------------|----------------------------------------|
-| Minimum CMake      | 3.25.2                                 |
-| C++ Standard       | C++20                                  |
-| CUDA Standard      | C++20 (`-std=c++20` flag)              |
-| CUDA Architectures | 75;80;86;89;90                         |
-| Output             | `libcrs4cassandra.so` (shared library) |
+| Property | Value |
+|----------|-------|
+| Minimum CMake | 3.25.2 |
+| C++ Standard | C++20 |
+| CUDA Standard | C++20 (`-std=c++20` flag) |
+| CUDA Architectures | 75;80;86;89;90 |
+| Output | `libcrs4cassandra.so` (shared library) |
 
 CMake queries DALI at configure time for include paths and library directories:
 
@@ -215,45 +170,45 @@ images, labels = fn.crs4.cassandra(
 
 ### Core Parameters
 
-| Parameter             | Description                                              | Default |
-|-----------------------|----------------------------------------------------------|---------|
-| `name`                | Reader name                                              | -       |
-| `cassandra_ips`       | List of Cassandra IPs/hostnames                          | -       |
-| `cassandra_port`      | Cassandra TCP port                                       | 9042    |
-| `table`               | Data table name (e.g., `imagenet.data_train`)            | -       |
-| `label_col`           | Label column name                                        | -       |
-| `label_type`          | "int" (classification), "blob" (segmentation), or "none" | -       |
-| `data_col`            | Data column name (BLOB)                                  | -       |
-| `id_col`              | UUID column name                                         | -       |
-| `source_uuids`        | Full list of UUIDs to retrieve                           | -       |
-| `num_shards`          | Number of shards for distributed training                | 1       |
-| `shard_id`            | Shard index for this process                             | 0       |
-| `shuffle_every_epoch` | Shuffle UUIDs each epoch                                 | True    |
-| `loop_forever`        | Loop dataset infinitely                                  | True    |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `name` | Reader name | - |
+| `cassandra_ips` | List of Cassandra IPs/hostnames | - |
+| `cassandra_port` | Cassandra TCP port | 9042 |
+| `table` | Data table name (e.g., `imagenet.data_train`) | - |
+| `label_col` | Label column name | - |
+| `label_type` | "int" (classification), "blob" (segmentation), or "none" | - |
+| `data_col` | Data column name (BLOB) | - |
+| `id_col` | UUID column name | - |
+| `source_uuids` | Full list of UUIDs to retrieve | - |
+| `num_shards` | Number of shards for distributed training | 1 |
+| `shard_id` | Shard index for this process | 0 |
+| `shuffle_every_epoch` | Shuffle UUIDs each epoch | True |
+| `loop_forever` | Loop dataset infinitely | True |
 
 ### Authentication
 
-| Parameter               | Description                                              | Default |
-|-------------------------|----------------------------------------------------------|---------|
-| `username` / `password` | Cassandra auth credentials                               | None    |
-| `use_ssl`               | Enable SSL                                               | False   |
-| `ssl_certificate`       | Path to server public key                                | ""      |
-| `ssl_own_certificate`   | Path to client public key                                | ""      |
-| `ssl_own_key`           | Path to client private key                               | ""      |
-| `ssl_own_key_pass`      | Password for client private key                          | ""      |
-| `cloud_config`          | Astra-style dict `{'secure_connect_bundle': 'path.zip'}` | None    |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `username` / `password` | Cassandra auth credentials | None |
+| `use_ssl` | Enable SSL | False |
+| `ssl_certificate` | Path to server public key | "" |
+| `ssl_own_certificate` | Path to client public key | "" |
+| `ssl_own_key` | Path to client private key | "" |
+| `ssl_own_key_pass` | Password for client private key | "" |
+| `cloud_config` | Astra-style dict `{'secure_connect_bundle': 'path.zip'}` | None |
 
 ### Performance Tuning
 
-| Parameter          | Description                                                   | Default |
-|--------------------|---------------------------------------------------------------|---------|
-| `prefetch_buffers` | Multi-buffering depth (hides latency)                         | 2       |
-| `io_threads`       | Cassandra driver IO threads (limits TCP connections)          | 2       |
-| `comm_threads`     | Communication handling threads                                | 2       |
-| `copy_threads`     | Data copying threads                                          | 2       |
-| `wait_threads`     | Wait handling threads                                         | 2       |
-| `ooo`              | Out-of-order delivery (for high-latency/packet-loss networks) | False   |
-| `slow_start`       | Prefetch dilution (request extra image every N)               | 0       |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `prefetch_buffers` | Multi-buffering depth (hides latency) | 2 |
+| `io_threads` | Cassandra driver IO threads (limits TCP connections) | 2 |
+| `comm_threads` | Communication handling threads | 2 |
+| `copy_threads` | Data copying threads | 2 |
+| `wait_threads` | Wait handling threads | 2 |
+| `ooo` | Out-of-order delivery (for high-latency/packet-loss networks) | False |
+| `slow_start` | Prefetch dilution (request extra image every N) | 0 |
 
 ## C++ Code Patterns
 
@@ -365,38 +320,17 @@ Cassandra stores images/metadata in separate tables:
 
 The plugin reads exclusively from the data table during ML training. The `id_col` stores UUIDs, `label_col` stores labels (int or blob), and `data_col` stores the binary data.
 
-### Typical Cassandra Schema
-
-```sql
--- Example from examples/imagenette/create_tables.cql
-CREATE KEYSPACE IF NOT EXISTS imagenette WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
-
-CREATE TABLE IF NOT EXISTS imagenette.data_train (
-    id uuid PRIMARY KEY,
-    label int,
-    data blob
-);
-
-CREATE TABLE IF NOT EXISTS imagenette.metadata_train (
-    id uuid PRIMARY KEY,
-    label int
-);
-```
-
-The `metadata` table enables filtering by label during dataset preparation. The `data` table stores the actual image bytes.
-
 ## Docker Environment
 
-| Component               | Version                                                           |
-|-------------------------|-------------------------------------------------------------------|
-| Base image              | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.02-py3`) |
-| Cassandra C++ driver    | 2.17.0                                                            |
-| Cassandra Python driver | latest (via pip)                                                  |
-| Spark                   | 3.5.x                                                             |
-| DALI                    | Pre-installed in NGC container (1.53)                             |
-| PyTorch Lightning       | 2.3.1                                                             |
-| CUDA architectures      | 75;80;86;89;90                                                    |
-| Default shell           | fish                                                              |
+| Component | Version |
+|-----------|---------|
+| Base image | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.02-py3`) |
+| Cassandra C++ driver | 2.17.0 |
+| Cassandra Python driver | latest (via pip) |
+| Spark | 3.5.x |
+| DALI | Pre-installed in NGC container (1.53) |
+| PyTorch Lightning | 2.3.1 |
+| CUDA architectures | 75;80;86;89;90 |
 
 ### Cassandra Container Access
 
@@ -453,3 +387,4 @@ See `docs/LFN.md` for detailed discussion. Key parameters for high-bandwidth, hi
       primaryClass={cs.DC},
       url={https://arxiv.org/abs/2503.22643},
 }
+```
