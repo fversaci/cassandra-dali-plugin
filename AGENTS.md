@@ -7,6 +7,7 @@ NVIDIA DALI plugin for loading image/binary data from Apache Cassandra database 
 **Repository**: https://github.com/crs4/cassandra-dali-plugin
 **Version**: 1.3.0 (from setup.py)
 **License**: Apache License 2.0
+**Authors**: Francesco Versaci, Giovanni Busonera (CRS4)
 
 ## Code Organization
 
@@ -35,15 +36,19 @@ examples/
 ├── common/                        # Shared utilities (all examples depend on this)
 │   ├── cassandra_reader.py       # DALI reader wrapper + plugin loader
 │   ├── private_data.template.py  # Template for credentials (copy to private_data.py)
+│   ├── private_data.py           # Local credentials (gitignored, created from template)
 │   ├── fn_shortcuts.py           # DALI function shortcuts
-│   ├── extract_common.py         # Common extraction utilities
-│   ├── cache_uuids.py            # Cache UUIDs from metadata table
-│   └── extract_serial.py         # Serial data loader
+│   ├── extract_common.py         # Common extraction utilities (used by Spark jobs)
+│   ├── cache_uuids.py            # Cache UUIDs from metadata table to .rows file
+│   └── extract_serial.py         # Serial data loader (no Spark)
 ├── imagenette/                   # Classification example
 │   ├── create_tables.cql         # Cassandra schema
 │   ├── extract_spark.py          # Spark-based data loader
+│   ├── extract_serial.py         # Serial data loader
+│   ├── cache_uuids.py            # UUID caching helper
 │   ├── loop_read.py             # DALI reading test script
 │   ├── distrib_train_from_cassandra.py  # Multi-GPU training
+│   ├── distrib_train_from_file.py      # Original DALI file-based training
 │   └── create_tfrecord.py        # TFRecord conversion
 ├── lightning/                    # PyTorch Lightning variant of imagenette
 ├── ade20k/                       # Segmentation example
@@ -94,11 +99,59 @@ docker compose exec dali-cassandra fish
 
 The test scripts drop/recreate the Cassandra keyspace, load data via Spark (or serial), then run read tests including GPU reads and a full training epoch.
 
+### Development Workflow Inside Container
+
+```bash
+# Rebuild plugin after code changes
+pip3 install . --no-build-isolation
+
+# Run a single example manually
+cd examples/imagenette
+python3 cache_uuids.py --metadata-table=imagenette.metadata_train --rows-fn train.rows
+python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
+python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows --use-gpu
+
+# Multi-GPU training test (1 epoch)
+torchrun --nproc_per_node=NUM_GPUS distrib_train_from_cassandra.py \
+  -a resnet50 --dali_cpu --b 64 --loss-scale 128.0 --workers 4 --lr=0.4 --opt-level O2 --epochs 1 \
+  --train-data-table imagenette.data_train --train-rows-fn train.rows \
+  --val-data-table imagenette.data_val --val-rows-fn val.rows
+```
+
 ### Triton Inference
 
 ```bash
 docker compose -f docker-compose.triton.yml up --build -d
 ```
+
+### Spark-Based Data Loading (for large datasets)
+
+```bash
+# Start Spark master+worker (inside container)
+/spark/sbin/start-master.sh
+/spark/sbin/start-worker.sh spark://$HOSTNAME:7077
+
+# Load data in parallel with Spark
+/spark/bin/spark-submit --master spark://$HOSTNAME:7077 --conf spark.default.parallelism=10 \
+  --py-files extract_common.py extract_spark.py /data/imagenet/ \
+  --split-subdir=train --data-table imagenet.data_train --metadata-table imagenet.metadata_train
+```
+
+### UUID Caching Workflow
+
+The examples use a two-phase workflow:
+
+1. **Cache UUIDs** from the metadata table to a `.rows` file (pickle format):
+   ```bash
+   python3 cache_uuids.py --metadata-table=imagenette.metadata_train --rows-fn train.rows
+   ```
+
+2. **Read data** using the cached UUID list:
+   ```bash
+   python3 loop_read.py --data-table imagenette.data_train --rows-fn train.rows
+   ```
+
+The `.rows` files contain a pickled dict with `row_keys` (list of UUID strings). This separation allows filtering the metadata (e.g., by label split) once, then reusing the cached UUID list for multiple training runs.
 
 ### Using Aider (AI coding assistant)
 
@@ -320,6 +373,26 @@ Cassandra stores images/metadata in separate tables:
 
 The plugin reads exclusively from the data table during ML training. The `id_col` stores UUIDs, `label_col` stores labels (int or blob), and `data_col` stores the binary data.
 
+### Typical Cassandra Schema
+
+```sql
+-- Example from examples/imagenette/create_tables.cql
+CREATE KEYSPACE IF NOT EXISTS imagenette WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+CREATE TABLE IF NOT EXISTS imagenette.data_train (
+    id uuid PRIMARY KEY,
+    label int,
+    data blob
+);
+
+CREATE TABLE IF NOT EXISTS imagenette.metadata_train (
+    id uuid PRIMARY KEY,
+    label int
+);
+```
+
+The `metadata` table enables filtering by label during dataset preparation. The `data` table stores the actual image bytes.
+
 ## Docker Environment
 
 | Component | Version |
@@ -331,6 +404,7 @@ The plugin reads exclusively from the data table during ML training. The `id_col
 | DALI | Pre-installed in NGC container (1.53) |
 | PyTorch Lightning | 2.3.1 |
 | CUDA architectures | 75;80;86;89;90 |
+| Default shell | fish |
 
 ### Cassandra Container Access
 
