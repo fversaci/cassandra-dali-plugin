@@ -5,8 +5,9 @@
 NVIDIA DALI plugin for loading image/binary data from Apache Cassandra database into ML training pipelines. Tested with DALI v1.53.
 
 **Repository**: https://github.com/crs4/cassandra-dali-plugin
-**Version**: 1.3.0 (from setup.py)
+**Version**: 1.3.0 (from pyproject.toml)
 **License**: Apache License 2.0
+**Python**: >=3.11,<3.14
 **Authors**: Francesco Versaci, Giovanni Busonera (CRS4)
 
 ## Code Organization
@@ -183,7 +184,8 @@ Key dependencies linked: `dali`, `cudart`, `cassandra` (C++ driver).
 - C++ compilation triggered via CMake when running `pip install .`
 - Package name: `cassandra-dali-plugin`
 - Python package: `crs4.cassandra_utils`
-- Install requires: `cassandra-driver`, `pandas`, `tqdm`
+- Build requires: `setuptools>=64`, `wheel`, `cmake>=3.25.2`, `nvidia-dali-cuda130==1.53`
+- Install requires: `cassandra-driver>=3.29.3`, `pandas>=3.0.1`, `tqdm>=4.67.3`
 
 ## Loading the Plugin
 
