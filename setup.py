@@ -48,28 +48,8 @@ class build_ext(build_ext_orig):
 
 
 setup(
-    name="cassandra-dali-plugin",
-    version="1.3.0",
-    author="Francesco Versaci, Giovanni Busonera",
-    author_email="francesco.versaci@gmail.com, giovanni.busonera@crs4.it",
-    description="Cassandra data loader for ML pipelines",
-    packages=["crs4/cassandra_utils"],
-    url="https://github.com/crs4/cassandra-dali-plugin",
     ext_modules=[CMakeExtension("crs4cassandra")],
     cmdclass={
         "build_ext": build_ext,
     },
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: Apache Software License",
-        "Operating System :: OS Independent",
-        "Topic :: Scientific/Engineering",
-        "Intended Audience :: Science/Research",
-    ],
-    install_requires=[
-        "cassandra-driver",
-        "pandas",
-        "tqdm",
-    ],
-    python_requires=">=3.6",
 )
