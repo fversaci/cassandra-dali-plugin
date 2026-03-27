@@ -1,4 +1,11 @@
 # Imagenette Dataset with Lightning
+
+## Dependencies
+
+This example requires the following packages, which are not installed by the main plugin:
+* `lightning`
+* `torch`
+
 ## Starting and filling the DB
 
 Once the Docker container is set up, it is possible to start the

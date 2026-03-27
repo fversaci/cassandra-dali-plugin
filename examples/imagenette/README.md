@@ -8,6 +8,12 @@ The raw files are already present in the `/tmp` directory of the
 provided [Docker container](../../README.md#running-the-docker-container),
 from which the following commands can be run.
 
+## Dependencies
+
+This example requires the following packages, which are not installed by the main plugin:
+* `torch`
+* `torchvision`
+
 ## Resized dataset
 The following commands will copy the original dataset in Cassandra and
 use the plugin to read the images in NVIDIA DALI.

@@ -12,6 +12,12 @@ file will contain essential information, including training and
 validation splits, which will serve as input for the training
 application.
 
+## Dependencies
+
+This example requires the following packages, which are not installed by the main plugin:
+* `torch`
+* `torchvision`
+
 ## Store imagenette dataset to Cassandra DB
 The following commands will create the data and metadata tables within
 the Cassandra DB and store all imagenette images to it:

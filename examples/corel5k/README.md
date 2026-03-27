@@ -19,6 +19,11 @@ $ kaggle datasets download -d parhamsalar/corel5k
 In the following we will assume the original images are stored in the
 `/data/Corel-5k/`directory.
 
+## Dependencies
+
+This example requires the following packages, which are not installed by the main plugin:
+* `torch`
+
 ## Storing the (unchanged) images in the DB
 The following commands will insert the original dataset in Cassandra
 and use the plugin to read the images in NVIDIA DALI.
