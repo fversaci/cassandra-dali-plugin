@@ -33,11 +33,15 @@ classifiers = [
     "Topic :: Scientific/Engineering",
     "Intended Audience :: Science/Research",
 ]
+
 dependencies = [
     "cassandra-driver",
     "pandas",
     "tqdm",
 ]
+
+[tool.uv.extra-build-dependencies]
+cassandra-dali-plugin = ["nvidia-dali-cuda130==1.53"]
 
 [project.urls]
 Homepage = "https://github.com/crs4/cassandra-dali-plugin"
