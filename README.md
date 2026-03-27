@@ -77,7 +77,7 @@ examples](README.md#examples).
 - `label_col`: name of the label column (e.g., `label`)
 - `label_type`: type of label: "int", "blob" or "none" ("int" is
   typically used for classification, "blob" for segmentation)
-- `data_col`: name of the data column (e.g., `data")
+- `data_col`: name of the data column (e.g., `data`)
 - `id_col`: name of the UUID column (e.g., `img_id`)
 - `source_uuids`: full list of UUIDs, as strings, to be retrieved
 
