@@ -2,7 +2,7 @@
 
 ## Dependencies
 
-This example requires the following packages, which are not installed by the main plugin:
+This example requires the following packages, which are not installed by the main plugin but are already present in the Docker images:
 * `lightning`
 * `torch`
 
