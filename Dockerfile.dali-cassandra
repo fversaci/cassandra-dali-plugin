@@ -43,30 +43,18 @@ RUN \
 # Cassandra C++ and Python drivers
 ########################################################################
 
-# install cassandra C++ driver
+# install cassandra C++ driver build dependencies
+# (the driver itself is now built automatically by CMake if not found)
 RUN \
     export DEBIAN_FRONTEND=noninteractive \
     && apt-get update -y -q \
     && apt-get install -y libuv1-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/* 
 
-ARG CASS_DRIVER_VER=2.17.0
-RUN \
-    wget -nv "https://github.com/datastax/cpp-driver/archive/$CASS_DRIVER_VER.tar.gz" \
-    && tar xfz $CASS_DRIVER_VER.tar.gz \
-    && cd cassandra-cpp-driver-$CASS_DRIVER_VER \
-    && mkdir build \
-    && cd build \
-    && cmake .. \
-    && make -j \
-    && make install
-
-
 #install cassandra python driver + some python libraries
 RUN \
-    pip3 install --upgrade --no-cache matplotlib pandas clize boto3 \
-      opencv-python cassandra-driver pybind11 tqdm tifffile
-RUN pip3 install --upgrade --no-cache lightning==2.3.1
+    pip install --upgrade --no-cache matplotlib opencv-python pybind11 tifffile
+RUN pip install --upgrade --no-cache lightning==2.3.1
 
 ########################################################################
 # SPARK installation, to test examples
@@ -123,7 +111,6 @@ COPY varia/entrypoint-dali-cassandra.sh /tmp
 
 # install plugin
 WORKDIR /home/ubuntu/cassandra-dali-plugin
-RUN pip3 install IPython
-RUN pip3 install . --no-build-isolation
+RUN pip install . --no-build-isolation
 USER ubuntu
 ENTRYPOINT ["/tmp/entrypoint-dali-cassandra.sh"]

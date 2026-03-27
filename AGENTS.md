@@ -5,8 +5,9 @@
 NVIDIA DALI plugin for loading image/binary data from Apache Cassandra database into ML training pipelines. Tested with DALI v1.53.
 
 **Repository**: https://github.com/crs4/cassandra-dali-plugin
-**Version**: 1.3.0 (from setup.py)
+**Version**: 1.3.0 (from pyproject.toml)
 **License**: Apache License 2.0
+**Python**: >=3.11,<3.14
 **Authors**: Francesco Versaci, Giovanni Busonera (CRS4)
 
 ## Code Organization
@@ -76,10 +77,9 @@ setup.py                          # Python package with CMakeExtension
 
 ```bash
 # Build and install plugin (compiles C++ via CMake under the hood)
-pip3 install . --no-build-isolation
+# The Cassandra C++ driver is built automatically if not found.
+pip install .
 ```
-
-**Important**: Must use `--no-build-isolation` so CMake can access the build environment.
 
 ### Docker Workflow
 
@@ -102,7 +102,7 @@ The test scripts drop/recreate the Cassandra keyspace, load data via Spark (or s
 
 ```bash
 # Rebuild plugin after code changes
-pip3 install . --no-build-isolation
+pip install . --no-build-isolation
 
 # Run a single example manually
 cd examples/imagenette
@@ -175,6 +175,8 @@ execute_process(
     OUTPUT_VARIABLE DALI_COMPILE_FLAGS)
 ```
 
+**Automatic Dependency Management**: The CMake script (`crs4/cpp/CMakeLists.txt`) automatically fetches and compiles the Cassandra C++ driver from source (v2.17.0) if it is not found on the system.
+
 Key dependencies linked: `dali`, `cudart`, `cassandra` (C++ driver).
 
 ### Python Package (setup.py)
@@ -183,7 +185,8 @@ Key dependencies linked: `dali`, `cudart`, `cassandra` (C++ driver).
 - C++ compilation triggered via CMake when running `pip install .`
 - Package name: `cassandra-dali-plugin`
 - Python package: `crs4.cassandra_utils`
-- Install requires: `cassandra-driver`, `pandas`, `tqdm`
+- Build requires: `setuptools>=64`, `wheel`, `cmake>=3.25.2`, `nvidia-dali-cuda130==1.53`
+- Install requires: `cassandra-driver>=3.29.3`, `pandas>=3.0.1`, `tqdm>=4.67.3`
 
 ## Loading the Plugin
 
@@ -266,7 +269,7 @@ All code lives in `crs4` namespace.
 Three reader implementations (all inherit from `dali::InputOperator<dali::CPUBackend>`):
 
 1. **CassandraInteractive** - Synchronous batch prefetching, standard DALI pipeline
-2. **CassandraSelffeed** - Self-feeding variant
+2. **CassandraSelfFeed** - Self-feeding variant
 3. **CassandraDecoupled** - Mini-batch decoupled for Triton inference server
 
 ### Class Pattern
@@ -390,7 +393,7 @@ The `metadata` table enables filtering by label during dataset preparation. The 
 | Component               | Version                                                           |
 |-------------------------|-------------------------------------------------------------------|
 | Base image              | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.02-py3`) |
-| Cassandra C++ driver    | 2.17.0                                                            |
+| Cassandra C++ driver    | 2.17.0 (Built automatically by CMake)                             |
 | Cassandra Python driver | latest (via pip)                                                  |
 | Spark                   | 3.5.x                                                             |
 | DALI                    | Pre-installed in NGC container (1.53)                             |
@@ -416,19 +419,17 @@ The `SSL_VALIDATE=false` flag is required for cqlsh over the Docker bridge netwo
 
 3. **Cloud config**: Astra-style config uses dict like `{'secure_connect_bundle': 'path-to-bundle.zip'}`.
 
-4. **Build isolation**: Must use `--no-build-isolation` with pip to allow CMake access to build environment.
+4. **NVIDIA container runtime**: Requires `--ipc=host`, `SYS_ADMIN`, `NET_ADMIN` capabilities, and locked memory ulimits (`memlock=-1`, `stack=67108864`).
 
-5. **NVIDIA container runtime**: Requires `--ipc=host`, `SYS_ADMIN`, `NET_ADMIN` capabilities, and locked memory ulimits (`memlock=-1`, `stack=67108864`).
+5. **Prefetch dilution** (`slow_start`): For high-latency/packet-loss networks, set `slow_start=N` to request an extra image every N normal requests, limiting initial burst.
 
-6. **Prefetch dilution** (`slow_start`): For high-latency/packet-loss networks, set `slow_start=N` to request an extra image every N normal requests, limiting initial burst.
+6. **Out-of-order delivery** (`ooo=True`): For high-latency or lossy networks, returns images as soon as they arrive, potentially altering batch sequence and mixing batches.
 
-7. **Out-of-order delivery** (`ooo=True`): For high-latency or lossy networks, returns images as soon as they arrive, potentially altering batch sequence and mixing batches.
+7. **SSH access to Cassandra**: The DALI container connects to Cassandra via SSH on the Docker bridge network. The `SSL_VALIDATE=false` is mandatory for cqlsh in this setup.
 
-8. **SSH access to Cassandra**: The DALI container connects to Cassandra via SSH on the Docker bridge network. The `SSL_VALIDATE=false` is mandatory for cqlsh in this setup.
+8. **private_data.py**: Must be created from `private_data.template.py` before running examples. The template is copied to the container at build time.
 
-9. **private_data.py**: Must be created from `private_data.template.py` before running examples. The template is copied to the container at build time.
-
-10. **ThreadPool**: Third-party code from https://github.com/progschj/ThreadPool. Includes copyright notice but is freely usable.
+9. **ThreadPool**: Third-party code from https://github.com/progschj/ThreadPool. Includes copyright notice but is freely usable.
 
 ## Performance Tuning for Long Fat Networks
 

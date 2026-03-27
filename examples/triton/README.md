@@ -8,6 +8,11 @@ This allows a client to request that images stored in a remote
 Cassandra server be inferenced on a different remote, GPU-powered
 server.
 
+## Dependencies
+
+This example requires the following packages, which are not installed by the main plugin but are already present in the Docker images:
+* `tritonclient`
+
 ## Cassandra DALI operators
 
 The plugin provides two operators to be used with Triton:
