@@ -6,11 +6,11 @@ This document describes the three DALI operators provided by the cassandra-dali-
 
 The plugin provides three operators, each optimized for different use cases:
 
-| Operator | DALI Function Name | Primary Use Case |
-|----------|-------------------|------------------|
-| **CassandraSelfFeed** | `fn.crs4.cassandra` | Standard training workflows (recommended) |
-| **CassandraInteractive** | `fn.crs4.cassandra_interactive` | Custom pipelines, Triton inference |
-| **CassandraDecoupled** | `fn.crs4.cassandra_decoupled` | Triton inference with mini-batching |
+| Operator                 | DALI Function Name              | Primary Use Case                          |
+|--------------------------|---------------------------------|-------------------------------------------|
+| **CassandraSelfFeed**    | `fn.crs4.cassandra`             | Standard training workflows (recommended) |
+| **CassandraInteractive** | `fn.crs4.cassandra_interactive` | Custom pipelines, Triton inference        |
+| **CassandraDecoupled**   | `fn.crs4.cassandra_decoupled`   | Triton inference with mini-batching       |
 
 ### Choosing an Operator
 
@@ -82,40 +82,40 @@ reader = get_cassandra_reader(
 
 #### Connection Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `data_table` | str | *required* | Cassandra table containing the data (e.g., `"imagenet.data_train"`) |
-| `id_col` | str | `"id"` | Column name for UUID primary key |
-| `data_col` | str | `"data"` | Column name for binary data (BLOB) |
+| Parameter    | Type | Default    | Description                                                         |
+|--------------|------|------------|---------------------------------------------------------------------|
+| `data_table` | str  | *required* | Cassandra table containing the data (e.g., `"imagenet.data_train"`) |
+| `id_col`     | str  | `"id"`     | Column name for UUID primary key                                    |
+| `data_col`   | str  | `"data"`   | Column name for binary data (BLOB)                                  |
 
 #### Label Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `label_type` | str | `"int"` | Label format: `"int"` (classification), `"blob"` (segmentation), or `"none"` (inference) |
-| `label_col` | str | `"label"` | Column name for labels |
+| Parameter    | Type | Default   | Description                                                                              |
+|--------------|------|-----------|------------------------------------------------------------------------------------------|
+| `label_type` | str  | `"int"`   | Label format: `"int"` (classification), `"blob"` (segmentation), or `"none"` (inference) |
+| `label_col`  | str  | `"label"` | Column name for labels                                                                   |
 
 #### Dataset Management Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `source_uuids` | list | *required* | Full list of UUIDs to retrieve (from `read_uuids()`) |
-| `shard_id` | int | `0` | Shard index for this process in distributed training |
-| `num_shards` | int | `1` | Total number of shards (processes) |
-| `shuffle_every_epoch` | bool | `True` | Shuffle UUIDs at the start of each epoch |
-| `loop_forever` | bool | `True` | Loop dataset infinitely (set `False` for validation) |
+| Parameter             | Type | Default    | Description                                          |
+|-----------------------|------|------------|------------------------------------------------------|
+| `source_uuids`        | list | *required* | Full list of UUIDs to retrieve (from `read_uuids()`) |
+| `shard_id`            | int  | `0`        | Shard index for this process in distributed training |
+| `num_shards`          | int  | `1`        | Total number of shards (processes)                   |
+| `shuffle_every_epoch` | bool | `True`     | Shuffle UUIDs at the start of each epoch             |
+| `loop_forever`        | bool | `True`     | Loop dataset infinitely (set `False` for validation) |
 
 #### Performance Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `prefetch_buffers` | int | `2` | Multi-buffering depth for latency hiding |
-| `io_threads` | int | `2` | Cassandra driver IO threads (limits TCP connections) |
-| `comm_threads` | int | `2` | Communication handling threads |
-| `copy_threads` | int | `2` | Data copying threads |
-| `wait_threads` | int | `2` | Wait handling threads |
-| `ooo` | bool | `False` | Out-of-order delivery for high-latency/lossy networks |
-| `slow_start` | int | `0` | Prefetch dilution factor (request extra image every N requests) |
+| Parameter          | Type | Default | Description                                                     |
+|--------------------|------|---------|-----------------------------------------------------------------|
+| `prefetch_buffers` | int  | `2`     | Multi-buffering depth for latency hiding                        |
+| `io_threads`       | int  | `2`     | Cassandra driver IO threads (limits TCP connections)            |
+| `comm_threads`     | int  | `2`     | Communication handling threads                                  |
+| `copy_threads`     | int  | `2`     | Data copying threads                                            |
+| `wait_threads`     | int  | `2`     | Wait handling threads                                           |
+| `ooo`              | bool | `False` | Out-of-order delivery for high-latency/lossy networks           |
+| `slow_start`       | int  | `0`     | Prefetch dilution factor (request extra image every N requests) |
 
 ### Distributed Training Example
 
@@ -181,9 +181,9 @@ reader = get_cassandra_reader(
 
 This operator uses the same connection, label, and performance parameters as `CassandraSelfFeed`, but does **not** support the dataset management parameters (`source_uuids`, `shard_id`, `num_shards`, `shuffle_every_epoch`, `loop_forever`).
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `name` | str | `"UUID"` | Operator name for DALI pipeline |
+| Parameter | Type | Default  | Description                     |
+|-----------|------|----------|---------------------------------|
+| `name`    | str  | `"UUID"` | Operator name for DALI pipeline |
 
 ## CassandraDecoupled
 
@@ -220,9 +220,9 @@ reader = get_cassandra_reader(
 
 ### Additional Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `mini_batch_size` | int | `-1` | Size of mini-batches (`-1` uses full batch size) |
+| Parameter         | Type | Default | Description                                      |
+|-------------------|------|---------|--------------------------------------------------|
+| `mini_batch_size` | int  | `-1`    | Size of mini-batches (`-1` uses full batch size) |
 
 ## Label Types
 
@@ -329,12 +329,12 @@ reader = get_cassandra_reader(
 
 ### Parameter Guidelines
 
-| Scenario | `prefetch_buffers` | `io_threads` | `comm_threads` | `copy_threads` | `ooo` | `slow_start` |
-|----------|-------------------|--------------|----------------|----------------|-------|--------------|
-| Low latency | 2 | 2 | 2 | 2 | False | 0 |
-| High throughput | 4 | 4 | 1 | 4 | False | 0 |
-| High latency | 16 | 8 | 1 | 4 | True | 4 |
-| Packet loss | 16 | 8 | 1 | 4 | True | 4 |
+| Scenario        | `prefetch_buffers` | `io_threads` | `comm_threads` | `copy_threads` | `ooo` | `slow_start` |
+|-----------------|--------------------|--------------|----------------|----------------|-------|--------------|
+| Low latency     | 2                  | 2            | 2              | 2              | False | 0            |
+| High throughput | 4                  | 4            | 1              | 4              | False | 0            |
+| High latency    | 16                 | 8            | 1              | 4              | True  | 4            |
+| Packet loss     | 16                 | 8            | 1              | 4              | True  | 4            |
 
 ### Out-of-Order Delivery (`ooo`)
 
@@ -497,9 +497,3 @@ pipe = create_dali_pipeline(
 )
 pipe.build()
 ```
-
-## Related Documentation
-
-- [Long Fat Networks Optimization](LFN.md) - Tuning for high-latency, high-bandwidth networks
-- [Agent Guide](../AGENTS.md) - Development setup and build instructions
-- [Examples](../examples/) - Complete working examples for various use cases
