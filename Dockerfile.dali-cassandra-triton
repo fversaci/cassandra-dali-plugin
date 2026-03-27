@@ -100,12 +100,9 @@ RUN \
     && apt-get install -y libuv1-dev libssl-dev \
     && rm -rf /var/lib/apt/lists/* 
 
-# install uv for faster package management
-RUN pip3 install uv
-
 #install cassandra python driver + torch + other python libraries
 RUN \
-    uv pip install --system --upgrade --no-cache matplotlib pandas clize \
+    pip install --upgrade --no-cache matplotlib pandas clize \
       opencv-python cassandra-driver pybind11 tqdm tifffile torch torchvision
 
 ########################################################################
@@ -131,18 +128,18 @@ COPY ./examples/common/private_data.template.py /home/ubuntu/cassandra-dali-plug
 RUN chown -R triton-server:triton-server '/home/ubuntu/'
 
 # install DALI
-RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist \
+RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
     --upgrade nvidia-dali-cuda130==$DALI_DOWNLOAD_VERSION
-# RUN pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
+# RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist/nightly \
 #     --upgrade nvidia-dali-nightly-cuda130==$DALI_DOWNLOAD_VERSION
 
 
 # install cassandra dali plugin
 WORKDIR /home/ubuntu/cassandra-dali-plugin
-RUN uv pip install --system . --no-build-isolation
+RUN pip install . --no-build-isolation
 
 # install triton client
-RUN uv pip install --system tritonclient[all] IPython
+RUN pip install tritonclient[all] IPython
 
 # copy ssh keys to access cassandra container
 COPY varia/ssh/ /home/ubuntu/.ssh/

@@ -208,14 +208,11 @@ On Debian/Ubuntu, install the prerequisites with:
 sudo apt-get install -y libuv1-dev libssl-dev cmake build-essential
 ```
 
-We recommend using [uv](https://github.com/astral-sh/uv) for faster dependency resolution and installation.
+You can install the plugin using `pip` or `uv`:
 
 ```bash
-# Install uv
-pip install uv
-
 # Install the plugin (this will also fetch and build the Cassandra C++ driver if missing)
-uv pip install . --no-build-isolation
+pip install .
 ```
 
 Other details of how to install missing dependencies can be found in

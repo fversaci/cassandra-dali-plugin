@@ -78,10 +78,8 @@ setup.py                          # Python package with CMakeExtension
 ```bash
 # Build and install plugin (compiles C++ via CMake under the hood)
 # The Cassandra C++ driver is built automatically if not found.
-uv pip install . --no-build-isolation
+pip install .
 ```
-
-**Important**: Must use `--no-build-isolation` so CMake can access the build environment.
 
 ### Docker Workflow
 
@@ -104,7 +102,7 @@ The test scripts drop/recreate the Cassandra keyspace, load data via Spark (or s
 
 ```bash
 # Rebuild plugin after code changes
-uv pip install . --no-build-isolation
+pip install . --no-build-isolation
 
 # Run a single example manually
 cd examples/imagenette
@@ -184,7 +182,7 @@ Key dependencies linked: `dali`, `cudart`, `cassandra` (C++ driver).
 ### Python Package (setup.py)
 
 - Uses `setuptools` with custom `CMakeExtension` and `build_ext` command
-- C++ compilation triggered via CMake when running `pip install .` or `uv pip install .`
+- C++ compilation triggered via CMake when running `pip install .`
 - Package name: `cassandra-dali-plugin`
 - Python package: `crs4.cassandra_utils`
 - Build requires: `setuptools>=64`, `wheel`, `cmake>=3.25.2`, `nvidia-dali-cuda130==1.53`
@@ -421,19 +419,17 @@ The `SSL_VALIDATE=false` flag is required for cqlsh over the Docker bridge netwo
 
 3. **Cloud config**: Astra-style config uses dict like `{'secure_connect_bundle': 'path-to-bundle.zip'}`.
 
-4. **Build isolation**: Must use `--no-build-isolation` with pip/uv to allow CMake access to build environment.
+4. **NVIDIA container runtime**: Requires `--ipc=host`, `SYS_ADMIN`, `NET_ADMIN` capabilities, and locked memory ulimits (`memlock=-1`, `stack=67108864`).
 
-5. **NVIDIA container runtime**: Requires `--ipc=host`, `SYS_ADMIN`, `NET_ADMIN` capabilities, and locked memory ulimits (`memlock=-1`, `stack=67108864`).
+5. **Prefetch dilution** (`slow_start`): For high-latency/packet-loss networks, set `slow_start=N` to request an extra image every N normal requests, limiting initial burst.
 
-6. **Prefetch dilution** (`slow_start`): For high-latency/packet-loss networks, set `slow_start=N` to request an extra image every N normal requests, limiting initial burst.
+6. **Out-of-order delivery** (`ooo=True`): For high-latency or lossy networks, returns images as soon as they arrive, potentially altering batch sequence and mixing batches.
 
-7. **Out-of-order delivery** (`ooo=True`): For high-latency or lossy networks, returns images as soon as they arrive, potentially altering batch sequence and mixing batches.
+7. **SSH access to Cassandra**: The DALI container connects to Cassandra via SSH on the Docker bridge network. The `SSL_VALIDATE=false` is mandatory for cqlsh in this setup.
 
-8. **SSH access to Cassandra**: The DALI container connects to Cassandra via SSH on the Docker bridge network. The `SSL_VALIDATE=false` is mandatory for cqlsh in this setup.
+8. **private_data.py**: Must be created from `private_data.template.py` before running examples. The template is copied to the container at build time.
 
-9. **private_data.py**: Must be created from `private_data.template.py` before running examples. The template is copied to the container at build time.
-
-10. **ThreadPool**: Third-party code from https://github.com/progschj/ThreadPool. Includes copyright notice but is freely usable.
+9. **ThreadPool**: Third-party code from https://github.com/progschj/ThreadPool. Includes copyright notice but is freely usable.
 
 ## Performance Tuning for Long Fat Networks
 
