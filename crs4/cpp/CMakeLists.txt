@@ -20,6 +20,12 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++20")
 
 include_directories(SYSTEM "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
+# Verify required system libraries are installed
+find_library(CASSANDRA_LIB cassandra REQUIRED)
+find_library(UV_LIB uv REQUIRED)
+find_library(SSL_LIB ssl REQUIRED)
+find_library(CRYPTO_LIB crypto REQUIRED)
+
 execute_process(
         COMMAND python3 -c "import nvidia.dali as dali; print(dali.sysconfig.get_lib_dir())"
         OUTPUT_VARIABLE DALI_LIB_DIR)

@@ -189,10 +189,35 @@ cassandra-dali-plugin requires:
 - Cassandra C/C++ driver
 - Cassandra Python driver
 
-The details of how to install missing dependencies, in a system which
-provides only some of the dependencies, can be deduced from the
-[Dockerfile](Dockerfile), which contains all the installation
-commands for the packages above.
+### Build prerequisites
+
+The C++ plugin links against the following system libraries, which
+must be installed before building:
+
+| Library | Debian/Ubuntu package | Source |
+|---------|-----------------------|--------|
+| Cassandra C++ driver | Build from [source](https://github.com/datastax/cpp-driver) (v2.17.0 required) | [github.com/datastax/cpp-driver](https://github.com/datastax/cpp-driver) |
+| libuv | `libuv1-dev` | [libuv.org](https://libuv.org) |
+| OpenSSL | `libssl-dev` | [openssl.org](https://openssl.org) |
+| CMake | `cmake` (>= 3.25.2) | [cmake.org](https://cmake.org) |
+
+On Debian/Ubuntu, install the prerequisites with:
+
+```bash
+sudo apt-get install -y libuv1-dev libssl-dev cmake build-essential
+# Build and install the Cassandra C++ driver
+wget -nv "https://github.com/datastax/cpp-driver/archive/2.17.0.tar.gz"
+tar xfz 2.17.0.tar.gz
+cd cassandra-cpp-driver-2.17.0
+mkdir build && cd build
+cmake ..
+make -j
+sudo make install
+```
+
+Other details of how to install missing dependencies can be found in
+[Dockerfile.dali-cassandra](Dockerfile.dali-cassandra), which contains
+all the installation commands for the packages above.
 
 **Once the dependencies have been installed**, the plugin
 can easily be installed with pip:
