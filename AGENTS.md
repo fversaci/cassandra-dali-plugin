@@ -156,13 +156,13 @@ The `.rows` files contain a pickled dict with `row_keys` (list of UUID strings).
 
 ### C++ Plugin (CMake)
 
-| Property | Value |
-|----------|-------|
-| Minimum CMake | 3.25.2 |
-| C++ Standard | C++20 |
-| CUDA Standard | C++20 (`-std=c++20` flag) |
-| CUDA Architectures | 75;80;86;89;90 |
-| Output | `libcrs4cassandra.so` (shared library) |
+| Property           | Value                                  |
+|--------------------|----------------------------------------|
+| Minimum CMake      | 3.25.2                                 |
+| C++ Standard       | C++20                                  |
+| CUDA Standard      | C++20 (`-std=c++20` flag)              |
+| CUDA Architectures | 75;80;86;89;90                         |
+| Output             | `libcrs4cassandra.so` (shared library) |
 
 CMake queries DALI at configure time for include paths and library directories:
 
@@ -215,45 +215,45 @@ images, labels = fn.crs4.cassandra(
 
 ### Core Parameters
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `name` | Reader name | - |
-| `cassandra_ips` | List of Cassandra IPs/hostnames | - |
-| `cassandra_port` | Cassandra TCP port | 9042 |
-| `table` | Data table name (e.g., `imagenet.data_train`) | - |
-| `label_col` | Label column name | - |
-| `label_type` | "int" (classification), "blob" (segmentation), or "none" | - |
-| `data_col` | Data column name (BLOB) | - |
-| `id_col` | UUID column name | - |
-| `source_uuids` | Full list of UUIDs to retrieve | - |
-| `num_shards` | Number of shards for distributed training | 1 |
-| `shard_id` | Shard index for this process | 0 |
-| `shuffle_every_epoch` | Shuffle UUIDs each epoch | True |
-| `loop_forever` | Loop dataset infinitely | True |
+| Parameter             | Description                                              | Default |
+|-----------------------|----------------------------------------------------------|---------|
+| `name`                | Reader name                                              | -       |
+| `cassandra_ips`       | List of Cassandra IPs/hostnames                          | -       |
+| `cassandra_port`      | Cassandra TCP port                                       | 9042    |
+| `table`               | Data table name (e.g., `imagenet.data_train`)            | -       |
+| `label_col`           | Label column name                                        | -       |
+| `label_type`          | "int" (classification), "blob" (segmentation), or "none" | -       |
+| `data_col`            | Data column name (BLOB)                                  | -       |
+| `id_col`              | UUID column name                                         | -       |
+| `source_uuids`        | Full list of UUIDs to retrieve                           | -       |
+| `num_shards`          | Number of shards for distributed training                | 1       |
+| `shard_id`            | Shard index for this process                             | 0       |
+| `shuffle_every_epoch` | Shuffle UUIDs each epoch                                 | True    |
+| `loop_forever`        | Loop dataset infinitely                                  | True    |
 
 ### Authentication
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `username` / `password` | Cassandra auth credentials | None |
-| `use_ssl` | Enable SSL | False |
-| `ssl_certificate` | Path to server public key | "" |
-| `ssl_own_certificate` | Path to client public key | "" |
-| `ssl_own_key` | Path to client private key | "" |
-| `ssl_own_key_pass` | Password for client private key | "" |
-| `cloud_config` | Astra-style dict `{'secure_connect_bundle': 'path.zip'}` | None |
+| Parameter               | Description                                              | Default |
+|-------------------------|----------------------------------------------------------|---------|
+| `username` / `password` | Cassandra auth credentials                               | None    |
+| `use_ssl`               | Enable SSL                                               | False   |
+| `ssl_certificate`       | Path to server public key                                | ""      |
+| `ssl_own_certificate`   | Path to client public key                                | ""      |
+| `ssl_own_key`           | Path to client private key                               | ""      |
+| `ssl_own_key_pass`      | Password for client private key                          | ""      |
+| `cloud_config`          | Astra-style dict `{'secure_connect_bundle': 'path.zip'}` | None    |
 
 ### Performance Tuning
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `prefetch_buffers` | Multi-buffering depth (hides latency) | 2 |
-| `io_threads` | Cassandra driver IO threads (limits TCP connections) | 2 |
-| `comm_threads` | Communication handling threads | 2 |
-| `copy_threads` | Data copying threads | 2 |
-| `wait_threads` | Wait handling threads | 2 |
-| `ooo` | Out-of-order delivery (for high-latency/packet-loss networks) | False |
-| `slow_start` | Prefetch dilution (request extra image every N) | 0 |
+| Parameter          | Description                                                   | Default |
+|--------------------|---------------------------------------------------------------|---------|
+| `prefetch_buffers` | Multi-buffering depth (hides latency)                         | 2       |
+| `io_threads`       | Cassandra driver IO threads (limits TCP connections)          | 2       |
+| `comm_threads`     | Communication handling threads                                | 2       |
+| `copy_threads`     | Data copying threads                                          | 2       |
+| `wait_threads`     | Wait handling threads                                         | 2       |
+| `ooo`              | Out-of-order delivery (for high-latency/packet-loss networks) | False   |
+| `slow_start`       | Prefetch dilution (request extra image every N)               | 0       |
 
 ## C++ Code Patterns
 
@@ -387,16 +387,16 @@ The `metadata` table enables filtering by label during dataset preparation. The 
 
 ## Docker Environment
 
-| Component | Version |
-|-----------|---------|
-| Base image | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.02-py3`) |
-| Cassandra C++ driver | 2.17.0 |
-| Cassandra Python driver | latest (via pip) |
-| Spark | 3.5.x |
-| DALI | Pre-installed in NGC container (1.53) |
-| PyTorch Lightning | 2.3.1 |
-| CUDA architectures | 75;80;86;89;90 |
-| Default shell | fish |
+| Component               | Version                                                           |
+|-------------------------|-------------------------------------------------------------------|
+| Base image              | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.02-py3`) |
+| Cassandra C++ driver    | 2.17.0                                                            |
+| Cassandra Python driver | latest (via pip)                                                  |
+| Spark                   | 3.5.x                                                             |
+| DALI                    | Pre-installed in NGC container (1.53)                             |
+| PyTorch Lightning       | 2.3.1                                                             |
+| CUDA architectures      | 75;80;86;89;90                                                    |
+| Default shell           | fish                                                              |
 
 ### Cassandra Container Access
 
