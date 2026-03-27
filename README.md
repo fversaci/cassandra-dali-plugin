@@ -77,7 +77,7 @@ examples](README.md#examples).
 - `label_col`: name of the label column (e.g., `label`)
 - `label_type`: type of label: "int", "blob" or "none" ("int" is
   typically used for classification, "blob" for segmentation)
-- `data_col`: name of the data column (e.g., `data`)
+- `data_col`: name of the data column (e.g., `data")
 - `id_col`: name of the UUID column (e.g., `img_id`)
 - `source_uuids`: full list of UUIDs, as strings, to be retrieved
 
@@ -192,11 +192,12 @@ cassandra-dali-plugin requires:
 ### Build prerequisites
 
 The C++ plugin links against the following system libraries, which
-must be installed before building:
+must be installed before building. The Cassandra C++ driver is now
+automatically fetched and compiled by the build system if not found
+on the system.
 
 | Library | Debian/Ubuntu package | Source |
 |---------|-----------------------|--------|
-| Cassandra C++ driver | Build from [source](https://github.com/datastax/cpp-driver) (v2.17.0 required) | [github.com/datastax/cpp-driver](https://github.com/datastax/cpp-driver) |
 | libuv | `libuv1-dev` | [libuv.org](https://libuv.org) |
 | OpenSSL | `libssl-dev` | [openssl.org](https://openssl.org) |
 | CMake | `cmake` (>= 3.25.2) | [cmake.org](https://cmake.org) |
@@ -205,25 +206,21 @@ On Debian/Ubuntu, install the prerequisites with:
 
 ```bash
 sudo apt-get install -y libuv1-dev libssl-dev cmake build-essential
-# Build and install the Cassandra C++ driver
-wget -nv "https://github.com/datastax/cpp-driver/archive/2.17.0.tar.gz"
-tar xfz 2.17.0.tar.gz
-cd cassandra-cpp-driver-2.17.0
-mkdir build && cd build
-cmake ..
-make -j
-sudo make install
+```
+
+We recommend using [uv](https://github.com/astral-sh/uv) for faster dependency resolution and installation.
+
+```bash
+# Install uv
+pip install uv
+
+# Install the plugin (this will also fetch and build the Cassandra C++ driver if missing)
+uv pip install . --no-build-isolation
 ```
 
 Other details of how to install missing dependencies can be found in
 [Dockerfile.dali-cassandra](Dockerfile.dali-cassandra), which contains
 all the installation commands for the packages above.
-
-**Once the dependencies have been installed**, the plugin
-can easily be installed with pip:
-```bash
-$ pip3 install . --no-build-isolation
-```
 
 ## Authors
 

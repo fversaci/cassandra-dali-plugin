@@ -77,7 +77,8 @@ setup.py                          # Python package with CMakeExtension
 
 ```bash
 # Build and install plugin (compiles C++ via CMake under the hood)
-pip3 install . --no-build-isolation
+# The Cassandra C++ driver is built automatically if not found.
+uv pip install . --no-build-isolation
 ```
 
 **Important**: Must use `--no-build-isolation` so CMake can access the build environment.
@@ -103,7 +104,7 @@ The test scripts drop/recreate the Cassandra keyspace, load data via Spark (or s
 
 ```bash
 # Rebuild plugin after code changes
-pip3 install . --no-build-isolation
+uv pip install . --no-build-isolation
 
 # Run a single example manually
 cd examples/imagenette
@@ -176,12 +177,14 @@ execute_process(
     OUTPUT_VARIABLE DALI_COMPILE_FLAGS)
 ```
 
+**Automatic Dependency Management**: The CMake script (`crs4/cpp/CMakeLists.txt`) automatically fetches and compiles the Cassandra C++ driver from source (v2.17.0) if it is not found on the system.
+
 Key dependencies linked: `dali`, `cudart`, `cassandra` (C++ driver).
 
 ### Python Package (setup.py)
 
 - Uses `setuptools` with custom `CMakeExtension` and `build_ext` command
-- C++ compilation triggered via CMake when running `pip install .`
+- C++ compilation triggered via CMake when running `pip install .` or `uv pip install .`
 - Package name: `cassandra-dali-plugin`
 - Python package: `crs4.cassandra_utils`
 - Build requires: `setuptools>=64`, `wheel`, `cmake>=3.25.2`, `nvidia-dali-cuda130==1.53`
@@ -392,7 +395,7 @@ The `metadata` table enables filtering by label during dataset preparation. The 
 | Component               | Version                                                           |
 |-------------------------|-------------------------------------------------------------------|
 | Base image              | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.02-py3`) |
-| Cassandra C++ driver    | 2.17.0                                                            |
+| Cassandra C++ driver    | 2.17.0 (Built automatically by CMake)                             |
 | Cassandra Python driver | latest (via pip)                                                  |
 | Spark                   | 3.5.x                                                             |
 | DALI                    | Pre-installed in NGC container (1.53)                             |
@@ -418,7 +421,7 @@ The `SSL_VALIDATE=false` flag is required for cqlsh over the Docker bridge netwo
 
 3. **Cloud config**: Astra-style config uses dict like `{'secure_connect_bundle': 'path-to-bundle.zip'}`.
 
-4. **Build isolation**: Must use `--no-build-isolation` with pip to allow CMake access to build environment.
+4. **Build isolation**: Must use `--no-build-isolation` with pip/uv to allow CMake access to build environment.
 
 5. **NVIDIA container runtime**: Requires `--ipc=host`, `SYS_ADMIN`, `NET_ADMIN` capabilities, and locked memory ulimits (`memlock=-1`, `stack=67108864`).
 
