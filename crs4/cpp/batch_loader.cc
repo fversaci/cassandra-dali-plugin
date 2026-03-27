@@ -72,7 +72,7 @@ void BatchLoader::load_own_key_file(std::string file, CassSsl* ssl, std::string 
 
   FILE *in = fopen(file.c_str(), "rb");
   if (in == NULL) {
-    throw std::runtime_error("Error loading certificate file " + file);
+    throw std::runtime_error("Error loading key file " + file);
   }
 
   fseek(in, 0, SEEK_END);
