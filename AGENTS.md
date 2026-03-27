@@ -269,7 +269,7 @@ All code lives in `crs4` namespace.
 Three reader implementations (all inherit from `dali::InputOperator<dali::CPUBackend>`):
 
 1. **CassandraInteractive** - Synchronous batch prefetching, standard DALI pipeline
-2. **CassandraSelffeed** - Self-feeding variant
+2. **CassandraSelfFeed** - Self-feeding variant
 3. **CassandraDecoupled** - Mini-batch decoupled for Triton inference server
 
 ### Class Pattern
