@@ -35,9 +35,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "cassandra-driver",
-    "pandas",
-    "tqdm",
+    "boto3>=1.42.77",
+    "cassandra-driver>=3.29.3",
+    "clize>=5.0.2",
+    "ipython>=9.10.1",
+    "nvidia-dali-cuda130==1.53",
+    "pandas>=3.0.1",
+    "pillow>=12.1.1",
+    "tqdm>=4.67.3",
+    # "lightning>=2.6.1",
+    # "torch>=2.11.0",
+    # "torchvision>=0.26.0",
 ]
 
 [tool.uv.extra-build-dependencies]
