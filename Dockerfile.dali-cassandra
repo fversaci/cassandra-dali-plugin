@@ -53,8 +53,7 @@ RUN \
 
 #install cassandra python driver + some python libraries
 RUN \
-    pip install --upgrade --no-cache matplotlib pandas clize boto3 \
-      opencv-python cassandra-driver pybind11 tqdm tifffile
+    pip install --upgrade --no-cache matplotlib opencv-python pybind11 tifffile
 RUN pip install --upgrade --no-cache lightning==2.3.1
 
 ########################################################################
@@ -112,7 +111,6 @@ COPY varia/entrypoint-dali-cassandra.sh /tmp
 
 # install plugin
 WORKDIR /home/ubuntu/cassandra-dali-plugin
-RUN pip install IPython
 RUN pip install . --no-build-isolation
 USER ubuntu
 ENTRYPOINT ["/tmp/entrypoint-dali-cassandra.sh"]

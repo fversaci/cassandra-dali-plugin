@@ -102,8 +102,7 @@ RUN \
 
 #install cassandra python driver + torch + other python libraries
 RUN \
-    pip install --upgrade --no-cache matplotlib pandas clize \
-      opencv-python cassandra-driver pybind11 tqdm tifffile torch torchvision
+    pip install --upgrade --no-cache matplotlib opencv-python pybind11 tifffile torch torchvision
 
 ########################################################################
 # Fix for error given by "from nvidia.dali.plugin.pytorch import DALIGenericIterator"
@@ -139,7 +138,7 @@ WORKDIR /home/ubuntu/cassandra-dali-plugin
 RUN pip install . --no-build-isolation
 
 # install triton client
-RUN pip install tritonclient[all] IPython
+RUN pip install tritonclient[all]
 
 # copy ssh keys to access cassandra container
 COPY varia/ssh/ /home/ubuntu/.ssh/
