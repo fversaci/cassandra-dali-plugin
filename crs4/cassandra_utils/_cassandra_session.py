@@ -47,7 +47,7 @@ class CassandraSession:
             )
         else:
             if cass_conf.use_ssl:
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS)
                 if cass_conf.ssl_certificate:
                     ssl_context.load_verify_locations(cass_conf.ssl_certificate)
                     ssl_context.verify_mode = ssl.CERT_REQUIRED
