@@ -24,12 +24,13 @@ namespace crs4 {
 BatchLoader::~BatchLoader() {
   if (connected) {
     ignore_batch();
-    cass_session_free(session);
-    cass_cluster_free(cluster);
     delete(copy_pool);
     delete(comm_pool);
     delete(wait_pool);
   }
+  // Always free cluster and session as they are allocated in the header
+  cass_session_free(session);
+  cass_cluster_free(cluster);
 }
 
 void BatchLoader::load_own_cert_file(std::string file, CassSsl* ssl) {
