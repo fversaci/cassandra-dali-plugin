@@ -387,8 +387,6 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   // label/mask/none
   std::future<void> cj;
   size_t l_sz = 0;
-  const cass_byte_t* lab = nullptr;
-  cass_int32_t lab_int = 0;
 
   switch (label_t) {
   case lab_none: {
@@ -400,7 +398,8 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   case lab_int: {
     const CassValue* c_lab =
       cass_row_get_column_by_name(row, label_col.c_str());
-    rc = cass_value_get_int32(c_lab, &lab_int);
+    cass_int32_t lab;
+    rc = cass_value_get_int32(c_lab, &lab);
     if (rc != CASS_OK) {
       cass_result_free(result);
       throw std::runtime_error("Error getting value from result: "
@@ -408,12 +407,14 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     }
     // enqueue image copy + int label
     cj = copy_pool->enqueue(&BatchLoader::copy_data_int, this,
-                            result, data, sz, lab_int, i, wb);
+                            result, data, sz, lab, i, wb);
     break;
   }
   case lab_img: {
     const CassValue* c_lab =
       cass_row_get_column_by_name(row, label_col.c_str());
+    const cass_byte_t* lab;
+    size_t l_sz;
     rc = cass_value_get_bytes(c_lab, &lab, &l_sz);
     if (rc != CASS_OK) {
       cass_result_free(result);
