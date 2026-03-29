@@ -47,8 +47,13 @@ void BatchLoader::load_own_cert_file(std::string file, CassSsl* ssl) {
   rewind(in);
 
   cert = reinterpret_cast<char*>(malloc(cert_size));
-  fread(cert, sizeof(char), cert_size, in);
+  size_t read_size = fread(cert, sizeof(char), cert_size, in);
   fclose(in);
+
+  if (read_size != static_cast<size_t>(cert_size)) {
+    free(cert);
+    throw std::runtime_error("Error reading certificate file " + file + ": incomplete read");
+  }
 
   // Add the trusted certificate (or chain) to the driver
   rc = cass_ssl_set_cert_n(ssl, cert, cert_size);
@@ -80,8 +85,13 @@ void BatchLoader::load_own_key_file(std::string file, CassSsl* ssl, std::string 
   rewind(in);
 
   cert = reinterpret_cast<char*>(malloc(cert_size));
-  fread(cert, sizeof(char), cert_size, in);
+  size_t read_size = fread(cert, sizeof(char), cert_size, in);
   fclose(in);
+
+  if (read_size != static_cast<size_t>(cert_size)) {
+    free(cert);
+    throw std::runtime_error("Error reading key file " + file + ": incomplete read");
+  }
 
   // Add the trusted certificate (or chain) to the driver
   rc = cass_ssl_set_private_key_n(ssl, cert, cert_size, password, password_length);
@@ -109,8 +119,13 @@ void BatchLoader::load_trusted_cert_file(std::string file, CassSsl* ssl) {
   rewind(in);
 
   cert = reinterpret_cast<char*>(malloc(cert_size));
-  fread(cert, sizeof(char), cert_size, in);
+  size_t read_size = fread(cert, sizeof(char), cert_size, in);
   fclose(in);
+
+  if (read_size != static_cast<size_t>(cert_size)) {
+    free(cert);
+    throw std::runtime_error("Error reading certificate file " + file + ": incomplete read");
+  }
 
   // Add the trusted certificate (or chain) to the driver
   rc = cass_ssl_add_trusted_cert_n(ssl, cert, cert_size);
@@ -190,10 +205,12 @@ void BatchLoader::connect() {
   }
   CassFuture* connect_future = cass_session_connect(session, cluster);
   rc = cass_future_error_code(connect_future);
-  cass_future_free(connect_future);
   if (rc != CASS_OK) {
-    throw std::runtime_error("Error: unable to connect to Cassandra DB. ");
+    cass_future_free(connect_future);
+    throw std::runtime_error("Error: unable to connect to Cassandra DB: "
+                             + std::string(cass_error_desc(rc)));
   }
+  cass_future_free(connect_future);
   // assemble query
   std::stringstream ss;
   ss << "SELECT ";
@@ -207,9 +224,12 @@ void BatchLoader::connect() {
   CassFuture* prepare_future = cass_session_prepare(session, query.c_str());
   prepared = cass_future_get_prepared(prepare_future);
   if (prepared == NULL) {
-    /* Handle error */
+    const char* error_message;
+    size_t error_message_length;
+    cass_future_error_message(prepare_future, &error_message, &error_message_length);
+    std::string err_str(error_message, error_message_length);
     cass_future_free(prepare_future);
-    throw std::runtime_error("Error in query: " + query);
+    throw std::runtime_error("Error preparing query '" + query + "': " + err_str);
   }
   cass_future_free(prepare_future);
   // init thread pools
@@ -337,21 +357,19 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   CassError rc;
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
-    // Handle error
     const char* error_message;
     size_t error_message_length;
     cass_future_error_message(query_future,
                               &error_message, &error_message_length);
-    fprintf(stderr, "Unable to run query: '%.*s'\n",
-            static_cast<int>(error_message_length), error_message);
-    cass_future_free(query_future);
-    throw std::runtime_error("Error: unable to execute query");
+    std::string err_str(error_message, error_message_length);
+    throw std::runtime_error("Unable to run query: " + err_str);
   }
   // decode result
   const CassRow* row = cass_result_first_row(result);
   if (row == NULL) {
     // Handle error
-    throw std::runtime_error("Error: query returned empty set");
+    cass_result_free(result);
+    throw std::runtime_error("Error: query returned empty result set");
   }
   // feature
   const CassValue* c_data =
@@ -360,6 +378,7 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   size_t sz;
   rc = cass_value_get_bytes(c_data, &data, &sz);
   if (rc != CASS_OK) {
+    cass_result_free(result);
     throw std::runtime_error("Error getting bytes from result: "
                              + std::string(cass_error_desc(rc)));
   }
@@ -379,6 +398,7 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     cass_int32_t lab;
     rc = cass_value_get_int32(c_lab, &lab);
     if (rc != CASS_OK) {
+      cass_result_free(result);
       throw std::runtime_error("Error getting value from result: "
                                + std::string(cass_error_desc(rc)));
     }
@@ -394,6 +414,7 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     size_t l_sz;
     rc = cass_value_get_bytes(c_lab, &lab, &l_sz);
     if (rc != CASS_OK) {
+      cass_result_free(result);
       throw std::runtime_error("Error getting value from result: "
                                + std::string(cass_error_desc(rc)));
     }
@@ -404,6 +425,7 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
     break;
   }
   default:
+    cass_result_free(result);
     throw std::runtime_error("Unknown label type");
   }
   // saving raw image size
