@@ -32,18 +32,12 @@
 **Issue:** Direct pointer arithmetic on `uint64_t*` without bounds checking assumes exactly 2 `uint64_t` values per tensor element.
 **Impact:** If `uuids` tensor is malformed, could read out of bounds. Should validate tensor shape.
 
-## 7. Race Condition in Batch Shape Assignment
-**File:** `crs4/cpp/batch_loader.cc`
-**Function:** `transfer2copy`
-**Issue:** The assignment `shapes[wb][i] = sz` (and `lab_shapes[wb][i] = l_sz` for segmentation) occurs outside the `alloc_mtx[wb]` mutex lock. Multiple threads can write to different indices of the same vector concurrently, and the final read by the last thread (to allocate tensors) may not see all writes due to lack of synchronization.
-**Impact:** Data race (Undefined Behavior). The thread allocating the tensor may read uninitialized/incorrect shape values, leading to tensor allocation failures or memory corruption.
-
-## 8. Missing Documentation for Complex Parameters
+## 7. Missing Documentation for Complex Parameters
 **File:** `crs4/cpp/cassandra_dali_interactive.cc`
 **Issue:** The `ooo` (out-of-order) and `slow_start` parameters have minimal DALI_SCHEMA documentation.
 **Impact:** Users may misuse these advanced parameters. Should add detailed documentation.
 
-## 9. Missing Input Validation in CassandraSelfFeed
+## 8. Missing Input Validation in CassandraSelfFeed
 **File:** `crs4/cpp/cassandra_dali_selffeed.cc`
 **Function:** `CassandraSelfFeed::CassandraSelfFeed`
 **Issue:** No validation that `batch_size > 0`; emptiness of `source_uuids` is only checked after UUID conversion, not before.
