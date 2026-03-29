@@ -205,12 +205,11 @@ void BatchLoader::connect() {
   }
   CassFuture* connect_future = cass_session_connect(session, cluster);
   rc = cass_future_error_code(connect_future);
+  cass_future_free(connect_future);
   if (rc != CASS_OK) {
-    cass_future_free(connect_future);
     throw std::runtime_error("Error: unable to connect to Cassandra DB: "
                              + std::string(cass_error_desc(rc)));
   }
-  cass_future_free(connect_future);
   // assemble query
   std::stringstream ss;
   ss << "SELECT ";
@@ -357,11 +356,13 @@ void BatchLoader::transfer2copy(CassFuture* query_future, int wb, int i) {
   CassError rc;
   const CassResult* result = cass_future_get_result(query_future);
   if (result == NULL) {
+    // Handle error
     const char* error_message;
     size_t error_message_length;
     cass_future_error_message(query_future,
                               &error_message, &error_message_length);
     std::string err_str(error_message, error_message_length);
+    cass_future_free(query_future);
     throw std::runtime_error("Unable to run query: " + err_str);
   }
   // decode result
