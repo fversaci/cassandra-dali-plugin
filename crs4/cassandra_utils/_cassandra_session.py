@@ -70,13 +70,18 @@ class CassandraSession:
         self.cluster.connect_timeout = 10  # seconds
         # start session
         self.sess = self.cluster.connect()
+        self._shutdown = False
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.cluster.shutdown()
+        if not self._shutdown:
+            self.cluster.shutdown()
+            self._shutdown = True
         return False
 
     def __del__(self):
-        self.cluster.shutdown()
+        if not self._shutdown:
+            self.cluster.shutdown()
+            self._shutdown = True
