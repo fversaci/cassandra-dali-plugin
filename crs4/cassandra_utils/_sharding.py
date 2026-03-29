@@ -40,6 +40,11 @@ def get_shard(
     num_shards=1,
     seed=0,
 ):
+    if batch_size <= 0:
+        raise ValueError(f"batch_size must be greater than 0, got {batch_size}")
+    if num_shards <= 0:
+        raise ValueError(f"num_shards must be greater than 0, got {num_shards}")
+
     random.seed(seed + epoch)
     random.shuffle(uuids)
     real_sz = len(uuids)
