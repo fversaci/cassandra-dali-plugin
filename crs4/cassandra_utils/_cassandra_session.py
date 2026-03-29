@@ -23,6 +23,7 @@ import ssl
 
 class CassandraSession:
     def __init__(self, cass_conf):
+        self._shutdown = False
         # read parameters
         auth_prov = PlainTextAuthProvider(
             username=cass_conf.username, password=cass_conf.password
@@ -70,7 +71,6 @@ class CassandraSession:
         self.cluster.connect_timeout = 10  # seconds
         # start session
         self.sess = self.cluster.connect()
-        self._shutdown = False
 
     def __enter__(self):
         return self
@@ -82,6 +82,6 @@ class CassandraSession:
         return False
 
     def __del__(self):
-        if not self._shutdown:
+        if not self._shutdown and hasattr(self, "cluster"):
             self.cluster.shutdown()
             self._shutdown = True
