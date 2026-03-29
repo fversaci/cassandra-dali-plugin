@@ -120,4 +120,4 @@ class split_generator:
         """
         This must be implemented in derived classes
         """
-        None
+        raise NotImplementedError("Subclasses must implement create_splits")
