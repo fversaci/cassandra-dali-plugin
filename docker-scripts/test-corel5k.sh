@@ -3,7 +3,7 @@ set -e
 
 echo "Waiting for Cassandra..."
 while ! nc -z cassandra 9042; do
-  sleep 1
+  sleep 5
 done
 
 cd examples/corel5k/
