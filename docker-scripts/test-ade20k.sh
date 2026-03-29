@@ -1,6 +1,11 @@
 #! /bin/bash -x
 set -e
 
+echo "Waiting for Cassandra..."
+while ! nc -z cassandra 9042; do
+  sleep 1
+done
+
 cd examples/ade20k/
 ssh root@cassandra 'SSL_VALIDATE=false /opt/cassandra/bin/cqlsh --ssl -e "DROP KEYSPACE IF EXISTS ade20k;"'
 cat create_tables.cql | ssh root@cassandra 'SSL_VALIDATE=false /opt/cassandra/bin/cqlsh --ssl'
