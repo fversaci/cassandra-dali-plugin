@@ -50,11 +50,11 @@
 **Issue:** Direct pointer arithmetic on `uint64_t*` without bounds checking assumes exactly 2 `uint64_t` values per tensor element.
 **Impact:** If `uuids` tensor is malformed, could read out of bounds. Should validate tensor shape.
 
-## 10. Race Condition in Out-of-Order Buffer Management
+## 10. Race Condition in Batch Shape Assignment
 **File:** `crs4/cpp/batch_loader.cc`
-**Function:** `ooo_enqueue`
-**Issue:** The mutex lock is released before calling `transfer2copy`, but `transfer2copy` may modify shared state (`shapes[wb]`) that other threads are concurrently accessing.
-**Impact:** Potential data race under out-of-order mode.
+**Function:** `transfer2copy`
+**Issue:** The assignment `shapes[wb][i] = sz` (and `lab_shapes[wb][i] = l_sz` for segmentation) occurs outside the `alloc_mtx[wb]` mutex lock. Multiple threads can write to different indices of the same vector concurrently, and the final read by the last thread (to allocate tensors) may not see all writes due to lack of synchronization.
+**Impact:** Data race (Undefined Behavior). The thread allocating the tensor may read uninitialized/incorrect shape values, leading to tensor allocation failures or memory corruption.
 
 ## 11. Missing Documentation for Complex Parameters
 **File:** `crs4/cpp/cassandra_dali_interactive.cc`
