@@ -194,6 +194,6 @@ DALI_SCHEMA(crs4__cassandra_interactive)
 .AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2)
 .AddOptionalArg("blocking", R"(block until the data is available)", true)
 .AddOptionalArg("no_copy", R"(should DALI copy the buffer when ``feed_input`` is called?)", false)
-.AddOptionalArg("ooo", R"(Enable out-of-order batches)", false)
-.AddOptionalArg("slow_start", R"(How much to dilute prefetching)", 0)
+.AddOptionalArg("ooo", R"(Enable out-of-order batch processing. When enabled, images are returned as soon as they arrive from Cassandra, potentially altering their sequence and mixing different batches. This is beneficial for high-latency or lossy networks where variable delays can stall the pipeline. Enable only when the training loop can handle non-sequential batches.)", false)
+.AddOptionalArg("slow_start", R"(Controls prefetch dilution to limit initial request bursts. When set to N > 0, the loader requests an additional image every N normal requests. This helps prevent packet loss on networks where initial bursts can overwhelm routers. Set to 0 to disable dilution (default).)", 0)
 .AddParent("InputOperatorBase");
