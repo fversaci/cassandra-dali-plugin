@@ -49,6 +49,9 @@ void CassandraDecoupled::prefetch_one() {
   auto cass_uuids = std::vector<CassUuid>(bs);
   size_t ci = 0;
   for (auto i=start; i != end; ++i, ++ci) {
+    // Validate UUID tensor shape to prevent buffer overflow
+    DALI_ENFORCE(uuids[i].shape().num_elements() == 2,
+                 "Each UUID tensor must contain exactly 2 uint64 values (16 bytes).");
     auto d_ptr = uuids[i].data<uint64_t>();
     auto c_uuid = &cass_uuids[ci];
     c_uuid->time_and_version = *(d_ptr++);

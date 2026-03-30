@@ -70,6 +70,9 @@ void CassandraInteractive::prefetch_one() {
   auto bs = uuids.num_samples();
   auto cass_uuids = std::vector<CassUuid>(bs);
   for (auto i=0; i != bs; ++i) {
+    // Validate UUID tensor shape to prevent buffer overflow
+    DALI_ENFORCE(uuids[i].shape().num_elements() == 2,
+                 "Each UUID tensor must contain exactly 2 uint64 values (16 bytes).");
     auto d_ptr = uuids[i].data<uint64_t>();
     auto c_uuid = &cass_uuids[i];
     c_uuid->time_and_version = *(d_ptr++);
@@ -194,4 +197,3 @@ DALI_SCHEMA(crs4__cassandra_interactive)
 .AddOptionalArg("ooo", R"(Enable out-of-order batches)", false)
 .AddOptionalArg("slow_start", R"(How much to dilute prefetching)", 0)
 .AddParent("InputOperatorBase");
-
