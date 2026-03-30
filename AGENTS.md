@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-NVIDIA DALI plugin for loading image/binary data from Apache Cassandra database into ML training pipelines. Tested with DALI v1.53.
+NVIDIA DALI plugin for loading image/binary data from Apache Cassandra database into ML training pipelines. Tested with DALI v2.0.
 
 **Repository**: https://github.com/crs4/cassandra-dali-plugin
 **Version**: 1.3.0 (from pyproject.toml)
@@ -65,7 +65,7 @@ docker-scripts/                   # Test scripts (run inside container)
 
 docker-compose.yml               # Cassandra + DALI containers
 docker-compose.triton.yml        # Triton inference variant
-Dockerfile.dali-cassandra         # DALI client container (NGC 26.02-py3)
+Dockerfile.dali-cassandra         # DALI client container (NGC 26.03-py3)
 Dockerfile.cassandra              # Cassandra server container
 Dockerfile.dali-cassandra-triton  # DALI + Triton container
 setup.py                          # Python package with CMakeExtension
@@ -185,7 +185,7 @@ Key dependencies linked: `dali`, `cudart`, `cassandra` (C++ driver).
 - C++ compilation triggered via CMake when running `pip install .`
 - Package name: `cassandra-dali-plugin`
 - Python package: `crs4.cassandra_utils`
-- Build requires: `setuptools>=64`, `wheel`, `cmake>=3.25.2`, `nvidia-dali-cuda130==1.53`
+- Build requires: `setuptools>=64`, `wheel`, `cmake>=3.25.2`, `nvidia-dali-cuda130==2.0`
 - Install requires: `cassandra-driver>=3.29.3`, `pandas>=3.0.1`, `tqdm>=4.67.3`
 
 ## Loading the Plugin
@@ -392,11 +392,11 @@ The `metadata` table enables filtering by label during dataset preparation. The 
 
 | Component               | Version                                                           |
 |-------------------------|-------------------------------------------------------------------|
-| Base image              | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.02-py3`) |
+| Base image              | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.03-py3`) |
 | Cassandra C++ driver    | 2.17.0 (Built automatically by CMake)                             |
 | Cassandra Python driver | latest (via pip)                                                  |
-| Spark                   | 3.5.x                                                             |
-| DALI                    | Pre-installed in NGC container (1.53)                             |
+| Spark                   | 4.1 (uses `SPARK_V=4.1`)                                          |
+| DALI                    | Pre-installed in NGC container (2.0)                              |
 | PyTorch Lightning       | 2.3.1                                                             |
 | CUDA architectures      | 75;80;86;89;90                                                    |
 | Default shell           | fish                                                              |
