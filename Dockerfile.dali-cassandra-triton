@@ -35,7 +35,6 @@ RUN \
     netcat-openbsd \
     nload \
     nmon \
-    openjdk-11-jdk \
     psutils \
     rapidjson-dev \
     source-highlight \
