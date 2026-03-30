@@ -395,7 +395,7 @@ The `metadata` table enables filtering by label during dataset preparation. The 
 | Base image              | NVIDIA PyTorch NGC Container (`nvcr.io/nvidia/pytorch:26.03-py3`) |
 | Cassandra C++ driver    | 2.17.0 (Built automatically by CMake)                             |
 | Cassandra Python driver | latest (via pip)                                                  |
-| Spark                   | 3.5.x                                                             |
+| Spark                   | 4.1 (uses `SPARK_V=4.1`)                                          |
 | DALI                    | Pre-installed in NGC container (2.0)                              |
 | PyTorch Lightning       | 2.3.1                                                             |
 | CUDA architectures      | 75;80;86;89;90                                                    |
