@@ -1,6 +1,6 @@
 # Starting from NVIDIA PyTorch NGC Container
 # https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch
-FROM nvcr.io/nvidia/pytorch:26.02-py3
+FROM nvcr.io/nvidia/pytorch:26.03-py3
 
 # install some useful tools
 RUN \
@@ -91,7 +91,7 @@ RUN \
 ENV PATH="${PATH}:/opt/hpcx/ompi/bin"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/hpcx/ompi/lib:/opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib"
 # RUN pip install --extra-index-url https://developer.download.nvidia.com/compute/redist \
-#     --upgrade nvidia-dali-cuda130==1.53
+#     --upgrade nvidia-dali-cuda130==2.0
 
 RUN sed -i 's/ALL$/NOPASSWD:ALL/' /etc/sudoers
 COPY . /home/ubuntu/cassandra-dali-plugin
