@@ -48,7 +48,7 @@ CassandraInteractive::CassandraInteractive(const dali::OpSpec &spec) :
   DALI_ENFORCE(prefetch_buffers >= 0,
      "prefetch_buffers should be non-negative.");
   DALI_ENFORCE(label_type == "int" || label_type == "blob" || label_type == "none",
-     "label_type can only be int, image or none.");
+     "label_type can only be int, blob or none.");
   DALI_ENFORCE(slow_start >= 0,
      "slow_start should be either 0 (disabled) or >= 1 (prefetch dilution).");
   DALI_ENFORCE(batch_size * prefetch_buffers <= 32768 * io_threads,
@@ -70,6 +70,9 @@ void CassandraInteractive::prefetch_one() {
   auto bs = uuids.num_samples();
   auto cass_uuids = std::vector<CassUuid>(bs);
   for (auto i=0; i != bs; ++i) {
+    // Validate UUID tensor shape to prevent buffer overflow
+    DALI_ENFORCE(uuids[i].shape().num_elements() == 2,
+                 "Each UUID tensor must contain exactly 2 uint64 values (16 bytes).");
     auto d_ptr = uuids[i].data<uint64_t>();
     auto c_uuid = &cass_uuids[i];
     c_uuid->time_and_version = *(d_ptr++);
@@ -191,7 +194,6 @@ DALI_SCHEMA(crs4__cassandra_interactive)
 .AddOptionalArg("comm_threads", R"(Parallelism for communication threads)", 2)
 .AddOptionalArg("blocking", R"(block until the data is available)", true)
 .AddOptionalArg("no_copy", R"(should DALI copy the buffer when ``feed_input`` is called?)", false)
-.AddOptionalArg("ooo", R"(Enable out-of-order batches)", false)
-.AddOptionalArg("slow_start", R"(How much to dilute prefetching)", 0)
+.AddOptionalArg("ooo", R"(Enable out-of-order batch processing. When enabled, images are returned as soon as they arrive from Cassandra, potentially altering their sequence and mixing different batches. This is beneficial for high-latency or lossy networks where variable delays can stall the pipeline. Enable only when the training loop can handle non-sequential batches.)", false)
+.AddOptionalArg("slow_start", R"(Controls prefetch dilution to limit initial request bursts. When set to N > 0, the loader requests an additional image every N normal requests. This helps prevent packet loss on networks where initial bursts can overwhelm routers. Set to 0 to disable dilution (default).)", 0)
 .AddParent("InputOperatorBase");
-

@@ -29,6 +29,24 @@ class CassandraWriter:
         metadata_id_col=None,
         metadata_label_col=None,
     ):
+        # Validate required parameters
+        if cass_conf is None:
+            raise ValueError("cass_conf cannot be None")
+        if not data_table:
+            raise ValueError("data_table cannot be empty")
+        if not metadata_table:
+            raise ValueError("metadata_table cannot be empty")
+        if not data_id_col:
+            raise ValueError("data_id_col cannot be empty")
+        if not data_label_col:
+            raise ValueError("data_label_col cannot be empty")
+        if not data_col:
+            raise ValueError("data_col cannot be empty")
+        if cols is None:
+            raise ValueError("cols cannot be None")
+        if get_data is None:
+            raise ValueError("get_data cannot be None")
+
         self.get_data = get_data
         self.data_table = data_table
         self.metadata_table = metadata_table

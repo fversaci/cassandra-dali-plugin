@@ -27,7 +27,7 @@ def uuid2ints(uuid):
 def uuids_as_tensors(uuids, bs):
     uuids = list(map(uuid2ints, uuids))  # convert uuids to ints
     uuids = np.array(uuids, dtype=np.uint64)
-    uuids = np.pad(uuids, ((0, bs - len(uuids) % bs), (0, 0)), "edge")
+    uuids = np.pad(uuids, ((0, (-len(uuids)) % bs), (0, 0)), "edge")
     uuids = uuids.reshape([-1, bs, 2])
     return uuids
 
@@ -40,6 +40,11 @@ def get_shard(
     num_shards=1,
     seed=0,
 ):
+    if batch_size <= 0:
+        raise ValueError(f"batch_size must be greater than 0, got {batch_size}")
+    if num_shards <= 0:
+        raise ValueError(f"num_shards must be greater than 0, got {num_shards}")
+
     random.seed(seed + epoch)
     random.shuffle(uuids)
     real_sz = len(uuids)

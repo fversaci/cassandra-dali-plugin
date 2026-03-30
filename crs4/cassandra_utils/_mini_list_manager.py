@@ -43,7 +43,8 @@ class MiniListManager(ListManager):
         :rtype:
 
         """
-        super().__init__()
+        self.row_keys = None
+        self.split = None
         self.table = conf["table"]
         self.id_col = conf["id_col"]
 

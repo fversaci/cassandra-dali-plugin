@@ -23,6 +23,27 @@ import ssl
 
 class CassandraSession:
     def __init__(self, cass_conf):
+        # Validate configuration object
+        if cass_conf is None:
+            raise ValueError("cass_conf cannot be None")
+
+        required_attrs = [
+            "username",
+            "password",
+            "cloud_config",
+            "use_ssl",
+            "ssl_certificate",
+            "ssl_own_certificate",
+            "ssl_own_key",
+            "ssl_own_key_pass",
+            "cassandra_ips",
+            "cassandra_port",
+        ]
+
+        for attr in required_attrs:
+            if not hasattr(cass_conf, attr):
+                raise ValueError(f"Missing required configuration attribute: {attr}")
+
         # read parameters
         auth_prov = PlainTextAuthProvider(
             username=cass_conf.username, password=cass_conf.password

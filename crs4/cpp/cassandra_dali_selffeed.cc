@@ -25,6 +25,7 @@ CassandraSelfFeed::CassandraSelfFeed(const dali::OpSpec &spec) :
   num_shards(spec.GetArgument<int>("num_shards")),
   shuffle_every_epoch(spec.GetArgument<bool>("shuffle_every_epoch")),
   loop_forever(spec.GetArgument<bool>("loop_forever")) {
+  DALI_ENFORCE(batch_size > 0, "batch_size must be greater than 0");
   DALI_ENFORCE(source_uuids.size() > 0,
                "please provide a non-empty list of source_uuids");
   DALI_ENFORCE(num_shards > shard_id,
@@ -117,4 +118,3 @@ This is typically used for distributed training.)code", 1)
    false)
 .AddOptionalArg("loop_forever", R"(Loop on souce_uuids)", true)
 .AddParent("crs4__cassandra_interactive");
-

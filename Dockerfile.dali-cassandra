@@ -27,6 +27,7 @@ RUN \
     libtool \
     libopencv-dev \
     mc \
+    netcat-openbsd \
     nload \
     nmon \
     openjdk-11-jdk \
