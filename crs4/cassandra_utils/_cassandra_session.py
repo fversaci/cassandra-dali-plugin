@@ -28,11 +28,18 @@ class CassandraSession:
             raise ValueError("cass_conf cannot be None")
 
         required_attrs = [
-            'username', 'password', 'cloud_config', 'use_ssl',
-            'ssl_certificate', 'ssl_own_certificate', 'ssl_own_key',
-            'ssl_own_key_pass', 'cassandra_ips', 'cassandra_port'
+            "username",
+            "password",
+            "cloud_config",
+            "use_ssl",
+            "ssl_certificate",
+            "ssl_own_certificate",
+            "ssl_own_key",
+            "ssl_own_key_pass",
+            "cassandra_ips",
+            "cassandra_port",
         ]
-        
+
         for attr in required_attrs:
             if not hasattr(cass_conf, attr):
                 raise ValueError(f"Missing required configuration attribute: {attr}")
