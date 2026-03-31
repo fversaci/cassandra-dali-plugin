@@ -25,35 +25,36 @@ find_library(UV_LIB uv REQUIRED)
 find_library(SSL_LIB ssl REQUIRED)
 find_library(CRYPTO_LIB crypto REQUIRED)
 
-# Try to find cassandra driver installed on system first
-find_library(CASSANDRA_LIB cassandra)
+# Fetch and build cassandra driver statically from source
+# This is required for distributing the plugin as a wheel, as users
+# generally do not have the Cassandra C++ driver installed.
+include(FetchContent)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+FetchContent_Declare(
+    cassandra_driver
+    GIT_REPOSITORY https://github.com/datastax/cpp-driver.git
+    GIT_TAG        2.17.0
+    GIT_SHALLOW    TRUE
+)
+set(CASS_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(CASS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(CASS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(CASS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-if(NOT CASSANDRA_LIB)
-    message(STATUS "Cassandra C++ driver not found, fetching from source...")
-    include(FetchContent)
-    set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
-    FetchContent_Declare(
-        cassandra_driver
-        GIT_REPOSITORY https://github.com/datastax/cpp-driver.git
-        GIT_TAG        2.17.0
-        GIT_SHALLOW    TRUE
-    )
-    set(CASS_BUILD_STATIC OFF CACHE BOOL "" FORCE)
-    set(CASS_BUILD_SHARED ON CACHE BOOL "" FORCE)
-    set(CASS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(CASS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    
-    # cpp-driver 2.17.0 is not C++20 compatible (uses std::memory_order as unscoped enum)
-    # Build it with C++17 instead
-    set(SAVED_CMAKE_CXX_STANDARD ${CMAKE_CXX_STANDARD})
-    set(CMAKE_CXX_STANDARD 17)
-    FetchContent_MakeAvailable(cassandra_driver)
-    set(CMAKE_CXX_STANDARD ${SAVED_CMAKE_CXX_STANDARD})
-    set(CASSANDRA_TARGET cassandra)
-    set(CASSANDRA_INCLUDE_DIR ${cassandra_driver_SOURCE_DIR}/include)
-else()
-    message(STATUS "Found Cassandra C++ driver: ${CASSANDRA_LIB}")
-endif()
+# cpp-driver 2.17.0 is not C++20 compatible (uses std::memory_order as unscoped enum)
+# Build it with C++17 instead
+set(SAVED_CMAKE_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+set(CMAKE_CXX_STANDARD 17)
+
+# Enable Position Independent Code (PIC) for the static library
+# Required when linking statically into a shared library (.so)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+FetchContent_MakeAvailable(cassandra_driver)
+set(CMAKE_CXX_STANDARD ${SAVED_CMAKE_CXX_STANDARD})
+
+set(CASSANDRA_TARGET cassandra_static)
+set(CASSANDRA_INCLUDE_DIR ${cassandra_driver_SOURCE_DIR}/include)
 
 execute_process(
         COMMAND python3 -c "import nvidia.dali as dali; print(dali.sysconfig.get_lib_dir())"
@@ -72,9 +73,6 @@ link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}")  # -lcudart
 
 add_library(crs4cassandra SHARED cassandra_dali_interactive.cc cassandra_dali_selffeed.cc cassandra_dali_decoupled.cc batch_loader.cc)
 
-if(CASSANDRA_TARGET)
-    target_include_directories(crs4cassandra PRIVATE ${CASSANDRA_INCLUDE_DIR})
-    target_link_libraries(crs4cassandra dali cudart ${CASSANDRA_TARGET})
-else()
-    target_link_libraries(crs4cassandra dali cudart ${CASSANDRA_LIB})
-endif()
+target_include_directories(crs4cassandra PRIVATE ${CASSANDRA_INCLUDE_DIR})
+# Link against the static cassandra target and explicit system dependencies
+target_link_libraries(crs4cassandra dali cudart ${CASSANDRA_TARGET} ${UV_LIB} ${SSL_LIB} ${CRYPTO_LIB})
