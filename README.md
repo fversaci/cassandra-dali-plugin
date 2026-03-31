@@ -155,7 +155,7 @@ with a focus on high-latency connections, is available
 See the following annotated example for details on how to use this plugin:
 - [Imagenette](examples/imagenette/)
 
-A variant of the same example implemented with [PyTorch Lightning](https://github.com/Lightning-AI/pytorch-lightning)
+A variant of the same example implemented with [PyTorch Lightning](https://github.com/Lightning-Ai/pytorch-lightning)
 is available in:
 - [Imagenette (Lightning)](examples/lightning)
 
@@ -182,7 +182,15 @@ This plugin also supports efficient inference via [NVIDIA Triton
 server](https://github.com/triton-inference-server/server):
 - [Triton pipelines](examples/triton)
 
-## Installation on a bare machine
+## Installation
+
+You can install the plugin via pip:
+
+```bash
+pip install cassandra-dali-plugin
+```
+
+## Building from source
 
 cassandra-dali-plugin requires:
 - NVIDIA DALI
@@ -211,18 +219,14 @@ sudo apt-get install -y libuv1-dev libssl-dev cmake build-essential
 You can install the plugin using `pip` or `uv`:
 
 ```bash
-# Install the plugin (this will also fetch and build the Cassandra C++ driver if missing)
+# Install the plugin
 pip install .
 ```
-
-Other details of how to install missing dependencies can be found in
-[Dockerfile.dali-cassandra](Dockerfile.dali-cassandra), which contains
-all the installation commands for the packages above.
 
 ## Authors
 
 Cassandra Data Loader is developed by
-  * Francesco Versaci, CRS4 <francesco.versaci@gmail.com>
+  * Francesco Versaci, CRS4 <francesco.versaci@crs4.it>
   * Giovanni Busonera, CRS4 <giovanni.busonera@crs4.it>
 
 ## License
