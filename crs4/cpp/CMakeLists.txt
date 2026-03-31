@@ -45,6 +45,11 @@ set(CASS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 # Build it with C++17 instead
 set(SAVED_CMAKE_CXX_STANDARD ${CMAKE_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD 17)
+
+# Enable Position Independent Code (PIC) for the static library
+# Required when linking statically into a shared library (.so)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 FetchContent_MakeAvailable(cassandra_driver)
 set(CMAKE_CXX_STANDARD ${SAVED_CMAKE_CXX_STANDARD})
 
