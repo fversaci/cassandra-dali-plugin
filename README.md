@@ -219,18 +219,14 @@ sudo apt-get install -y libuv1-dev libssl-dev cmake build-essential
 You can install the plugin using `pip` or `uv`:
 
 ```bash
-# Install the plugin (this will also fetch and build the Cassandra C++ driver if missing)
+# Install the plugin
 pip install .
 ```
-
-Other details of how to install missing dependencies can be found in
-[Dockerfile.dali-cassandra](Dockerfile.dali-cassandra), which contains
-all the installation commands for the packages above.
 
 ## Authors
 
 Cassandra Data Loader is developed by
-  * Francesco Versaci, CRS4 <francesco.versaci@gmail.com>
+  * Francesco Versaci, CRS4 <francesco.versaci@crs4.it>
   * Giovanni Busonera, CRS4 <giovanni.busonera@crs4.it>
 
 ## License
