@@ -1,0 +1,3 @@
+include crs4/cpp/*
+include crs4/cassandra_utils/*
+include setup.py
