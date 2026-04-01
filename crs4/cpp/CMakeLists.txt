@@ -54,6 +54,15 @@ else()
     message(FATAL_ERROR "Failed to build libuv: no library target was generated")
 endif()
 
+# The Cassandra C++ driver still runs a FindLibUV check during configuration.
+# Pre-seed the cache variables that its module expects so it can reuse the
+# libuv target fetched above instead of looking for a system installation.
+set(LIBUV_ROOT_DIR "${libuv_SOURCE_DIR}" CACHE PATH "libuv root directory" FORCE)
+set(LIBUV_INCLUDE_DIR "${libuv_SOURCE_DIR}/include" CACHE PATH "libuv include directory" FORCE)
+set(LIBUV_INCLUDE_DIRS "${libuv_SOURCE_DIR}/include" CACHE PATH "libuv include directories" FORCE)
+set(LIBUV_LIBRARY "${UV_TARGET}" CACHE STRING "libuv library target" FORCE)
+set(LIBUV_LIBRARIES "${UV_TARGET}" CACHE STRING "libuv library targets" FORCE)
+
 # Fetch and build cassandra driver statically from source
 # This is required for distributing the plugin as a wheel, as users
 # generally do not have the Cassandra C++ driver installed.
