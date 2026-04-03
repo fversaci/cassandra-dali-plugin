@@ -216,6 +216,8 @@ On Debian/Ubuntu, install the prerequisites with:
 sudo apt-get install -y libuv1-dev libssl-dev cmake build-essential
 ```
 
+**Note**: Build using `clang` or `gcc-12`. Other compilers may not be supported.
+
 You can install the plugin using `pip` or `uv`:
 
 ```bash
