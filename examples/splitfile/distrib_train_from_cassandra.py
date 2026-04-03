@@ -7,6 +7,7 @@ from cassandra_reader import get_cassandra_reader
 from crs4.cassandra_utils import get_shard
 
 import argparse
+import sys
 import os
 import shutil
 import time
@@ -332,36 +333,39 @@ def read_split_file(split_fn):
     )
 
 
-def compute_split_index(split, train_index, val_index, crossval_index, exclude_index):
+def compute_split_index(split, crossval_index, exclude_index):
     n_split = len(split)
 
     # Merge splits for training samples if crossvalidation is requested.
     # Do nothing otherwise
-    if crossval_index and n_split > 2:
-        if exclude_index > n_split:
-            exclude_index = n_split - 1
-        if crossval_index > n_split or crossval_index == exclude_index:
-            crossval_index = n_split - 2
+    if exclude_index is None:
+        # set a int dummy value to not use exclude_index in the train split creation
+        exclude_index = -1
 
-        tis = np.array(
-            [i for i in range(n_split) if i != exclude_index and i != val_index]
-        )
-        train_split = np.concatenate([split[i] for i in tis])
-        val_split = split[val_index]
+    tis = np.array(
+        [i for i in range(n_split) if i != exclude_index and i != crossval_index]
+    )
+    train_split = np.concatenate([split[i] for i in tis])
 
-        split = [train_split, val_split]
-        train_index = 0
-        val_index = 1
+    val_split = split[crossval_index]
 
-        print("\nCrossvalidation:")
-        print(f"Training samples will be taken from splits {tis}")
-        print(f"Validation samples will be taken from split {crossval_index}")
-        if exclude_index:
-            print(f"Split {exclude_index} will not be used")
-        print("\n")
+    split = [train_split, val_split]
+    train_index = 0
+    val_index = 1
+
+    print("\nCrossvalidation:")
+    print(f"Training samples will be taken from splits {tis}")
+    print(f"Validation samples will be taken from split {crossval_index}")
+    if exclude_index >= 0:
+        print(f"Split {exclude_index} will not be used")
+    print("\n")
 
     return split, train_index, val_index
 
+def cleanup_and_exit(err):
+    if dist.is_available() and dist.is_initialized():
+        dist.destroy_process_group()
+    sys.exit(err)
 
 def main():
     global best_prec1, args
@@ -381,9 +385,31 @@ def main():
     ) = read_split_file(args.split_fn)
 
     # Get split indexes
-    split, train_index, val_index = compute_split_index(
-        split, args.train_index, args.val_index, args.crossval_index, args.exclude_index
-    )
+    n_splits = len(split)
+    crossval_index = args.crossval_index
+    exclude_index = args.exclude_index
+    if crossval_index is not None and n_splits > 2:
+        ## Sanity check for crossval_index and exclude_index
+        if crossval_index > n_splits - 1:
+            print (f"Error: crossval_index must be in the range [0, {n_splits-1}]")
+            cleanup_and_exit(0)
+        if exclude_index is not None:
+            if exclude_index == crossval_index:
+                print ("Error: exclude_index must be different from crossval_index")
+                cleanup_and_exit(0)
+            if exclude_index > n_splits -1:
+                print (f"Error: exclude_index must be in the range [0, {n_splits-1}]")
+                cleanup_and_exit(0)
+
+        ## Compute the right split for crossvalidation
+        split, train_index, val_index = compute_split_index(
+            split, args.crossval_index, args.exclude_index
+        )
+    else:
+        if crossval_index is not None:
+            print(f"Warning: crossval_index ignored because n_splits={n_splits} <= 2, using default train (0)/val (1) indices.")
+        train_index = args.train_index
+        val_index = args.val_index
 
     # test mode, use default args for sanity test
     if args.test:
