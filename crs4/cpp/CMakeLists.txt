@@ -20,16 +20,52 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -std=c++20")
 
 include_directories(SYSTEM "${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
-# Required system libraries (dependencies of cassandra driver)
-find_library(UV_LIB uv REQUIRED)
+# Required system libraries (OpenSSL dependencies of the Cassandra driver)
 find_library(SSL_LIB ssl REQUIRED)
 find_library(CRYPTO_LIB crypto REQUIRED)
+
+include(FetchContent)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+
+# Enable Position Independent Code (PIC) for the static libraries
+# Required when linking statically into a shared library (.so)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Build libuv from source so pip install does not require a system libuv package.
+FetchContent_Declare(
+    libuv
+    GIT_REPOSITORY https://github.com/libuv/libuv.git
+    GIT_TAG        v1.52.1
+    GIT_SHALLOW    TRUE
+)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(LIBUV_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+set(LIBUV_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(LIBUV_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LIBUV_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(libuv)
+
+if(TARGET uv_a)
+    set(UV_TARGET uv_a)
+elseif(TARGET uv)
+    set(UV_TARGET uv)
+else()
+    message(FATAL_ERROR "Failed to build libuv: no library target was generated")
+endif()
+
+# The Cassandra C++ driver still runs a FindLibUV check during configuration.
+# Pre-seed the cache variables that its module expects so it can reuse the
+# libuv target fetched above instead of looking for a system installation.
+set(LIBUV_ROOT_DIR "${libuv_SOURCE_DIR}" CACHE PATH "libuv root directory" FORCE)
+set(LIBUV_INCLUDE_DIR "${libuv_SOURCE_DIR}/include" CACHE PATH "libuv include directory" FORCE)
+set(LIBUV_INCLUDE_DIRS "${libuv_SOURCE_DIR}/include" CACHE PATH "libuv include directories" FORCE)
+set(LIBUV_LIBRARY "${UV_TARGET}" CACHE STRING "libuv library target" FORCE)
+set(LIBUV_LIBRARIES "${UV_TARGET}" CACHE STRING "libuv library targets" FORCE)
 
 # Fetch and build cassandra driver statically from source
 # This is required for distributing the plugin as a wheel, as users
 # generally do not have the Cassandra C++ driver installed.
-include(FetchContent)
-set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 FetchContent_Declare(
     cassandra_driver
     GIT_REPOSITORY https://github.com/datastax/cpp-driver.git
@@ -75,4 +111,4 @@ add_library(crs4cassandra SHARED cassandra_dali_interactive.cc cassandra_dali_se
 
 target_include_directories(crs4cassandra PRIVATE ${CASSANDRA_INCLUDE_DIR})
 # Link against the static cassandra target and explicit system dependencies
-target_link_libraries(crs4cassandra dali cudart ${CASSANDRA_TARGET} ${UV_LIB} ${SSL_LIB} ${CRYPTO_LIB})
+target_link_libraries(crs4cassandra dali cudart ${CASSANDRA_TARGET} ${UV_TARGET} ${SSL_LIB} ${CRYPTO_LIB})
