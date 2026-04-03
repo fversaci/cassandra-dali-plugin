@@ -17,15 +17,27 @@ from crs4.cassandra_utils._cassandra_session import CassandraSession
 
 
 class MiniListManager(ListManager):
+    """Manages UUID lists by loading them from Cassandra metadata tables.
+
+    This class connects to Cassandra, queries a metadata table for UUIDs,
+    and provides methods to save/load the UUID list to/from local files.
+    It stores configuration (table name, column name) so the same query
+    can be reproduced when loading from cache.
+
+    Attributes:
+        table: Name of the Cassandra metadata table.
+        id_col: Name of the column containing UUIDs.
+        sess: Cassandra session object.
+    """
     def __init__(
         self,
         cass_conf,
     ):
-        """Loads the list of images from Cassandra DB
+        """Initialize MiniListManager with Cassandra configuration.
 
-        :param cass_conf: Configuration for Cassandra
-        :returns:
-        :rtype:
+        Args:
+            cass_conf: CassandraConf object with connection parameters
+                (IPs, port, credentials, SSL settings, etc.).
         """
         super().__init__()
         self._cs = CassandraSession(cass_conf)
@@ -35,13 +47,14 @@ class MiniListManager(ListManager):
         self._rows = None
 
     def set_config(self, conf):
-        """Loads the list of images from Cassandra DB
+        """Set configuration from a dictionary.
 
-        :param table: Matadata table with ids
-        :param id_col: Cassandra id column for the images (e.g., 'image_id')
-        :returns:
-        :rtype:
+        Restores the table name and ID column from a configuration
+        dictionary (typically loaded from a cached file).
 
+        Args:
+            conf: Dictionary with keys 'table' (metadata table name) and
+                'id_col' (UUID column name).
         """
         self.row_keys = None
         self.split = None
@@ -49,6 +62,11 @@ class MiniListManager(ListManager):
         self.id_col = conf["id_col"]
 
     def get_config(self):
+        """Get current configuration as a dictionary.
+
+        Returns:
+            dict: Dictionary with 'table' and 'id_col' keys.
+        """
         conf = {
             "table": self.table,
             "id_col": self.id_col,
@@ -56,6 +74,11 @@ class MiniListManager(ListManager):
         return conf
 
     def read_rows_from_db(self):
+        """Load UUIDs from the configured Cassandra metadata table.
+
+        Executes a SELECT query to retrieve all UUID values from the
+        configured table and column, storing them in self.row_keys.
+        """
         # get list of all rows
         query = f"SELECT {self.id_col} FROM {self.table} ;"
         res = self.sess.execute(query, execution_profile="tuple")

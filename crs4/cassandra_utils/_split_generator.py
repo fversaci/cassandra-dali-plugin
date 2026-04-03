@@ -19,6 +19,24 @@ import pickle
 
 
 class split_generator:
+    """Base class for generating train/validation/test splits from Cassandra metadata.
+
+    This class loads metadata from Cassandra, applies filtering and splitting
+    logic (to be implemented in subclasses), and caches the results for later
+    use by the DALI data loader.
+
+    Attributes:
+        _df: Pandas DataFrame containing the metadata.
+        _metadata_id_col: Column name for IDs in the metadata table.
+        _data_id_col: Column name for IDs in the data table.
+        _metadata_label_col: Column name for labels in the metadata table.
+        _data_label_col: Column name for labels in the data table.
+        _label_type: Type of labels ("int", "blob", or "none").
+        _data_col: Column name for binary data.
+        _data_table: Name of the data table.
+        _metadata_table: Name of the metadata table.
+        split_metadata: Dictionary containing split configuration and results.
+    """
     def __init__(
         self,
         data_id_col=None,
@@ -28,6 +46,22 @@ class split_generator:
         metadata_label_col=None,
         label_type=None,
     ):
+        """Initialize split generator with column mappings.
+
+        Args:
+            data_id_col: Column name for IDs in the data table. If None,
+                defaults to metadata_id_col.
+            metadata_id_col: Column name for IDs in the metadata table.
+            data_col: Column name for binary data in the data table.
+            data_label_col: Column name for labels in the data table.
+            metadata_label_col: Column name for labels in the metadata table.
+            label_type: Type of labels - "int" for classification, "blob" for
+                segmentation masks, or "none" for no labels.
+
+        Raises:
+            Exception: If label_type is not "none" and metadata_label_col is
+                not provided.
+        """
         ## Preliminary check on arguments
         if label_type != "none" and not metadata_label_col:
             raise Exception("Please provide the label_col argument")
@@ -52,6 +86,13 @@ class split_generator:
         self._metadata_table = None
 
     def load_from_db(self, cass_conf, data_table, metadata_table):
+        """Load metadata from Cassandra and initialize the split.
+
+        Args:
+            cass_conf: CassandraConf object with connection parameters.
+            data_table: Name of the data table (keyspace.tablename).
+            metadata_table: Name of the metadata table (keyspace.tablename).
+        """
         self._data_table = data_table
         self._metadata_table = metadata_table
         self.cass_conf = cass_conf
@@ -59,6 +100,11 @@ class split_generator:
         self.setup()
 
     def load_from_file(self, fn):
+        """Load previously cached metadata from a pickle file.
+
+        Args:
+            fn: Path to the pickle file created by cache_db_data_to_file.
+        """
         dict_tmp = pickle.load(open(fn, "rb"))
         self._data_table = dict_tmp["data_table"]
         self._metadata_table = dict_tmp["metadata_table"]
@@ -66,6 +112,14 @@ class split_generator:
         self.setup()
 
     def cache_db_data_to_file(self, fn):
+        """Save the metadata DataFrame to a pickle file for later reuse.
+
+        Args:
+            fn: Path to the output pickle file.
+
+        Raises:
+            Exception: If no DataFrame has been loaded yet (call load_from_db first).
+        """
         if (
             not isinstance(self._df, pd.DataFrame)
             or not self._data_table
@@ -81,6 +135,12 @@ class split_generator:
         pickle.dump(dict_tmp, open(fn, "wb"))
 
     def setup(self):
+        """Initialize the split_metadata dictionary with column mappings and placeholders.
+
+        Populates split_metadata with table/column names, label type, and
+        placeholder arrays for row_keys and splits. Subclasses should
+        override create_splits() to compute the actual split indices.
+        """
         self.split_metadata = {
             "data_table": self._data_table,
             "data_id_col": self._data_id_col,
@@ -103,6 +163,11 @@ class split_generator:
         }
 
     def get_df_from_metadata(self):
+        """Fetch all rows from the metadata table and return as a DataFrame.
+
+        Returns:
+            pandas.DataFrame: All rows from the configured metadata table.
+        """
         cs = CassandraSession(self.cass_conf)
         sess = cs.sess
 
@@ -114,6 +179,11 @@ class split_generator:
         return df
 
     def save_splits(self, out_split_fn="cassandra_split_file.pckl"):
+        """Save the split_metadata dictionary to a pickle file.
+
+        Args:
+            out_split_fn: Output filename (default: "cassandra_split_file.pckl").
+        """
         pickle.dump(self.split_metadata, open(out_split_fn, "wb"))
 
     def create_splits(self, **kwargs):

@@ -23,15 +23,36 @@ class ListManager:
         """List of lists of indexes (pointing to row_keys list)"""
 
     def get_config(self):
-        """Return dictionary with configuration"""
+        """Return dictionary with configuration.
+
+        This method should be implemented by subclasses to return
+        a dictionary containing configuration parameters needed to
+        restore the state (e.g., table name, column names).
+
+        Returns:
+            dict: Configuration parameters.
+        """
         pass
 
     def set_config(self):
-        """Apply saved configuration"""
+        """Apply saved configuration.
+
+        This method should be implemented by subclasses to restore
+        state from a configuration dictionary previously returned
+        by get_config().
+
+        Args:
+            conf: Configuration dictionary from get_config().
+        """
         pass
 
     def get_rows(self):
-        """Return list of UUIDs and splits"""
+        """Return a dictionary containing UUIDs, configuration, and splits.
+
+        Returns:
+            dict: Dictionary with keys 'row_keys' (list of UUIDs),
+                'config' (from get_config()), and 'split' (list of splits).
+        """
         stuff = {
             "row_keys": self.row_keys,
             "config": self.get_config(),
@@ -40,24 +61,20 @@ class ListManager:
         return stuff
 
     def save_rows(self, filename):
-        """Save full list of DB rows to file
+        """Save UUIDs, configuration, and splits to a pickle file.
 
-        :param filename: Local filename, as string
-        :returns:
-        :rtype:
-
+        Args:
+            filename: Path to the output file.
         """
         stuff = self.get_rows()
         with open(filename, "wb") as f:
             pickle.dump(stuff, f)
 
     def load_rows(self, filename):
-        """Load full list of DB rows from file
+        """Load UUIDs, configuration, and splits from a pickle file.
 
-        :param filename: Local filename, as string
-        :returns:
-        :rtype:
-
+        Args:
+            filename: Path to the input file.
         """
         print("Loading rows...")
         with open(filename, "rb") as f:
