@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cassandra-dali-plugin"
-version = "1.3.0a1"
+version = "1.3.0a5"
 description = "Cassandra data loader for ML pipelines"
 readme = "README.md"
 license = {text = "Apache-2.0"}
