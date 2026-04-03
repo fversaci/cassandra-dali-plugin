@@ -168,14 +168,21 @@ DALI_SCHEMA(crs4__cassandra_interactive)
    R"(List of Cassandra IPs)", std::vector<std::string>())
 .AddOptionalArg("cassandra_port",
    R"(Port to connect to in the Cassandra server)", 9042)
-.AddOptionalArg<std::string>("table", R"()", nullptr)
+.AddOptionalArg<std::string>("table",
+   R"(Cassandra table name in the format keyspace.tablename (e.g., imagenet.train_data))", nullptr)
 // label type: int (classification), image (segmentation mask), none
-.AddOptionalArg<std::string>("label_type", R"()", "int")
-.AddOptionalArg<std::string>("label_col", R"()", nullptr)
-.AddOptionalArg<std::string>("data_col", R"()", nullptr)
-.AddOptionalArg<std::string>("id_col", R"()", nullptr)
-.AddOptionalArg<std::string>("username", R"()", nullptr)
-.AddOptionalArg<std::string>("password", R"()", nullptr)
+.AddOptionalArg<std::string>("label_type",
+   R"(Type of label: "int" for classification, "blob" for segmentation masks, or "none" for no labels)", "int")
+.AddOptionalArg<std::string>("label_col",
+   R"(Name of the label column in the Cassandra table)", nullptr)
+.AddOptionalArg<std::string>("data_col",
+   R"(Name of the data column containing the binary image/feature data (BLOB))", nullptr)
+.AddOptionalArg<std::string>("id_col",
+   R"(Name of the UUID column used as primary key)", nullptr)
+.AddOptionalArg<std::string>("username",
+   R"(Username for Cassandra authentication)", nullptr)
+.AddOptionalArg<std::string>("password",
+   R"(Password for Cassandra authentication)", nullptr)
 .AddOptionalArg("use_ssl", R"(Encrypt Cassandra connection with SSL)", false)
 .AddOptionalArg<std::string>("ssl_certificate",
    R"(Optional SSL server certificate)", "")

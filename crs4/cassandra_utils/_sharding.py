@@ -18,6 +18,17 @@ import numpy as np
 
 
 def uuid2ints(uuid):
+    """Convert a Python UUID to a pair of int64 values.
+
+    This matches the Cassandra C++ driver's internal UUID representation
+    (time_and_version, clock_seq_and_node).
+
+    Args:
+        uuid: Python uuid.UUID object.
+
+    Returns:
+        Tuple of two int64 values.
+    """
     # convert to CassUuid format
     i1 = int.from_bytes(uuid.bytes_le[:8], byteorder="little")
     i2 = int.from_bytes(uuid.bytes[8:], byteorder="big")
@@ -25,6 +36,16 @@ def uuid2ints(uuid):
 
 
 def uuids_as_tensors(uuids, bs):
+    """Convert a list of UUIDs to a padded numpy array.
+
+    Args:
+        uuids: List of (i1, i2) tuples from uuid2ints.
+        bs: Batch size for padding.
+
+    Returns:
+        Numpy array of shape (N, bs, 2) where N is the number of batches
+        after padding. Pads with edge values to fill the last batch.
+    """
     uuids = list(map(uuid2ints, uuids))  # convert uuids to ints
     uuids = np.array(uuids, dtype=np.uint64)
     uuids = np.pad(uuids, ((0, (-len(uuids)) % bs), (0, 0)), "edge")
@@ -40,6 +61,28 @@ def get_shard(
     num_shards=1,
     seed=0,
 ):
+    """Split a list of UUIDs into shards for distributed training.
+
+    Shuffles the UUIDs (deterministically based on epoch and seed),
+    pads to a multiple of batch_size, and returns the requested shard.
+
+    Args:
+        uuids: List of uuid.UUID objects (will be shuffled in-place).
+        batch_size: Number of samples per batch.
+        epoch: Epoch number for deterministic shuffling.
+        shard_id: Index of the shard to return (0-based).
+        num_shards: Total number of shards.
+        seed: Random seed for shuffling.
+
+    Returns:
+        Tuple of (shard_uuids, shard_size) where shard_uuids is a numpy
+        array of shape (batches, batch_size, 2) and shard_size is the
+        actual number of samples in this shard (accounting for padding
+        deletion on the last shard).
+
+    Raises:
+        ValueError: If batch_size or num_shards is <= 0.
+    """
     if batch_size <= 0:
         raise ValueError(f"batch_size must be greater than 0, got {batch_size}")
     if num_shards <= 0:

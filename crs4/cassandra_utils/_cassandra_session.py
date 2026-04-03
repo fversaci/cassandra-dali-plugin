@@ -22,7 +22,31 @@ import ssl
 
 
 class CassandraSession:
+    """Manages a session connection to a Cassandra database.
+
+    This class wraps the Cassandra Python driver's Cluster and Session
+    objects, handling authentication, SSL/TLS configuration, and cloud
+    connection bundles (e.g., for Astra DB).
+
+    Attributes:
+        cluster: The Cassandra Cluster object.
+        sess: The active Cassandra Session object.
+
+    Example:
+        >>> conf = CassandraConf()
+        >>> conf.cassandra_ips = ["localhost"]
+        >>> session = CassandraSession(conf)
+        >>> results = session.sess.execute("SELECT * FROM keyspace.table")
+    """
     def __init__(self, cass_conf):
+        """Create a new Cassandra session.
+
+        Args:
+            cass_conf: CassandraConf object containing connection parameters.
+
+        Raises:
+            ValueError: If cass_conf is None or missing required attributes.
+        """
         # Validate configuration object
         if cass_conf is None:
             raise ValueError("cass_conf cannot be None")
@@ -93,4 +117,5 @@ class CassandraSession:
         self.sess = self.cluster.connect()
 
     def __del__(self):
+        """Clean up resources by shutting down the cluster connection."""
         self.cluster.shutdown()

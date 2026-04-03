@@ -16,6 +16,25 @@ from crs4.cassandra_utils._cassandra_session import CassandraSession
 
 
 class CassandraWriter:
+    """Base class for writing data and metadata to Cassandra tables.
+
+    This abstract base class handles the common setup for writing binary
+    data (e.g., images) and associated metadata to separate Cassandra
+    tables. Subclasses must implement set_query() and save_item() to
+    define the specific schema and write logic.
+
+    Attributes:
+        get_data: Callable that reads file data into bytes.
+        data_table: Name of the table storing binary data.
+        metadata_table: Name of the table storing metadata.
+        data_id_col: UUID column name in the data table.
+        data_label_col: Label column name in the data table.
+        metadata_id_col: UUID column name in the metadata table.
+        metadata_label_col: Label column name in the metadata table.
+        data_col: Binary data column name.
+        cols: Additional metadata column names.
+        sess: Active Cassandra session.
+    """
     def __init__(
         self,
         cass_conf,
@@ -29,6 +48,25 @@ class CassandraWriter:
         metadata_id_col=None,
         metadata_label_col=None,
     ):
+        """Initialize CassandraWriter with table and column configuration.
+
+        Args:
+            cass_conf: CassandraConf object with connection parameters.
+            data_table: Name of the data table (keyspace.tablename).
+            metadata_table: Name of the metadata table (keyspace.tablename).
+            data_id_col: Column name for UUIDs in the data table.
+            data_label_col: Column name for labels in the data table.
+            data_col: Column name for binary data (BLOB).
+            cols: List of additional metadata column names.
+            get_data: Callable(path) -> bytes that reads file content.
+            metadata_id_col: Column name for UUIDs in metadata table.
+                Defaults to data_id_col if None.
+            metadata_label_col: Column name for labels in metadata table.
+                Defaults to data_label_col if None.
+
+        Raises:
+            ValueError: If any required parameter is missing or empty.
+        """
         # Validate required parameters
         if cass_conf is None:
             raise ValueError("cass_conf cannot be None")
@@ -74,9 +112,21 @@ class CassandraWriter:
         self.set_query()
 
     def set_query(self):
-        # set query and prepare
+        """Prepare INSERT statements for data and metadata tables.
+
+        Subclasses must implement this method to prepare the appropriate
+        CQL statements (self.prep_data, self.prep_meta) based on their
+        specific schema.
+        """
         pass
 
     def save_item(self, item):
-        # insert metadata and heavy data
+        """Insert a single item (metadata and binary data) into Cassandra.
+
+        Subclasses must implement this method to execute the prepared
+        statements with data extracted from the item tuple.
+
+        Args:
+            item: Tuple containing (id, label, data, partition_items).
+        """
         pass
