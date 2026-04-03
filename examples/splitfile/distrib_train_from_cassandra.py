@@ -362,7 +362,7 @@ def compute_split_index(split, crossval_index, exclude_index):
 
     return split, train_index, val_index
 
-def exit(err):
+def cleanup_and_exit(err):
     if dist.is_available() and dist.is_initialized():
         dist.destroy_process_group()
     sys.exit(err)
@@ -392,14 +392,14 @@ def main():
         ## Sanity check for crossval_index and exclude_index
         if crossval_index > n_splits - 1:
             print (f"Error: crossval_index must be in the range [0, {n_splits-1}]")
-            exit(0)
+            cleanup_and_exit(0)
         if exclude_index is not None:
             if exclude_index == crossval_index:
                 print ("Error: exclude_index must be different from crossval_index")
-                exit(0)
+                cleanup_and_exit(0)
             if exclude_index > n_splits -1:
                 print (f"Error: exclude_index must be in the range [0, {n_splits-1}]")
-                exit(0)
+                cleanup_and_exit(0)
 
         ## Compute the right split for crossvalidation
         split, train_index, val_index = compute_split_index(
