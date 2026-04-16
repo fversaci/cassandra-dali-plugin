@@ -60,7 +60,7 @@ class BatchLoader {
   // Cassandra connection and execution
   CassCluster* cluster = cass_cluster_new();
   CassSession* session = cass_session_new();
-  const CassPrepared* prepared;
+  const CassPrepared* prepared = nullptr;
   // concurrency
   ThreadPool* comm_pool;
   ThreadPool* copy_pool;
