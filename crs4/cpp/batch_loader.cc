@@ -28,6 +28,9 @@ BatchLoader::~BatchLoader() {
     delete(comm_pool);
     delete(wait_pool);
   }
+  if (prepared) {
+    cass_prepared_free(prepared);
+  }
   // Always free cluster and session as they are allocated in the header
   cass_session_free(session);
   cass_cluster_free(cluster);
@@ -48,6 +51,9 @@ void BatchLoader::load_own_cert_file(std::string file, CassSsl* ssl) {
   rewind(in);
 
   cert = reinterpret_cast<char*>(malloc(cert_size));
+  if (cert == nullptr) {
+    throw std::runtime_error("Error allocating memory for certificate");
+  }
   size_t read_size = fread(cert, sizeof(char), cert_size, in);
   fclose(in);
 
@@ -86,6 +92,9 @@ void BatchLoader::load_own_key_file(std::string file, CassSsl* ssl, std::string 
   rewind(in);
 
   cert = reinterpret_cast<char*>(malloc(cert_size));
+  if (cert == nullptr) {
+    throw std::runtime_error("Error allocating memory for key");
+  }
   size_t read_size = fread(cert, sizeof(char), cert_size, in);
   fclose(in);
 
@@ -120,6 +129,9 @@ void BatchLoader::load_trusted_cert_file(std::string file, CassSsl* ssl) {
   rewind(in);
 
   cert = reinterpret_cast<char*>(malloc(cert_size));
+  if (cert == nullptr) {
+    throw std::runtime_error("Error allocating memory for trusted certificate");
+  }
   size_t read_size = fread(cert, sizeof(char), cert_size, in);
   fclose(in);
 
