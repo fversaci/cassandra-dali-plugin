@@ -96,6 +96,8 @@ class CassandraSession:
                 if cass_conf.ssl_certificate:
                     ssl_context.load_verify_locations(cass_conf.ssl_certificate)
                     ssl_context.verify_mode = ssl.CERT_REQUIRED
+                else:
+                    ssl_context.verify_mode = ssl.CERT_NONE
                 if cass_conf.ssl_own_certificate and cass_conf.ssl_own_key:
                     ssl_context.load_cert_chain(
                         certfile=cass_conf.ssl_own_certificate,
