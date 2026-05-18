@@ -105,10 +105,10 @@ string(STRIP ${DALI_COMPILE_FLAGS} DALI_COMPILE_FLAGS)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${DALI_COMPILE_FLAGS} ")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${DALI_COMPILE_FLAGS} ")
 link_directories("${DALI_LIB_DIR}")
-link_directories("${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}")  # -lcudart
+set(CMAKE_CUDA_IMPLICIT_LINK_LIBRARIES "")
 
 add_library(crs4cassandra SHARED cassandra_dali_interactive.cc cassandra_dali_selffeed.cc cassandra_dali_decoupled.cc batch_loader.cc)
 
 target_include_directories(crs4cassandra PRIVATE ${CASSANDRA_INCLUDE_DIR})
 # Link against the static cassandra target and explicit system dependencies
-target_link_libraries(crs4cassandra dali cudart ${CASSANDRA_TARGET} ${UV_TARGET} ${SSL_LIB} ${CRYPTO_LIB})
+target_link_libraries(crs4cassandra dali ${CASSANDRA_TARGET} ${UV_TARGET} ${SSL_LIB} ${CRYPTO_LIB})
