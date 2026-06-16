@@ -13,12 +13,12 @@
 # limitations under the License.
 
 [build-system]
-requires = ["setuptools>=64", "wheel", "cmake>=3.25.2", "nvidia-dali-cuda130==2.1"]
+requires = ["setuptools>=64", "wheel", "cmake>=3.25.2", "nvidia-dali-cuda130==2.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "cassandra-dali-plugin"
-version = "1.3.2"
+version = "1.3.3a3"
 description = "Cassandra data loader for ML pipelines"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -39,7 +39,7 @@ dependencies = [
     "cassandra-driver>=3.29.3",
     "clize>=5.0.2",
     "ipython>=9.10.1",
-    "nvidia-dali-cuda130==2.1",
+    "nvidia-dali-cuda130==2.2",
     "pandas>=3.0.1",
     "pillow>=12.1.1",
     "tqdm>=4.67.3",
@@ -49,7 +49,7 @@ dependencies = [
 ]
 
 [tool.uv.extra-build-dependencies]
-cassandra-dali-plugin = ["nvidia-dali-cuda130==2.1"]
+cassandra-dali-plugin = ["nvidia-dali-cuda130==2.2"]
 
 [project.urls]
 Homepage = "https://github.com/crs4/cassandra-dali-plugin"

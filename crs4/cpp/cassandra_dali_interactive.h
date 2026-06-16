@@ -50,11 +50,9 @@ class CassandraInteractive : public dali::InputOperator<dali::CPUBackend> {
   }
   */
 
-  void Run(dali::Workspace &ws) override {
-    // SetupSharedSampleParams(ws);
+  void Run(dali::Workspace &ws, bool validate_metadata = true) override {
     RunImpl(ws);
     ws.GetThreadPool().WaitForWork();
-    // EnforceUniformOutputBatchSize<dali::CPUBackend>(ws);
   }
 
   int NextBatchSize() override {
